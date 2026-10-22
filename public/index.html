@@ -327,6 +327,7 @@
                 </div>
                 <div class="form-group">
                     <label>Fecha</label>
+                    <!-- Campo de fecha estandarizado YYYY-MM-DD para la base de datos -->
                     <input type="date" id="event_date" required>
                 </div>
                 <div class="form-group">
@@ -529,23 +530,26 @@
             }
         });
 
-        // CREAR EVENTO CORREGIDO (CON e.preventDefault() y Token)
+        // CREAR EVENTO (Garantizando el envío del token y formato ISO de fecha)
         document.getElementById('eventForm').addEventListener('submit', async (e) => {
-            e.preventDefault(); // ¡Evita la recarga de página y el signo "?" en la URL!
+            e.preventDefault();
             
             const title = document.getElementById('title').value;
-            const event_date = document.getElementById('event_date').value;
+            const rawDate = document.getElementById('event_date').value;
             const location = document.getElementById('location').value;
             const description = document.getElementById('description').value;
             const resDiv = document.getElementById('resultadoEvento');
             const token = localStorage.getItem('token');
+
+            // Asegurar que la fecha viaje formateada correctamente como YYYY-MM-DD
+            const event_date = rawDate ? new Date(rawDate).toISOString().split('T')[0] : '';
 
             try {
                 const res = await fetch('/api/events', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}` // Envía el token para proteger la sesión
+                        'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({ title, event_date, location, description })
                 });
@@ -559,7 +563,7 @@
                         closeModal();
                         resDiv.textContent = '';
                         resDiv.className = '';
-                        loadEvents(); // Recarga la lista de eventos
+                        loadEvents();
                     }, 1500);
                 } else {
                     resDiv.className = 'alert alert-error';

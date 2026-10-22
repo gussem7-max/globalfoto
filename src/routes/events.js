@@ -4,7 +4,7 @@ const pool = require('../db');
 const verificarToken = require('../middleware/auth');
 const archiver = require('archiver');
 const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');
-const axios = require('axios'); // Opcional si quieres descargar de S3 para el ZIP
+const axios = require('axios');
 
 // Inicializar cliente S3
 const s3Client = new S3Client({
@@ -20,6 +20,11 @@ router.post('/', verificarToken, async (req, res) => {
     try {
         const { title, description, event_date, location } = req.body;
         
+        // Validación básica para evitar errores en la base de datos si falta la fecha
+        if (!title || !event_date) {
+            return res.status(400).json({ error: 'El título y la fecha del evento son obligatorios.' });
+        }
+
         // El ID del fotógrafo lo extraemos directamente del token verificado (req.user.id)
         const photographer_id = req.user.id;
 
@@ -39,7 +44,7 @@ router.post('/', verificarToken, async (req, res) => {
     }
 });
 
-// Ruta para listar todos los eventos (Pública para que los clientes puedan verlos)
+// Ruta para listar todos los eventos
 router.get('/', async (req, res) => {
     try {
         const allEvents = await pool.query('SELECT * FROM events ORDER BY created_at DESC');
@@ -55,15 +60,13 @@ router.delete('/:id', verificarToken, async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Buscar todas las fotos vinculadas a este evento en la base de datos
         const photosResult = await pool.query('SELECT * FROM photos WHERE event_id = $1', [id]);
         
-        // Eliminar los archivos directamente del bucket de Amazon S3
         for (const photo of photosResult.rows) {
             try {
                 const deleteParams = {
                     Bucket: process.env.AWS_BUCKET_NAME,
-                    Key: photo.filename // Contiene la key de S3
+                    Key: photo.filename
                 };
                 await s3Client.send(new DeleteObjectCommand(deleteParams));
             } catch (s3Error) {
@@ -71,7 +74,6 @@ router.delete('/:id', verificarToken, async (req, res) => {
             }
         }
 
-        // Eliminar el evento de la BD (PostgreSQL eliminará en cascada las filas en photos si tiene ON DELETE CASCADE)
         await pool.query('DELETE FROM events WHERE id = $1', [id]);
 
         res.json({ mensaje: 'Evento y sus fotografías eliminados correctamente de la nube.' });
@@ -136,7 +138,6 @@ router.get('/:id/download-zip', async (req, res) => {
 
         archive.pipe(res);
 
-        // Descargar cada foto desde su URL pública de S3 y añadirla al ZIP
         for (const photo of photos) {
             try {
                 const response = await axios.get(photo.url, { responseType: 'stream' });
