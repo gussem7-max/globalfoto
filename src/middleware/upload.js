@@ -1,31 +1,40 @@
+const { S3Client } = require('@aws-sdk/client-s3');
 const multer = require('multer');
+const multerS3 = require('multer-s3');
 const path = require('path');
+require('dotenv').config();
 
-// Configuración de almacenamiento local
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/'); // Carpeta destino
-    },
-    filename: (req, file, cb) => {
-        // Generar un nombre único usando el timestamp actual y el nombre original
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
+// Configurar el cliente de AWS S3
+const s3 = new S3Client({
+    region: process.env.AWS_REGION,
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
     }
 });
 
-// Filtro para aceptar solo archivos de imagen
-const fileFilter = (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-        cb(null, true);
-    } else {
-        cb(new Error('Solo se permiten archivos de imagen (JPEG, PNG, etc.).'), false);
+// Configurar Multer para subir directamente a S3 usando multer-s3
+const upload = multer({
+    storage: multerS3({
+        s3: s3,
+        bucket: process.env.AWS_BUCKET_NAME,
+        acl: 'public-read', // Permite que la imagen sea accesible mediante URL pública
+        metadata: function (req, file, cb) {
+            cb(null, { fieldName: file.fieldname });
+        },
+        key: function (req, file, cb) {
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            cb(null, 'photos/' + uniqueSuffix + path.extname(file.originalname));
+        }
+    }),
+    limits: { fileSize: 15 * 1024 * 1024 }, // Límite actualizado a 15MB para fotos profesionales
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Solo se permiten archivos de imagen (JPEG, PNG, etc.).'), false);
+        }
     }
-};
-
-const upload = multer({ 
-    storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // Límite de 5MB por foto
-    fileFilter: fileFilter
 });
 
 module.exports = upload;

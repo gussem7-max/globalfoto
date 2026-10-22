@@ -3,6 +3,16 @@ const router = express.Router();
 const pool = require('../db');
 const upload = require('../middleware/upload');
 const verificarToken = require('../middleware/auth');
+const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+
+// Inicializar cliente S3 para la eliminación en la nube
+const s3Client = new S3Client({
+    region: process.env.AWS_REGION,
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+    }
+});
 
 // Ruta para subir una foto asociada a un evento (Protegida)
 router.post('/upload', verificarToken, upload.single('photo'), async (req, res) => {
@@ -16,17 +26,18 @@ router.post('/upload', verificarToken, upload.single('photo'), async (req, res) 
             return res.status(400).json({ error: 'Se requiere el ID del evento.' });
         }
 
-        const filename = req.file.filename;
-        const url = `/uploads/${filename}`;
+        // Con multer-s3, obtenemos la URL pública y la key (ruta en el bucket)
+        const url = req.file.location; 
+        const filename = req.file.key; // Guardamos la key de S3 para poder borrarla después si es necesario
 
-        // Guardar la referencia en la base de datos
+        // Guardar la referencia en la base de datos PostgreSQL
         const newPhoto = await pool.query(
             'INSERT INTO photos (event_id, filename, url) VALUES ($1, $2, $3) RETURNING *',
             [event_id, filename, url]
         );
 
         res.status(201).json({
-            mensaje: '¡Foto subida exitosamente!',
+            mensaje: '¡Foto subida exitosamente a Amazon S3!',
             photo: newPhoto.rows[0]
         });
 
@@ -48,9 +59,6 @@ router.get('/event/:event_id', async (req, res) => {
     }
 });
 
-const fs = require('fs');
-const path = require('path');
-
 // Ruta para eliminar una foto (Protegida)
 router.delete('/:id', verificarToken, async (req, res) => {
     try {
@@ -63,17 +71,19 @@ router.delete('/:id', verificarToken, async (req, res) => {
         }
 
         const photo = photoResult.rows[0];
-        const filePath = path.join(__dirname, '../../uploads', photo.filename);
 
-        // Eliminar registro de la base de datos
+        // Eliminar registro de la base de datos PostgreSQL
         await pool.query('DELETE FROM photos WHERE id = $1', [id]);
 
-        // Eliminar archivo físico de la carpeta /uploads si existe
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-        }
+        // Eliminar el archivo físico directamente del bucket de Amazon S3
+        const deleteParams = {
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: photo.filename // Asumiendo que guardaste la key de S3 en la columna filename
+        };
 
-        res.json({ mensaje: 'Fotografía eliminada correctamente.' });
+        await s3Client.send(new DeleteObjectCommand(deleteParams));
+
+        res.json({ mensaje: 'Fotografía eliminada correctamente de Amazon S3.' });
     } catch (error) {
         console.error('Error al eliminar foto:', error);
         res.status(500).json({ error: 'Error interno al eliminar la fotografía.' });
