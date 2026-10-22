@@ -393,7 +393,7 @@
             document.getElementById('publicView').classList.remove('hidden');
 
             try {
-                const res = await fetch(`http://localhost:4000/api/events/${eventId}/public`);
+                const res = await fetch(`/api/events/${eventId}/public`);
                 const data = await res.json();
 
                 if (!res.ok) {
@@ -404,11 +404,12 @@
 
                 document.getElementById('pubEventTitle').textContent = data.event.title;
                 
-                const zipDownloadUrl = `http://localhost:4000/api/events/${eventId}/download-zip`;
+                const zipDownloadUrl = `/api/events/${eventId}/download-zip`;
                 
                 document.getElementById('pubEventDetails').innerHTML = `
                     <div style="margin-bottom: 16px;">
-                        📅 ${data.event.event_date ? data.event.event_date.split('T')[0] : ''} | 📍 ${data.event.location || ''} - ${data.event.description || ''}
+                        📅 ${data.event.event_date ? data.event.event_date.split('T')[0] : ''} | 📍 ${data.event.location || ''}
+                        <br>${data.event.description || ''}
                     </div>
                     ${data.photos.length > 0 ? `
                         <a href="${zipDownloadUrl}" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px; width: auto; padding: 10px 20px; text-decoration: none; margin-top: 8px;">
@@ -425,10 +426,10 @@
 
                 grid.innerHTML = data.photos.map(p => `
                     <div class="public-photo-card">
-                        <img src="http://localhost:4000${p.url}" class="public-photo-img" onclick="openLightbox('http://localhost:4000${p.url}')">
+                        <img src="${p.url}" class="public-photo-img" onclick="openLightbox('${p.url}')">
                         <div class="public-photo-footer">
                             <span style="font-size: 11px; color: #94a3b8;">GlobalFoto</span>
-                            <a href="http://localhost:4000${p.url}" download class="btn-download" target="_blank">
+                            <a href="${p.url}" download class="btn-download" target="_blank">
                                 <i class="fa-solid fa-download"></i> Descargar
                             </a>
                         </div>
@@ -477,7 +478,7 @@
             const resDiv = document.getElementById('resultadoLogin');
 
             try {
-                const res = await fetch('http://localhost:4000/api/auth/login', {
+                const res = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
@@ -507,7 +508,7 @@
             const resDiv = document.getElementById('resultado');
 
             try {
-                const res = await fetch('http://localhost:4000/api/auth/register', {
+                const res = await fetch('/api/auth/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, email, password, role })
@@ -528,10 +529,190 @@
             }
         });
 
+        // CREAR EVENTO CORREGIDO (CON e.preventDefault() y Token)
+        document.getElementById('eventForm').addEventListener('submit', async (e) => {
+            e.preventDefault(); // ¡Evita la recarga de página y el signo "?" en la URL!
+            
+            const title = document.getElementById('title').value;
+            const event_date = document.getElementById('event_date').value;
+            const location = document.getElementById('location').value;
+            const description = document.getElementById('description').value;
+            const resDiv = document.getElementById('resultadoEvento');
+            const token = localStorage.getItem('token');
+
+            try {
+                const res = await fetch('/api/events', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` // Envía el token para proteger la sesión
+                    },
+                    body: JSON.stringify({ title, event_date, location, description })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    resDiv.className = 'alert alert-success';
+                    resDiv.textContent = data.mensaje || '¡Evento creado exitosamente!';
+                    e.target.reset();
+                    setTimeout(() => {
+                        closeModal();
+                        resDiv.textContent = '';
+                        resDiv.className = '';
+                        loadEvents(); // Recarga la lista de eventos
+                    }, 1500);
+                } else {
+                    resDiv.className = 'alert alert-error';
+                    resDiv.textContent = data.error || 'Error al crear el evento.';
+                }
+            } catch (err) {
+                resDiv.className = 'alert alert-error';
+                resDiv.textContent = 'Error de conexión con el servidor.';
+            }
+        });
+
+        async function loadEvents() {
+            try {
+                const res = await fetch('/api/events');
+                const events = await res.json();
+                cachedEvents = events;
+
+                document.getElementById('statEventsCount').textContent = events.length;
+                
+                let totalPhotos = 0;
+                events.forEach(ev => {
+                    if(ev.photosCount) totalPhotos += ev.photosCount;
+                });
+                document.getElementById('statPhotosCount').textContent = totalPhotos;
+
+                const eventList = document.getElementById('eventList');
+                if (events.length === 0) {
+                    eventList.innerHTML = '<p style="color: var(--text-muted);">No tienes eventos registrados aún.</p>';
+                    return;
+                }
+
+                eventList.innerHTML = events.map(ev => `
+                    <div class="event-card">
+                        <div class="event-header">
+                            <div>
+                                <div class="event-title">${ev.title}</div>
+                                <div class="event-meta">
+                                    <span><i class="fa-solid fa-calendar"></i> ${ev.event_date ? ev.event_date.split('T')[0] : 'Sin fecha'}</span>
+                                    <span><i class="fa-solid fa-location-dot"></i> ${ev.location || 'Sin ubicación'}</span>
+                                </div>
+                            </div>
+                            <div class="event-actions">
+                                <button class="btn-action" onclick="deleteEvent(${ev.id})" title="Eliminar Evento"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <div class="event-body">
+                            <div class="event-desc">${ev.description || 'Sin descripción.'}</div>
+                            <div style="font-size: 12px; color: var(--accent); font-weight: 600; margin-bottom: 8px;">Enlace público:</div>
+                            <input type="text" value="${window.location.origin}/?galeria=${ev.id}" readonly style="font-size: 11px; padding: 6px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 4px; width: 100%;" onclick="this.select()">
+                            
+                            <div class="upload-box">
+                                <input type="file" id="file-${ev.id}" class="file-input" multiple accept="image/*" onchange="updateFileLabel(${ev.id})">
+                                <label for="file-${ev.id}" class="file-label" id="label-${ev.id}">Seleccionar fotos</label>
+                                <button class="btn-upload" onclick="uploadPhotos(${ev.id})">Subir</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (err) {
+                console.error('Error al cargar eventos:', err);
+            }
+        }
+
+        function updateFileLabel(eventId) {
+            const input = document.getElementById(`file-${eventId}`);
+            const label = document.getElementById(`label-${eventId}`);
+            if (input.files.length > 0) {
+                label.textContent = `${input.files.length} archivo(s) seleccionados`;
+            } else {
+                label.textContent = 'Seleccionar fotos';
+            }
+        }
+
+        async function uploadPhotos(eventId) {
+            const input = document.getElementById(`file-${eventId}`);
+            if (input.files.length === 0) {
+                alert('Por favor selecciona al menos una foto.');
+                return;
+            }
+
+            const formData = new FormData();
+            for (let i = 0; i < input.files.length; i++) {
+                formData.append('photos', input.files[i]);
+            }
+            formData.append('event_id', eventId);
+
+            const token = localStorage.getItem('token');
+
+            try {
+                const res = await fetch('/api/photos/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    alert('¡Fotos subidas exitosamente a S3!');
+                    loadEvents();
+                } else {
+                    alert(data.error || 'Error al subir las fotos.');
+                }
+            } catch (err) {
+                alert('Error de conexión al subir las fotos.');
+            }
+        }
+
+        async function deleteEvent(eventId) {
+            if (!confirm('¿Estás seguro de eliminar este evento y todas sus fotos?')) return;
+            const token = localStorage.getItem('token');
+
+            try {
+                const res = await fetch(`/api/events/${eventId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    loadEvents();
+                } else {
+                    alert('Error al eliminar el evento.');
+                }
+            } catch (err) {
+                alert('Error de conexión.');
+            }
+        }
+
+        function renderGalleriesView() {
+            const grid = document.getElementById('galleriesGrid');
+            if (cachedEvents.length === 0) {
+                grid.innerHTML = '<p style="color: var(--text-muted);">No hay galerías disponibles.</p>';
+                return;
+            }
+            grid.innerHTML = cachedEvents.map(ev => `
+                <div class="event-card">
+                    <div class="event-header">
+                        <div>
+                            <div class="event-title">${ev.title}</div>
+                            <div class="event-meta"><span>${ev.event_date ? ev.event_date.split('T')[0] : ''}</span></div>
+                        </div>
+                    </div>
+                    <div class="event-body">
+                        <a href="/?galeria=${ev.id}" target="_blank" class="btn-primary" style="text-align: center; text-decoration: none; display: block;">
+                            <i class="fa-solid fa-external-link-alt"></i> Ver Galería Pública
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+        }
+
         function showDashboard() {
             document.getElementById('authContainer').classList.add('hidden');
             document.getElementById('dashboardContainer').classList.remove('hidden');
-            
             updateHeaderUserInfo();
             loadEvents();
         }
@@ -559,7 +740,7 @@
             const token = localStorage.getItem('token');
 
             try {
-                const res = await fetch('http://localhost:4000/api/auth/update-profile', {
+                const res = await fetch('/api/auth/update-profile', {
                     method: 'PUT',
                     headers: { 
                         'Content-Type': 'application/json',
@@ -591,7 +772,7 @@
             const token = localStorage.getItem('token');
 
             try {
-                const res = await fetch('http://localhost:4000/api/auth/change-password', {
+                const res = await fetch('/api/auth/update-password', {
                     method: 'PUT',
                     headers: { 
                         'Content-Type': 'application/json',
@@ -602,172 +783,12 @@
                 const data = await res.json();
                 resDiv.className = res.ok ? 'alert alert-success' : 'alert alert-error';
                 resDiv.textContent = data.mensaje || data.error;
-
                 if (res.ok) e.target.reset();
             } catch (err) {
                 resDiv.className = 'alert alert-error';
-                resDiv.textContent = 'Error al cambiar la contraseña.';
+                resDiv.textContent = 'Error al actualizar la contraseña.';
             }
         });
-
-        // Cargar Eventos
-        async function loadEvents() {
-            const listDiv = document.getElementById('eventList');
-            try {
-                const res = await fetch('http://localhost:4000/api/events');
-                cachedEvents = await res.json();
-
-                document.getElementById('statEventsCount').textContent = cachedEvents.length;
-
-                if (cachedEvents.length === 0) {
-                    listDiv.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1;">No tienes eventos registrados aún.</p>';
-                    document.getElementById('statPhotosCount').textContent = '0';
-                    return;
-                }
-
-                let totalPhotosCount = 0;
-                listDiv.innerHTML = '';
-
-                for (const ev of cachedEvents) {
-                    const photosRes = await fetch(`http://localhost:4000/api/photos/event/${ev.id}`);
-                    const photos = await photosRes.json();
-                    totalPhotosCount += photos.length;
-
-                    const photosHtml = photos.length > 0 
-                        ? `<div class="gallery-grid">
-                            ${photos.map(p => `
-                                <div class="photo-container">
-                                    <img src="http://localhost:4000${p.url}" class="gallery-img" onclick="openLightbox('http://localhost:4000${p.url}')">
-                                </div>
-                            `).join('')}
-                           </div>` 
-                        : '<p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">Sin fotografías subidas.</p>';
-
-                    const publicUrl = `http://localhost:4000/?galeria=${ev.id}`;
-
-                    const card = document.createElement('div');
-                    card.className = 'event-card';
-                    card.innerHTML = `
-                        <div class="event-header">
-                            <div>
-                                <div class="event-title">${ev.title}</div>
-                                <div class="event-meta">
-                                    <span><i class="fa-regular fa-calendar"></i> ${ev.event_date ? ev.event_date.split('T')[0] : 'S/F'}</span>
-                                    <span><i class="fa-solid fa-location-dot"></i> ${ev.location || 'Sin ubicación'}</span>
-                                </div>
-                            </div>
-                            <div class="event-actions">
-                                <a href="${publicUrl}" target="_blank" class="btn-action" title="Ver Galería Pública">
-                                    <i class="fa-solid fa-external-link-alt"></i>
-                                </a>
-                                <button class="btn-action btn-delete-event" onclick="deleteEvent(${ev.id})" title="Eliminar Evento">
-                                    <i class="fa-solid fa-trash-can"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="event-body">
-                            <p class="event-desc">${ev.description || 'Sin descripción adicional.'}</p>
-                            
-                            <form onsubmit="uploadPhoto(event, ${ev.id})" class="upload-box">
-                                <label for="file-${ev.id}" class="file-label" id="label-${ev.id}">
-                                    <i class="fa-solid fa-cloud-arrow-up"></i> Seleccionar foto
-                                </label>
-                                <input type="file" id="file-${ev.id}" class="file-input" accept="image/*" required onchange="updateFileName(${ev.id})">
-                                <button type="submit" class="btn-upload"><i class="fa-solid fa-upload"></i></button>
-                            </form>
-
-                            ${photosHtml}
-                        </div>
-                    `;
-                    listDiv.appendChild(card);
-                }
-
-                document.getElementById('statPhotosCount').textContent = totalPhotosCount;
-
-            } catch (err) {
-                listDiv.innerHTML = '<p style="color: var(--danger);">Error al cargar los eventos.</p>';
-            }
-        }
-
-        function renderGalleriesView() {
-            const grid = document.getElementById('galleriesGrid');
-            if (cachedEvents.length === 0) {
-                grid.innerHTML = '<p style="color: var(--text-muted);">No hay galerías creadas.</p>';
-                return;
-            }
-
-            grid.innerHTML = cachedEvents.map(ev => {
-                const publicUrl = `http://localhost:4000/?galeria=${ev.id}`;
-                return `
-                    <div class="event-card" style="padding: 20px;">
-                        <h3 style="font-size: 16px; margin-bottom: 6px;">${ev.title}</h3>
-                        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">📍 ${ev.location || 'Sin ubicación'}</p>
-                        <a href="${publicUrl}" target="_blank" class="btn-primary" style="display: inline-block; text-align: center; text-decoration: none;">
-                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir Enlace de Cliente
-                        </a>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function updateFileName(eventId) {
-            const fileInput = document.getElementById(`file-${eventId}`);
-            const label = document.getElementById(`label-${eventId}`);
-            if (fileInput.files.length > 0) {
-                label.innerHTML = `<i class="fa-solid fa-check"></i> ${fileInput.files[0].name.substring(0, 15)}...`;
-            }
-        }
-
-        async function uploadPhoto(event, eventId) {
-            event.preventDefault();
-            const fileInput = document.getElementById(`file-${eventId}`);
-            const file = fileInput.files[0];
-            if (!file) return;
-
-            const formData = new FormData();
-            formData.append('photo', file);
-            formData.append('event_id', eventId);
-
-            const token = localStorage.getItem('token');
-
-            try {
-                const res = await fetch('http://localhost:4000/api/photos/upload', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    body: formData
-                });
-
-                if (res.ok) {
-                    loadEvents();
-                } else {
-                    const data = await res.json();
-                    alert(data.error || 'Error al subir la foto.');
-                }
-            } catch (err) {
-                alert('Error de conexión al subir la foto.');
-            }
-        }
-
-        async function deleteEvent(eventId) {
-            if (!confirm('¿Seguro que deseas eliminar este evento y todas sus fotos?')) return;
-
-            const token = localStorage.getItem('token');
-            try {
-                const res = await fetch(`http://localhost:4000/api/events/${eventId}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (res.ok) {
-                    loadEvents();
-                } else {
-                    const data = await res.json();
-                    alert(data.error || 'Error al eliminar el evento.');
-                }
-            } catch (err) {
-                alert('Error de conexión al eliminar.');
-            }
-        }
     </script>
 </body>
 </html>
