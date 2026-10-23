@@ -80,10 +80,6 @@
         .event-body { padding: 20px; flex: 1; }
         .event-desc { font-size: 13px; color: #475569; margin-bottom: 16px; line-height: 1.5; }
 
-        .gallery-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
-        .photo-container { position: relative; width: 100%; height: 65px; border-radius: 6px; overflow: hidden; }
-        .gallery-img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
-
         .upload-box { margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border-color); display: flex; gap: 8px; }
         .file-input { display: none; }
         .file-label { flex: 1; border: 1px dashed var(--accent); color: var(--accent); background: #eff6ff; padding: 8px; border-radius: 6px; text-align: center; font-size: 12px; font-weight: 600; cursor: pointer; }
@@ -327,7 +323,6 @@
                 </div>
                 <div class="form-group">
                     <label>Fecha</label>
-                    <!-- Campo de fecha estandarizado YYYY-MM-DD para la base de datos -->
                     <input type="date" id="event_date" required>
                 </div>
                 <div class="form-group">
@@ -355,15 +350,6 @@
     <script>
         let currentUser = null;
         let cachedEvents = [];
-
-        window.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const galeriaId = urlParams.get('galeria');
-
-            if (galeriaId) {
-                loadPublicGallery(galeriaId);
-            }
-        });
 
         function showSection(section) {
             document.getElementById('sectionEvents').classList.add('hidden');
@@ -530,7 +516,7 @@
             }
         });
 
-        // CREAR EVENTO (Garantizando el envío del token y formato ISO de fecha)
+        // CREAR EVENTO
         document.getElementById('eventForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -541,7 +527,6 @@
             const resDiv = document.getElementById('resultadoEvento');
             const token = localStorage.getItem('token');
 
-            // Asegurar que la fecha viaje formateada correctamente como YYYY-MM-DD
             const event_date = rawDate ? new Date(rawDate).toISOString().split('T')[0] : '';
 
             try {
@@ -585,7 +570,7 @@
                 
                 let totalPhotos = 0;
                 events.forEach(ev => {
-                    if(ev.photosCount) totalPhotos += ev.photosCount;
+                    if(ev.photosCount) totalPhotos += parseInt(ev.photosCount, 10);
                 });
                 document.getElementById('statPhotosCount').textContent = totalPhotos;
 
@@ -595,68 +580,77 @@
                     return;
                 }
 
-                eventList.innerHTML = events.map(ev => `
-                    <div class="event-card">
-                        <div class="event-header">
-                            <div>
-                                <div class="event-title">${ev.title}</div>
-                                <div class="event-meta">
-                                    <span><i class="fa-solid fa-calendar"></i> ${ev.event_date ? ev.event_date.split('T')[0] : 'Sin fecha'}</span>
-                                    <span><i class="fa-solid fa-location-dot"></i> ${ev.location || 'Sin ubicación'}</span>
+                eventList.innerHTML = events.map(ev => {
+                    const publicUrl = `${window.location.origin}/?galeria=${ev.id}`;
+                    return `
+                        <div class="event-card">
+                            <div class="event-header">
+                                <div>
+                                    <div class="event-title">${ev.title}</div>
+                                    <div class="event-meta">
+                                        <span><i class="fa-solid fa-calendar"></i> ${ev.event_date ? ev.event_date.split('T')[0] : ''}</span>
+                                        <span><i class="fa-solid fa-location-dot"></i> ${ev.location || 'Sin ubicación'}</span>
+                                    </div>
+                                </div>
+                                <div class="event-actions">
+                                    <button class="btn-action" onclick="deleteEvent(${ev.id})" title="Eliminar Evento"><i class="fa-solid fa-trash"></i></button>
                                 </div>
                             </div>
-                            <div class="event-actions">
-                                <button class="btn-action" onclick="deleteEvent(${ev.id})" title="Eliminar Evento"><i class="fa-solid fa-trash"></i></button>
+                            <div class="event-body">
+                                <div class="event-desc">${ev.description || ''}</div>
+                                <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">Enlace público:</div>
+                                <div style="display: flex; gap: 6px;">
+                                    <input type="text" readonly value="${publicUrl}" style="font-size: 11px; background: #f8fafc; padding: 6px; border: 1px solid var(--border-color); border-radius: 6px; width: 100%; color: var(--text-muted);">
+                                </div>
+                                
+                                <div class="upload-box">
+                                    <form onsubmit="uploadPhotos(event, ${ev.id})" style="display: flex; width: 100%; gap: 8px;">
+                                        <input type="file" id="fileInput_${ev.id}" multiple accept="image/*" class="file-input" onchange="updateFileLabel(${ev.id})">
+                                        <label for="fileInput_${ev.id}" class="file-label" id="fileLabel_${ev.id}">Seleccionar fotos</label>
+                                        <button type="submit" class="btn-upload">Subir</button>
+                                    </form>
+                                </div>
                             </div>
                         </div>
-                        <div class="event-body">
-                            <div class="event-desc">${ev.description || 'Sin descripción.'}</div>
-                            <div style="font-size: 12px; color: var(--accent); font-weight: 600; margin-bottom: 8px;">Enlace público:</div>
-                            <input type="text" value="${window.location.origin}/?galeria=${ev.id}" readonly style="font-size: 11px; padding: 6px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 4px; width: 100%;" onclick="this.select()">
-                            
-                            <div class="upload-box">
-                                <input type="file" id="file-${ev.id}" class="file-input" multiple accept="image/*" onchange="updateFileLabel(${ev.id})">
-                                <label for="file-${ev.id}" class="file-label" id="label-${ev.id}">Seleccionar fotos</label>
-                                <button class="btn-upload" onclick="uploadPhotos(${ev.id})">Subir</button>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-
+                    `;
+                }).join('');
             } catch (err) {
                 console.error('Error al cargar eventos:', err);
             }
         }
 
         function updateFileLabel(eventId) {
-            const input = document.getElementById(`file-${eventId}`);
-            const label = document.getElementById(`label-${eventId}`);
+            const input = document.getElementById(`fileInput_${eventId}`);
+            const label = document.getElementById(`fileLabel_${eventId}`);
             if (input.files.length > 0) {
-                label.textContent = `${input.files.length} archivo(s) seleccionados`;
+                label.textContent = `${input.files.length} foto(s) seleccionada(s)`;
             } else {
                 label.textContent = 'Seleccionar fotos';
             }
         }
 
-        async function uploadPhotos(eventId) {
-            const input = document.getElementById(`file-${eventId}`);
-            if (input.files.length === 0) {
+        async function uploadPhotos(e, eventId) {
+            e.preventDefault();
+            const input = document.getElementById(`fileInput_${eventId}`);
+            if (!input.files || input.files.length === 0) {
                 alert('Por favor selecciona al menos una foto.');
                 return;
             }
 
             const formData = new FormData();
+            formData.append('event_id', eventId);
             for (let i = 0; i < input.files.length; i++) {
                 formData.append('photos', input.files[i]);
             }
-            formData.append('event_id', eventId);
 
             const token = localStorage.getItem('token');
 
             try {
                 const res = await fetch('/api/photos/upload', {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: formData
                 });
                 const data = await res.json();
@@ -665,26 +659,25 @@
                     alert('¡Fotos subidas exitosamente a S3!');
                     loadEvents();
                 } else {
-                    alert(data.error || 'Error al subir las fotos.');
+                    alert(`Error al subir las fotos: ${data.error || 'Desconocido'}`);
                 }
             } catch (err) {
                 alert('Error de conexión al subir las fotos.');
             }
         }
 
-        async function deleteEvent(eventId) {
-            if (!confirm('¿Estás seguro de eliminar este evento y todas sus fotos?')) return;
+        async function deleteEvent(id) {
+            if (!confirm('¿Estás seguro de eliminar este evento?')) return;
             const token = localStorage.getItem('token');
-
             try {
-                const res = await fetch(`/api/events/${eventId}`, {
+                const res = await fetch(`/api/events/${id}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) {
                     loadEvents();
                 } else {
-                    alert('Error al eliminar el evento.');
+                    alert('No se pudo eliminar el evento.');
                 }
             } catch (err) {
                 alert('Error de conexión.');
@@ -697,100 +690,66 @@
                 grid.innerHTML = '<p style="color: var(--text-muted);">No hay galerías disponibles.</p>';
                 return;
             }
-            grid.innerHTML = cachedEvents.map(ev => `
-                <div class="event-card">
-                    <div class="event-header">
-                        <div>
-                            <div class="event-title">${ev.title}</div>
-                            <div class="event-meta"><span>${ev.event_date ? ev.event_date.split('T')[0] : ''}</span></div>
+            grid.innerHTML = cachedEvents.map(ev => {
+                const publicUrl = `${window.location.origin}/?galeria=${ev.id}`;
+                return `
+                    <div class="event-card">
+                        <div class="event-header">
+                            <div>
+                                <div class="event-title">${ev.title}</div>
+                                <div class="event-meta"><span>📅 ${ev.event_date ? ev.event_date.split('T')[0] : ''}</span></div>
+                            </div>
+                        </div>
+                        <div class="event-body">
+                            <a href="${publicUrl}" target="_blank" class="btn-primary" style="text-align: center; text-decoration: none; display: block;">
+                                Visitar Galería Pública <i class="fa-solid fa-external-link-alt"></i>
+                            </a>
                         </div>
                     </div>
-                    <div class="event-body">
-                        <a href="/?galeria=${ev.id}" target="_blank" class="btn-primary" style="text-align: center; text-decoration: none; display: block;">
-                            <i class="fa-solid fa-external-link-alt"></i> Ver Galería Pública
-                        </a>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function showDashboard() {
             document.getElementById('authContainer').classList.add('hidden');
             document.getElementById('dashboardContainer').classList.remove('hidden');
-            updateHeaderUserInfo();
-            loadEvents();
-        }
-
-        function updateHeaderUserInfo() {
             document.getElementById('userName').textContent = currentUser.name;
-            document.getElementById('welcomeTitle').textContent = `¡Hola de nuevo, ${currentUser.name.split(' ')[0]}! 👋`;
-            const initials = currentUser.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-            document.getElementById('userAvatar').textContent = initials;
+            document.getElementById('userAvatar').textContent = currentUser.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            document.getElementById('welcomeTitle').textContent = `¡Hola de nuevo, ${currentUser.name}!`;
+            loadEvents();
         }
 
         function logout() {
             localStorage.removeItem('token');
-            currentUser = null;
-            document.getElementById('dashboardContainer').classList.add('hidden');
-            document.getElementById('authContainer').classList.remove('hidden');
+            window.location.href = '/';
         }
 
-        // Guardar Datos Personales
-        document.getElementById('profileForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = document.getElementById('cfgName').value;
-            const email = document.getElementById('cfgEmail').value;
-            const resDiv = document.getElementById('resProfile');
+        // VERIFICAR SESIÓN AUTOMÁTICA AL ACTUALIZAR LA PÁGINA (Evita que se cierre sesión)
+        window.addEventListener('DOMContentLoaded', async () => {
             const token = localStorage.getItem('token');
+            const urlParams = new URLSearchParams(window.location.search);
+            const galeriaId = urlParams.get('galeria');
 
-            try {
-                const res = await fetch('/api/auth/update-profile', {
-                    method: 'PUT',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ name, email })
-                });
-                const data = await res.json();
-                resDiv.className = res.ok ? 'alert alert-success' : 'alert alert-error';
-                resDiv.textContent = data.mensaje || data.error;
-
-                if (res.ok) {
-                    currentUser.name = data.user.name;
-                    currentUser.email = data.user.email;
-                    updateHeaderUserInfo();
-                }
-            } catch (err) {
-                resDiv.className = 'alert alert-error';
-                resDiv.textContent = 'Error al actualizar el perfil.';
+            if (galeriaId) {
+                loadPublicGallery(galeriaId);
+                return;
             }
-        });
 
-        // Cambiar Contraseña
-        document.getElementById('passwordForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const currentPassword = document.getElementById('currentPassword').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const resDiv = document.getElementById('resPassword');
-            const token = localStorage.getItem('token');
-
-            try {
-                const res = await fetch('/api/auth/update-password', {
-                    method: 'PUT',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ currentPassword, newPassword })
-                });
-                const data = await res.json();
-                resDiv.className = res.ok ? 'alert alert-success' : 'alert alert-error';
-                resDiv.textContent = data.mensaje || data.error;
-                if (res.ok) e.target.reset();
-            } catch (err) {
-                resDiv.className = 'alert alert-error';
-                resDiv.textContent = 'Error al actualizar la contraseña.';
+            if (token) {
+                try {
+                    const res = await fetch('/api/auth/me', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        currentUser = data.user;
+                        showDashboard();
+                    } else {
+                        localStorage.removeItem('token');
+                    }
+                } catch (err) {
+                    console.error('Error al validar sesión:', err);
+                }
             }
         });
     </script>
