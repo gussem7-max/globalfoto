@@ -4,17 +4,15 @@ const pool = require('../db');
 const verificarToken = require('../middleware/auth');
 const multer = require('multer');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
-const sharp = require('sharp');
 const crypto = require('crypto');
 
 const upload = multer({ 
     storage: multer.memoryStorage(),
     limits: { 
-        fileSize: 15 * 1024 * 1024, // 15MB por archivo
-        files: 50 // máximo 50 archivos por petición
+        fileSize: 25 * 1024 * 1024, // 25MB por archivo (calidad profesional)
+        files: 50
     },
     fileFilter: (req, file, cb) => {
-        // Whitelist estricta de tipos MIME
         const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
         if (allowedMimes.includes(file.mimetype)) {
             cb(null, true);
@@ -32,7 +30,6 @@ const s3Client = new S3Client({
     }
 });
 
-// Validar magic bytes (firma real del archivo, no solo el mimetype)
 const validateMagicBytes = (buffer, mimetype) => {
     const signatures = {
         'image/jpeg': ['FFD8FF'],
@@ -49,7 +46,6 @@ const validateMagicBytes = (buffer, mimetype) => {
 
 const isValidId = (id) => /^\d+$/.test(id) && parseInt(id) > 0;
 
-// Subir fotos (Protegido + verificación de propiedad del evento)
 router.post('/upload', verificarToken, upload.array('photos', 50), async (req, res) => {
     try {
         const { event_id } = req.body;
@@ -64,14 +60,14 @@ router.post('/upload', verificarToken, upload.array('photos', 50), async (req, r
             return res.status(400).json({ error: 'ID de evento inválido.' });
         }
 
-        // Verificar que el evento existe Y pertenece al usuario autenticado
+        // Verificar propiedad del evento
         const eventCheck = await pool.query(
             'SELECT id FROM events WHERE id = $1 AND photographer_id = $2',
             [event_id, photographer_id]
         );
 
         if (eventCheck.rows.length === 0) {
-            return res.status(404).json({ error: 'Evento no encontrado o sin permisos para subir fotos.' });
+            return res.status(404).json({ error: 'Evento no encontrado o sin permisos.' });
         }
 
         const uploadedPhotos = [];
@@ -80,35 +76,21 @@ router.post('/upload', verificarToken, upload.array('photos', 50), async (req, r
             // Validar magic bytes
             if (!validateMagicBytes(file.buffer, file.mimetype)) {
                 return res.status(400).json({ 
-                    error: `El archivo ${file.originalname} no es una imagen válida o está corrupto.` 
+                    error: `El archivo ${file.originalname} no es una imagen válida.` 
                 });
             }
 
-            // Generar nombre único seguro (sin usar el nombre original)
+            // Nombre único con UUID (sin usar nombre original por seguridad)
             const uniqueId = crypto.randomBytes(16).toString('hex');
-            const ext = file.mimetype.split('/')[1] === 'jpeg' ? 'jpg' : file.mimetype.split('/')[1];
+            const ext = file.mimetype === 'image/jpeg' ? 'jpg' : file.mimetype.split('/')[1];
             const fileName = `events/${event_id}/${uniqueId}.${ext}`;
 
-            // Opcional: procesar imagen con sharp para optimizar (comprimir, redimensionar)
-            let processedBuffer = file.buffer;
-            try {
-                processedBuffer = await sharp(file.buffer)
-                    .resize(2400, 2400, { 
-                        fit: 'inside', 
-                        withoutEnlargement: true 
-                    })
-                    .jpeg({ quality: 85 })
-                    .toBuffer();
-            } catch (sharpError) {
-                console.error('Error procesando imagen con Sharp, usando original:', sharpError.message);
-                processedBuffer = file.buffer;
-            }
-
+            // ✅ SUBIR EL ARCHIVO ORIGINAL (SIN COMPRIMIR) PARA MÁXIMA CALIDAD
             const uploadParams = {
                 Bucket: process.env.AWS_BUCKET_NAME,
                 Key: fileName,
-                Body: processedBuffer,
-                ContentType: 'image/jpeg',
+                Body: file.buffer,              // Buffer original, sin tocar
+                ContentType: file.mimetype,     // Respeta el formato original
                 ServerSideEncryption: 'AES256'
             };
 
@@ -125,7 +107,7 @@ router.post('/upload', verificarToken, upload.array('photos', 50), async (req, r
         }
 
         res.status(201).json({
-            mensaje: `¡${uploadedPhotos.length} fotografía(s) subida(s) exitosamente!`,
+            mensaje: `¡${uploadedPhotos.length} fotografía(s) subida(s) en calidad original!`,
             photos: uploadedPhotos
         });
 
@@ -134,7 +116,7 @@ router.post('/upload', verificarToken, upload.array('photos', 50), async (req, r
         
         if (error instanceof multer.MulterError) {
             if (error.code === 'LIMIT_FILE_SIZE') {
-                return res.status(400).json({ error: 'Archivo demasiado grande. Máximo 15MB por foto.' });
+                return res.status(400).json({ error: 'Archivo demasiado grande. Máximo 25MB por foto.' });
             }
             if (error.code === 'LIMIT_FILE_COUNT') {
                 return res.status(400).json({ error: 'Demasiados archivos. Máximo 50 fotos por subida.' });
