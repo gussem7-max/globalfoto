@@ -5,6 +5,9 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const verificarToken = require('../middleware/auth');
 
+// Clave secreta estandarizada para toda la aplicación
+const JWT_SECRET = process.env.JWT_SECRET || 'clave_secreta_globalfoto_2026';
+
 // Ruta para el Login
 router.post('/login', async (req, res) => {
     try {
@@ -22,9 +25,10 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ error: 'Credenciales inválidas.' });
         }
 
+        // Usamos la misma clave secreta estandarizada
         const token = jwt.sign(
             { id: user.id, email: user.email, role: user.role },
-            process.env.JWT_SECRET || 'secreto_super_seguro',
+            JWT_SECRET,
             { expiresIn: '7d' }
         );
 
