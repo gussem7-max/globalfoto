@@ -6,7 +6,6 @@ const archiver = require('archiver');
 const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const axios = require('axios');
 
-// Inicializar cliente S3
 const s3Client = new S3Client({
     region: process.env.AWS_REGION,
     credentials: {
@@ -15,23 +14,27 @@ const s3Client = new S3Client({
     }
 });
 
-// Ruta para crear un nuevo evento (Protegida)
+// Validar que un ID sea número entero positivo
+const isValidId = (id) => /^\d+$/.test(id) && parseInt(id) > 0;
+
+// Crear evento (Protegido)
 router.post('/', verificarToken, async (req, res) => {
     try {
         const { title, description, event_date, location } = req.body;
         
-        if (!title || !event_date) {
-            return res.status(400).json({ error: 'El título y la fecha del evento son obligatorios.' });
+        if (!title || title.trim().length < 3) {
+            return res.status(400).json({ error: 'El título debe tener al menos 3 caracteres.' });
+        }
+        if (!event_date) {
+            return res.status(400).json({ error: 'La fecha del evento es obligatoria.' });
         }
 
         const photographer_id = req.user.id;
-
-        // Limpiar la fecha asegurando formato AAAA-MM-DD
         const formattedDate = new Date(event_date).toISOString().split('T')[0];
 
         const newEvent = await pool.query(
             'INSERT INTO events (title, description, event_date, location, photographer_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [title, description || '', formattedDate, location || '', photographer_id]
+            [title.trim(), (description || '').trim(), formattedDate, (location || '').trim(), photographer_id]
         );
 
         res.status(201).json({
@@ -40,29 +43,26 @@ router.post('/', verificarToken, async (req, res) => {
         });
 
     } catch (error) {
-        // Imprimir el error exacto en la consola del servidor (Logs de Render)
-        console.error('Error detallado de PostgreSQL:', error);
-        
-        // Devolver el mensaje real de la base de datos para diagnosticar en pantalla
-        res.status(500).json({ 
-            error: `Error en BD: ${error.message || 'Error interno al crear el evento.'}` 
-        });
+        console.error('Error al crear evento:', error);
+        res.status(500).json({ error: 'Error interno al crear el evento.' });
     }
 });
 
-// Ruta para listar todos los eventos (Actualizada con conteo de fotos)
-router.get('/', async (req, res) => {
+// Listar eventos SOLO del usuario autenticado (Protegido)
+router.get('/', verificarToken, async (req, res) => {
     try {
+        const photographer_id = req.user.id;
+        
         const query = `
             SELECT e.*, COUNT(p.id) as "photosCount"
             FROM events e
             LEFT JOIN photos p ON e.id = p.event_id
+            WHERE e.photographer_id = $1
             GROUP BY e.id
             ORDER BY e.created_at DESC;
         `;
-        const allEvents = await pool.query(query);
+        const allEvents = await pool.query(query, [photographer_id]);
         
-        // Asegurarnos de que photosCount sea un número entero
         const eventsWithCount = allEvents.rows.map(ev => ({
             ...ev,
             photosCount: parseInt(ev.photosCount, 10) || 0
@@ -75,11 +75,27 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Ruta para eliminar un evento
+// Eliminar evento (Protegido + verificación de propiedad)
 router.delete('/:id', verificarToken, async (req, res) => {
     try {
         const { id } = req.params;
+        const photographer_id = req.user.id;
 
+        if (!isValidId(id)) {
+            return res.status(400).json({ error: 'ID de evento inválido.' });
+        }
+
+        // Verificar que el evento existe Y pertenece al usuario autenticado
+        const eventCheck = await pool.query(
+            'SELECT id FROM events WHERE id = $1 AND photographer_id = $2',
+            [id, photographer_id]
+        );
+
+        if (eventCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'Evento no encontrado o sin permisos.' });
+        }
+
+        // Eliminar fotos de S3
         const photosResult = await pool.query('SELECT * FROM photos WHERE event_id = $1', [id]);
         
         for (const photo of photosResult.rows) {
@@ -96,17 +112,21 @@ router.delete('/:id', verificarToken, async (req, res) => {
 
         await pool.query('DELETE FROM events WHERE id = $1', [id]);
 
-        res.json({ mensaje: 'Evento y sus fotografías eliminados correctamente de la nube.' });
+        res.json({ mensaje: 'Evento y sus fotografías eliminados correctamente.' });
     } catch (error) {
         console.error('Error al eliminar evento:', error);
         res.status(500).json({ error: 'Error interno al eliminar el evento.' });
     }
 });
 
-// Ruta pública para ver un evento específico
+// Galería pública (sin autenticación)
 router.get('/:id/public', async (req, res) => {
     try {
         const { id } = req.params;
+
+        if (!isValidId(id)) {
+            return res.status(400).json({ error: 'ID de evento inválido.' });
+        }
 
         const eventResult = await pool.query('SELECT * FROM events WHERE id = $1', [id]);
         if (eventResult.rows.length === 0) {
@@ -126,10 +146,14 @@ router.get('/:id/public', async (req, res) => {
     }
 });
 
-// Ruta pública para descargar ZIP
+// Descarga ZIP (público, pero con validación)
 router.get('/:id/download-zip', async (req, res) => {
     try {
         const { id } = req.params;
+
+        if (!isValidId(id)) {
+            return res.status(400).json({ error: 'ID de evento inválido.' });
+        }
 
         const eventResult = await pool.query('SELECT * FROM events WHERE id = $1', [id]);
         if (eventResult.rows.length === 0) {
@@ -152,7 +176,7 @@ router.get('/:id/download-zip', async (req, res) => {
         archive.on('error', (err) => {
             console.error('Error al empaquetar ZIP:', err);
             if (!res.headersSent) {
-                res.status(500).send({ error: 'Error al generar el archivo ZIP.' });
+                res.status(500).json({ error: 'Error al generar el archivo ZIP.' });
             }
         });
 
