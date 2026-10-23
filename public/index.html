@@ -148,6 +148,16 @@
         .alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 12px; text-align: center; }
         .alert-success { background: #d1fae5; color: #065f46; }
         .alert-error { background: #fee2e2; color: #991b1b; }
+        /* PRICING CARD */
+        .pricing-section { margin-top: 24px; padding-top: 24px; border-top: 2px solid var(--border-color); }
+        .pricing-card { background: #f8fafc; padding: 20px; border-radius: 10px; border: 1px solid var(--border-color); }
+        .pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .toggle-switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 26px; }
+        .toggle-slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .toggle-slider { background-color: var(--accent); }
+        input:checked + .toggle-slider:before { transform: translateX(24px); }
     </style>
 </head>
 <body>
@@ -719,22 +729,57 @@
                                     <button class="btn-action" onclick="deleteEvent(${ev.id})" title="Eliminar Evento"><i class="fa-solid fa-trash"></i></button>
                                 </div>
                             </div>
-                            <div class="event-body">
-                                <div class="event-desc">${ev.description || ''}</div>
-                                <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">Enlace público:</div>
-                                <div style="display: flex; gap: 6px;">
-                                    <input type="text" readonly value="${publicUrl}" style="font-size: 11px; background: #f8fafc; padding: 6px; border: 1px solid var(--border-color); border-radius: 6px; width: 100%; color: var(--text-muted);">
-                                </div>
-                                
-                                <div class="upload-box">
-                                    <form onsubmit="uploadPhotos(event, ${ev.id})" style="display: flex; width: 100%; gap: 8px;">
-                                        <input type="file" id="fileInput_${ev.id}" multiple accept="image/*" class="file-input" onchange="updateFileLabel(${ev.id})">
-                                        <label for="fileInput_${ev.id}" class="file-label" id="fileLabel_${ev.id}">Seleccionar fotos</label>
-                                        <button type="submit" class="btn-upload">Subir</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
+<div class="event-body">
+    <div class="event-desc">${ev.description || ''}</div>
+    
+    <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">Enlace público:</div>
+    <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+        <input type="text" readonly value="${publicUrl}" style="font-size: 11px; background: #f8fafc; padding: 6px; border: 1px solid var(--border-color); border-radius: 6px; width: 100%; color: var(--text-muted);">
+    </div>
+    
+    <div class="upload-box">
+        <form onsubmit="uploadPhotos(event, ${ev.id})" style="display: flex; width: 100%; gap: 8px;">
+            <input type="file" id="fileInput_${ev.id}" multiple accept="image/*" class="file-input" onchange="updateFileLabel(${ev.id})">
+            <label for="fileInput_${ev.id}" class="file-label" id="fileLabel_${ev.id}">Seleccionar fotos</label>
+            <button type="submit" class="btn-upload">Subir</button>
+        </form>
+    </div>
+
+    <div class="pricing-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h4 style="font-size: 14px; color: #0f172a;">💰 Configuración de Ventas</h4>
+            <label class="toggle-switch">
+                <input type="checkbox" id="salesToggle_${ev.id}" ${ev.sales_enabled ? 'checked' : ''} onchange="toggleSales(${ev.id})">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        
+        <div class="pricing-card" id="pricingCard_${ev.id}" style="${ev.sales_enabled ? '' : 'opacity: 0.5; pointer-events: none;'}">
+            <div class="pricing-grid">
+                <div class="form-group">
+                    <label style="font-size: 12px;">Precio por foto</label>
+                    <input type="number" id="pricePhoto_${ev.id}" value="${ev.price_per_photo || 0}" min="0" step="1000">
+                </div>
+                <div class="form-group">
+                    <label style="font-size: 12px;">Galería completa</label>
+                    <input type="number" id="priceGallery_${ev.id}" value="${ev.price_full_gallery || 0}" min="0" step="5000">
+                </div>
+                <div class="form-group" style="grid-column: 1/-1;">
+                    <label style="font-size: 12px;">Número Nequi</label>
+                    <input type="text" id="nequiPhone_${ev.id}" value="${ev.nequi_phone || ''}" placeholder="3001234567">
+                </div>
+                <div class="form-group" style="grid-column: 1/-1;">
+                    <label style="font-size: 12px;">Nombre titular Nequi</label>
+                    <input type="text" id="nequiName_${ev.id}" value="${ev.nequi_name || ''}" placeholder="Juan Pérez">
+                </div>
+            </div>
+            <button onclick="savePricing(${ev.id})" class="btn-primary" style="margin-top: 12px;">
+                <i class="fa-solid fa-save"></i> Guardar Precios
+            </button>
+            <div id="pricingMsg_${ev.id}"></div>
+        </div>
+    </div>
+</div>
                     `;
                 }).join('');
             } catch (err) {
@@ -846,6 +891,52 @@
             localStorage.removeItem('token');
             window.location.href = '/';
         }
+
+        function toggleSales(eventId) {
+    const card = document.getElementById(`pricingCard_${eventId}`);
+    const enabled = document.getElementById(`salesToggle_${eventId}`).checked;
+    card.style.opacity = enabled ? '1' : '0.5';
+    card.style.pointerEvents = enabled ? 'auto' : 'none';
+}
+
+async function savePricing(eventId) {
+    const token = localStorage.getItem('token');
+    const msgDiv = document.getElementById(`pricingMsg_${eventId}`);
+    
+    const data = {
+        price_per_photo: parseFloat(document.getElementById(`pricePhoto_${eventId}`).value) || 0,
+        price_full_gallery: parseFloat(document.getElementById(`priceGallery_${eventId}`).value) || 0,
+        currency: 'COP',
+        nequi_phone: document.getElementById(`nequiPhone_${eventId}`).value.trim(),
+        nequi_name: document.getElementById(`nequiName_${eventId}`).value.trim(),
+        sales_enabled: document.getElementById(`salesToggle_${eventId}`).checked,
+        qr_code_url: '' // Se agregará en siguiente fase con upload de imagen
+    };
+
+    try {
+        const res = await fetch(`/api/events/${eventId}/pricing`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(data)
+        });
+        const result = await res.json();
+
+        if (res.ok) {
+            msgDiv.className = 'alert alert-success';
+            msgDiv.textContent = '✓ Configuración guardada';
+            setTimeout(() => { msgDiv.textContent = ''; msgDiv.className = ''; }, 3000);
+        } else {
+            msgDiv.className = 'alert alert-error';
+            msgDiv.textContent = result.error;
+        }
+    } catch (err) {
+        msgDiv.className = 'alert alert-error';
+        msgDiv.textContent = 'Error de conexión';
+    }
+}
 
         // VERIFICAR SESIÓN AUTOMÁTICA AL CARGAR/ACTUALIZAR LA PÁGINA
         window.addEventListener('DOMContentLoaded', async () => {

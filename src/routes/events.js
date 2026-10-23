@@ -202,4 +202,66 @@ router.get('/:id/download-zip', async (req, res) => {
     }
 });
 
+// Configurar precios y datos de pago de un evento (Protegido)
+router.put('/:id/pricing', verificarToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const photographer_id = req.user.id;
+        const { 
+            price_per_photo, 
+            price_full_gallery, 
+            currency = 'COP',
+            nequi_phone,
+            nequi_name,
+            qr_code_url,
+            sales_enabled 
+        } = req.body;
+
+        if (!isValidId(id)) {
+            return res.status(400).json({ error: 'ID de evento inválido.' });
+        }
+
+        // Verificar propiedad
+        const eventCheck = await pool.query(
+            'SELECT id FROM events WHERE id = $1 AND photographer_id = $2',
+            [id, photographer_id]
+        );
+
+        if (eventCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'Evento no encontrado o sin permisos.' });
+        }
+
+        // Validaciones de precio
+        const photoPrice = parseFloat(price_per_photo) || 0;
+        const galleryPrice = parseFloat(price_full_gallery) || 0;
+
+        if (photoPrice < 0 || galleryPrice < 0) {
+            return res.status(400).json({ error: 'Los precios no pueden ser negativos.' });
+        }
+
+        const updated = await pool.query(`
+            UPDATE events SET 
+                price_per_photo = $1, 
+                price_full_gallery = $2, 
+                currency = $3,
+                nequi_phone = $4,
+                nequi_name = $5,
+                qr_code_url = $6,
+                sales_enabled = $7,
+                updated_at = NOW()
+            WHERE id = $8
+            RETURNING *
+        `, [photoPrice, galleryPrice, currency, nequi_phone, nequi_name, qr_code_url, sales_enabled === true, id]);
+
+        res.json({
+            mensaje: 'Configuración de precios actualizada.',
+            event: updated.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Error al actualizar precios:', error);
+        res.status(500).json({ error: 'Error interno al guardar la configuración.' });
+    }
+});
+
 module.exports = router;
