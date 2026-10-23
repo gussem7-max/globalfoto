@@ -724,46 +724,58 @@
             window.location.href = '/';
         }
 
-// VERIFICAR SESIÓN AUTOMÁTICA AL ACTUALIZAR LA PÁGINA (Evita que se cierre sesión)
-        window.addEventListener('DOMContentLoaded', async () => {
-            const token = localStorage.getItem('token');
-            const urlParams = new URLSearchParams(window.location.search);
-            const galeriaId = urlParams.get('galeria');
+// VERIFICAR SESIÓN AUTOMÁTICA AL ACTUALIZAR LA PÁGINA
+window.addEventListener('DOMContentLoaded', async () => {
+    const token = localStorage.getItem('token');
+    const urlParams = new URLSearchParams(window.location.search);
+    const galeriaId = urlParams.get('galeria');
 
-            // 1. Si no hay token, redirigir o mostrar el login de inmediato de forma limpia
-            if (!token) {
-                // Asegúrate de mostrar tu contenedor de login aquí si lo tenías oculto
-                document.getElementById('login-container')?.classList.remove('hidden');
-                return;
-            }
+    // Si hay parámetro galeria, cargar galería pública
+    if (galeriaId) {
+        await loadPublicGallery(galeriaId);
+        return;
+    }
 
-            try {
-                // 2. Validar el token con el servidor
-                const response = await fetch('/api/auth/me', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
+    // Si no hay token, mostrar login
+    if (!token) {
+        document.getElementById('authContainer').classList.remove('hidden');
+        document.getElementById('dashboardContainer').classList.add('hidden');
+        return;
+    }
 
-                if (response.ok) {
-                    const data = await response.json();
-                    // El token es válido: ocultamos el login y mostramos el panel/dashboard
-                    document.getElementById('login-container')?.style.setProperty('display', 'none', 'important');
-                    document.getElementById('dashboard-container')?.classList.remove('hidden');
-                    
-                    // Aquí puedes continuar con la lógica de tu galería o carga de datos
-                } else {
-                    // Token inválido o expirado
-                    localStorage.removeItem('token');
-                    document.getElementById('login-container')?.classList.remove('hidden');
-                }
-            } catch (error) {
-                console.error('Error al verificar la sesión:', error);
-                localStorage.removeItem('token');
-                document.getElementById('login-container')?.classList.remove('hidden');
+    try {
+        // Validar el token con el servidor
+        const response = await fetch('/api/auth/me', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
             }
         });
+
+        if (response.ok) {
+            const data = await response.json();
+            // ✅ IMPORTANTE: Guardar currentUser para que funcione el dashboard
+            currentUser = data.user;
+            
+            // Ocultar login y mostrar dashboard
+            document.getElementById('authContainer').classList.add('hidden');
+            document.getElementById('dashboardContainer').classList.remove('hidden');
+            
+            // Cargar datos del dashboard
+            showDashboard();
+        } else {
+            // Token inválido o expirado
+            localStorage.removeItem('token');
+            document.getElementById('authContainer').classList.remove('hidden');
+            document.getElementById('dashboardContainer').classList.add('hidden');
+        }
+    } catch (error) {
+        console.error('Error al verificar la sesión:', error);
+        localStorage.removeItem('token');
+        document.getElementById('authContainer').classList.remove('hidden');
+        document.getElementById('dashboardContainer').classList.add('hidden');
+    }
+});
     </script>
 </body>
 </html>
