@@ -108,26 +108,42 @@
         .photo-more { width: 100%; aspect-ratio: 1; background: #f1f5f9; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--text-muted); }
 
         .public-wrapper { width: 100vw; min-height: 100vh; background: #0f172a; color: white; padding: 40px 20px; display: flex; justify-content: center; }
-        .public-container { width: 100%; max-width: 1000px; }
-        .public-header { text-align: center; margin-bottom: 40px; }
+        .public-container { width: 100%; max-width: 1200px; }
+        .public-header { text-align: center; margin-bottom: 30px; }
         .public-header h1 { font-size: 32px; margin-bottom: 10px; }
         .public-header p { color: #94a3b8; font-size: 15px; }
-        .public-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
-        .public-photo-card { background: #1e293b; border-radius: 12px; overflow: hidden; border: 1px solid #334155; display: flex; flex-direction: column; position: relative; }
-        .public-photo-img { width: 100%; height: 180px; object-fit: cover; cursor: pointer; }
-        .photo-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.7); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); pointer-events: none; }
-        .public-photo-footer { padding: 12px; display: flex; justify-content: space-between; align-items: center; }
-        .btn-download { background: var(--accent); color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+        .public-pricing-bar { background: rgba(255,255,255,0.05); padding: 16px 24px; border-radius: 12px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border: 1px solid rgba(255,255,255,0.1); }
+        .public-pricing-info { display: flex; gap: 24px; flex-wrap: wrap; }
+        .public-price-item { display: flex; flex-direction: column; }
+        .public-price-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+        .public-price-value { font-size: 18px; font-weight: 700; color: white; }
+        .btn-buy-gallery { background: var(--success); color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .btn-buy-gallery:hover { background: #059669; }
+        
+        .public-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+        .public-photo-card { background: #1e293b; border-radius: 12px; overflow: hidden; border: 1px solid #334155; display: flex; flex-direction: column; position: relative; transition: transform 0.2s; }
+        .public-photo-card:hover { transform: translateY(-2px); }
+        .public-photo-card.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+        .public-photo-wrapper { position: relative; cursor: pointer; }
+        .public-photo-img { width: 100%; height: 200px; object-fit: cover; display: block; }
+        .photo-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg); font-size: 22px; font-weight: 900; color: rgba(255,255,255,0.5); text-shadow: 2px 2px 8px rgba(0,0,0,0.8); pointer-events: none; letter-spacing: 2px; white-space: nowrap; user-select: none; }
+        .photo-select-check { position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; background: var(--accent); border-radius: 50%; display: none; align-items: center; justify-content: center; color: white; font-size: 14px; }
+        .public-photo-card.selected .photo-select-check { display: flex; }
+        .public-photo-footer { padding: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+        .photo-price-tag { font-size: 12px; color: #94a3b8; }
+        .btn-buy-photo { background: var(--accent); color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; border: none; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+        .btn-buy-photo:hover { background: var(--accent-hover); }
 
         .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
         .config-card { background: white; padding: 28px; border-radius: 12px; border: 1px solid var(--border-color); }
 
-        .modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.7); display: flex; justify-content: center; align-items: center; backdrop-filter: blur(4px); z-index: 1000; }
-        .modal-content { background: white; padding: 32px; border-radius: 16px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+        .modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.8); display: flex; justify-content: center; align-items: center; backdrop-filter: blur(4px); z-index: 1000; padding: 20px; }
+        .modal-content { background: white; padding: 32px; border-radius: 16px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+        .modal-content.large { max-width: 700px; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .close-modal { font-size: 20px; color: var(--text-muted); cursor: pointer; }
-        .lightbox-content { max-width: 80vw; max-height: 80vh; background: transparent; display: flex; flex-direction: column; align-items: center; }
-        .lightbox-img { max-width: 100%; max-height: 75vh; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .lightbox-content { max-width: 90vw; max-height: 90vh; background: transparent; display: flex; flex-direction: column; align-items: center; }
+        .lightbox-img { max-width: 100%; max-height: 80vh; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
 
         .hidden { display: none !important; }
         .alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 12px; text-align: center; }
@@ -169,6 +185,28 @@
         .order-actions { display: flex; gap: 8px; margin-top: 12px; }
         .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
         .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
+
+        /* MODAL DE COMPRA */
+        .purchase-summary { background: #f8fafc; padding: 16px; border-radius: 10px; margin-bottom: 20px; border: 1px solid var(--border-color); }
+        .purchase-summary-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+        .purchase-summary-row.total { border-top: 1px solid var(--border-color); margin-top: 8px; padding-top: 12px; font-weight: 700; font-size: 15px; }
+        .nequi-info { background: #eff6ff; padding: 16px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid var(--accent); }
+        .nequi-info h4 { font-size: 13px; color: var(--accent); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .nequi-info p { font-size: 14px; color: #0f172a; margin-bottom: 4px; }
+        .nequi-info strong { color: var(--accent); }
+        .receipt-upload { border: 2px dashed var(--border-color); border-radius: 10px; padding: 24px; text-align: center; cursor: pointer; transition: all 0.2s; background: #f8fafc; }
+        .receipt-upload:hover { border-color: var(--accent); background: #eff6ff; }
+        .receipt-upload i { font-size: 32px; color: var(--accent); margin-bottom: 8px; }
+        .receipt-upload p { font-size: 13px; color: var(--text-muted); }
+        .receipt-preview { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 12px; }
+
+        @media (max-width: 768px) {
+            .sidebar { width: 70px; padding: 16px 8px; }
+            .brand span, .nav-item span:not(.nav-badge), .user-info { display: none; }
+            .nav-item { justify-content: center; }
+            .main-content { padding: 16px; }
+            .public-pricing-bar { flex-direction: column; align-items: stretch; }
+        }
     </style>
 </head>
 <body>
@@ -177,6 +215,7 @@
         <div class="spinner"></div>
     </div>
 
+    <!-- VISTA PÚBLICA (Cliente) -->
     <div id="publicView" class="public-wrapper hidden">
         <div class="public-container">
             <div style="margin-bottom: 20px;">
@@ -186,10 +225,32 @@
                 <h1 id="pubEventTitle">Cargando evento...</h1>
                 <p id="pubEventDetails"></p>
             </div>
+            
+            <!-- Barra de precios y compra de galería -->
+            <div id="pubPricingBar" class="public-pricing-bar hidden">
+                <div class="public-pricing-info">
+                    <div class="public-price-item">
+                        <span class="public-price-label">Por foto</span>
+                        <span class="public-price-value" id="pubPricePhoto">$0</span>
+                    </div>
+                    <div class="public-price-item">
+                        <span class="public-price-label">Galería completa</span>
+                        <span class="public-price-value" id="pubPriceGallery">$0</span>
+                    </div>
+                    <div class="public-price-item" style="font-size: 12px; color: #94a3b8; align-self: center;">
+                        <i class="fa-solid fa-circle-info"></i> Selecciona las fotos que quieras comprar
+                    </div>
+                </div>
+                <button class="btn-buy-gallery" onclick="openPurchaseModal('gallery')">
+                    <i class="fa-solid fa-cart-shopping"></i> Comprar galería completa
+                </button>
+            </div>
+
             <div class="public-gallery" id="pubPhotoGrid"></div>
         </div>
     </div>
 
+    <!-- AUTH -->
     <div id="authContainer" class="auth-wrapper hidden">
         <div class="auth-card">
             <div class="brand" style="justify-content: center; margin-bottom: 20px; color: #0f172a;">
@@ -242,17 +303,18 @@
         </div>
     </div>
 
+    <!-- DASHBOARD -->
     <div id="dashboardContainer" class="dashboard-layout hidden">
         <aside class="sidebar">
             <div>
                 <div class="brand">
-                    <i class="fa-solid fa-camera-retro"></i> GlobalFoto
+                    <i class="fa-solid fa-camera-retro"></i> <span>GlobalFoto</span>
                 </div>
                 <ul class="nav-menu">
-                    <li class="nav-item active" id="navEvents" onclick="showSection('events')"><i class="fa-solid fa-calendar-days"></i> Eventos</li>
-                    <li class="nav-item" id="navGalleries" onclick="showSection('galleries')"><i class="fa-solid fa-images"></i> Galerías</li>
-                    <li class="nav-item" id="navSales" onclick="showSection('sales')"><i class="fa-solid fa-cart-shopping"></i> Ventas <span class="nav-badge hidden" id="pendingOrdersBadge">0</span></li>
-                    <li class="nav-item" id="navSettings" onclick="showSection('settings')"><i class="fa-solid fa-gear"></i> Configuración</li>
+                    <li class="nav-item active" id="navEvents" onclick="showSection('events')"><i class="fa-solid fa-calendar-days"></i> <span>Eventos</span></li>
+                    <li class="nav-item" id="navGalleries" onclick="showSection('galleries')"><i class="fa-solid fa-images"></i> <span>Galerías</span></li>
+                    <li class="nav-item" id="navSales" onclick="showSection('sales')"><i class="fa-solid fa-cart-shopping"></i> <span>Ventas</span> <span class="nav-badge hidden" id="pendingOrdersBadge">0</span></li>
+                    <li class="nav-item" id="navSettings" onclick="showSection('settings')"><i class="fa-solid fa-gear"></i> <span>Configuración</span></li>
                 </ul>
             </div>
             <div class="user-profile">
@@ -281,17 +343,11 @@
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fa-solid fa-folder-open"></i></div>
-                        <div class="stat-data">
-                            <h3 id="statEventsCount">0</h3>
-                            <p>Eventos Totales</p>
-                        </div>
+                        <div class="stat-data"><h3 id="statEventsCount">0</h3><p>Eventos Totales</p></div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fa-solid fa-image"></i></div>
-                        <div class="stat-data">
-                            <h3 id="statPhotosCount">0</h3>
-                            <p>Fotos Almacenadas</p>
-                        </div>
+                        <div class="stat-data"><h3 id="statPhotosCount">0</h3><p>Fotos Almacenadas</p></div>
                     </div>
                 </div>
                 <h2 style="font-size: 18px; margin-bottom: 16px; color: #0f172a;">Mis Eventos Fotográficos</h2>
@@ -318,24 +374,15 @@
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fa-solid fa-clock"></i></div>
-                        <div class="stat-data">
-                            <h3 id="pendingCount">0</h3>
-                            <p>Pendientes</p>
-                        </div>
+                        <div class="stat-data"><h3 id="pendingCount">0</h3><p>Pendientes</p></div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fa-solid fa-check"></i></div>
-                        <div class="stat-data">
-                            <h3 id="approvedCount">0</h3>
-                            <p>Aprobados</p>
-                        </div>
+                        <div class="stat-data"><h3 id="approvedCount">0</h3><p>Aprobados</p></div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fa-solid fa-dollar-sign"></i></div>
-                        <div class="stat-data">
-                            <h3 id="totalRevenue">$0</h3>
-                            <p>Ingresos Totales</p>
-                        </div>
+                        <div class="stat-data"><h3 id="totalRevenue">$0</h3><p>Ingresos Totales</p></div>
                     </div>
                 </div>
                 <h2 style="font-size: 18px; margin-bottom: 16px; color: #0f172a;">Pedidos Recientes</h2>
@@ -385,6 +432,7 @@
         </main>
     </div>
 
+    <!-- MODAL NUEVO EVENTO -->
     <div id="eventModal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
@@ -414,8 +462,20 @@
         </div>
     </div>
 
+    <!-- MODAL DE COMPRA (Cliente) -->
+    <div id="purchaseModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="font-size: 18px; color: #0f172a;" id="purchaseModalTitle">Comprar Foto</h3>
+                <i class="fa-solid fa-xmark close-modal" onclick="closePurchaseModal()"></i>
+            </div>
+            <div id="purchaseModalBody"></div>
+        </div>
+    </div>
+
+    <!-- MODAL DETALLES PEDIDO (Fotógrafo) -->
     <div id="orderModal" class="modal hidden">
-        <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-content large">
             <div class="modal-header">
                 <h3 style="font-size: 18px; color: #0f172a;">Detalles del Pedido</h3>
                 <i class="fa-solid fa-xmark close-modal" onclick="closeOrderModal()"></i>
@@ -424,6 +484,7 @@
         </div>
     </div>
 
+    <!-- LIGHTBOX -->
     <div id="lightboxModal" class="modal hidden" onclick="closeLightbox()">
         <div class="lightbox-content" onclick="event.stopPropagation()">
             <img id="lightboxImg" class="lightbox-img" src="" alt="Vista previa">
@@ -437,6 +498,8 @@
         let cachedPhotos = {};
         let editingPricingId = null;
         let cachedOrders = [];
+        let currentPublicEvent = null;
+        let selectedPhotos = new Set();
 
         function hideLoadingOverlay() {
             const overlay = document.getElementById('loadingOverlay');
@@ -481,6 +544,7 @@
             document.getElementById('authContainer').classList.add('hidden');
             document.getElementById('dashboardContainer').classList.add('hidden');
             document.getElementById('publicView').classList.remove('hidden');
+            selectedPhotos.clear();
 
             try {
                 const res = await fetch(`/api/events/${eventId}/public`);
@@ -490,31 +554,49 @@
                     document.getElementById('pubEventDetails').textContent = data.error || 'El evento solicitado no existe.';
                     return;
                 }
+
+                currentPublicEvent = data.event;
                 document.getElementById('pubEventTitle').textContent = data.event.title;
+
+                // Mostrar barra de precios si ventas activas
+                const pricingBar = document.getElementById('pubPricingBar');
+                if (data.event.sales_enabled && (data.event.price_per_photo > 0 || data.event.price_full_gallery > 0)) {
+                    pricingBar.classList.remove('hidden');
+                    document.getElementById('pubPricePhoto').textContent = data.event.price_per_photo ? `$${Number(data.event.price_per_photo).toLocaleString('es-CO')}` : 'No definido';
+                    document.getElementById('pubPriceGallery').textContent = data.event.price_full_gallery ? `$${Number(data.event.price_full_gallery).toLocaleString('es-CO')}` : 'No definido';
+                } else {
+                    pricingBar.classList.add('hidden');
+                }
+
                 const zipDownloadUrl = `/api/events/${eventId}/download-zip`;
                 document.getElementById('pubEventDetails').innerHTML = `
                     <div style="margin-bottom: 16px;">
                         📅 ${data.event.event_date ? data.event.event_date.split('T')[0] : ''} | 📍 ${data.event.location || ''}
                         <br>${data.event.description || ''}
                     </div>
-                    ${data.photos.length > 0 ? `
+                    ${data.photos.length > 0 && !data.event.sales_enabled ? `
                         <a href="${zipDownloadUrl}" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px; width: auto; padding: 10px 20px; text-decoration: none; margin-top: 8px;">
                             <i class="fa-solid fa-file-zipper"></i> Descargar Todas las Fotos (.ZIP)
                         </a>
                     ` : ''}
                 `;
+
                 const grid = document.getElementById('pubPhotoGrid');
                 if (data.photos.length === 0) {
                     grid.innerHTML = '<p style="color: #94a3b8; grid-column: 1/-1; text-align: center;">Este evento aún no tiene fotografías publicadas.</p>';
                     return;
                 }
+
                 grid.innerHTML = data.photos.map(p => `
-                    <div class="public-photo-card">
-                        <img src="${p.url}" class="public-photo-img" onclick="openLightbox('${p.url}')">
-                        <div class="photo-watermark">GlobalFoto</div>
+                    <div class="public-photo-card" id="photoCard_${p.id}" onclick="togglePhotoSelection(${p.id})">
+                        <div class="public-photo-wrapper" onclick="event.stopPropagation(); openLightbox('${p.url}')">
+                            <img src="${p.url}" class="public-photo-img">
+                            <div class="photo-watermark">GlobalFoto</div>
+                            <div class="photo-select-check"><i class="fa-solid fa-check"></i></div>
+                        </div>
                         <div class="public-photo-footer">
-                            <span style="font-size: 11px; color: #94a3b8;">GlobalFoto</span>
-                            <button onclick="openPurchaseModal(${eventId}, ${p.id})" class="btn-download">
+                            <span class="photo-price-tag">${data.event.price_per_photo ? '$' + Number(data.event.price_per_photo).toLocaleString('es-CO') : 'Consultar'}</span>
+                            <button class="btn-buy-photo" onclick="event.stopPropagation(); openPurchaseModal('single', ${p.id})">
                                 <i class="fa-solid fa-cart-shopping"></i> Comprar
                             </button>
                         </div>
@@ -522,6 +604,19 @@
                 `).join('');
             } catch (err) {
                 document.getElementById('pubEventTitle').textContent = 'Error de conexión';
+            }
+        }
+
+        function togglePhotoSelection(photoId) {
+            if (!currentPublicEvent || !currentPublicEvent.sales_enabled) return;
+            
+            const card = document.getElementById(`photoCard_${photoId}`);
+            if (selectedPhotos.has(photoId)) {
+                selectedPhotos.delete(photoId);
+                card.classList.remove('selected');
+            } else {
+                selectedPhotos.add(photoId);
+                card.classList.add('selected');
             }
         }
 
@@ -544,6 +639,11 @@
         function openModal() { document.getElementById('eventModal').classList.remove('hidden'); }
         function closeModal() { document.getElementById('eventModal').classList.add('hidden'); }
         function closeOrderModal() { document.getElementById('orderModal').classList.add('hidden'); }
+        function closePurchaseModal() { 
+            document.getElementById('purchaseModal').classList.add('hidden');
+            selectedPhotos.clear();
+            document.querySelectorAll('.public-photo-card').forEach(c => c.classList.remove('selected'));
+        }
         function openLightbox(url) {
             document.getElementById('lightboxImg').src = url;
             document.getElementById('lightboxModal').classList.remove('hidden');
@@ -834,7 +934,7 @@
                         </div>
                     </div>
                     <div class="commission-note">
-                        <i class="fa-solid fa-circle-info"></i> <strong>Comisión GlobalFoto:</strong> 10% por venta aprobada. Ej: galería de $50.000 → el fotógrafo recibe $45.000 y quedan $5.000 de comisión a favor de la plataforma.
+                        <i class="fa-solid fa-circle-info"></i> <strong>Comisión GlobalFoto:</strong> 10% por venta aprobada.
                     </div>
                     <button onclick="savePricing(${ev.id})" class="btn-primary" style="margin-top: 12px;">
                         <i class="fa-solid fa-save"></i> Guardar Precios
@@ -1011,7 +1111,7 @@
                         <div class="event-header">
                             <div>
                                 <div class="event-title">${ev.title}</div>
-                                <div class="event-meta"><span>📅 ${ev.event_date ? ev.event_date.split('T')[0] : ''}</span></div>
+                                <div class="event-meta"><span> ${ev.event_date ? ev.event_date.split('T')[0] : ''}</span></div>
                             </div>
                         </div>
                         <div class="event-body">
@@ -1136,9 +1236,7 @@
                         msgDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i> ✓ Configuración guardada';
                         msgDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     }
-                    setTimeout(() => {
-                        loadEvents();
-                    }, 800);
+                    setTimeout(() => { loadEvents(); }, 800);
                 } else {
                     if (msgDiv) {
                         msgDiv.className = 'alert alert-error';
@@ -1230,7 +1328,7 @@
                                         <div class="order-info">
                                             <strong>Cliente:</strong> ${order.customer_name || order.customer_email}<br>
                                             <strong>Email:</strong> ${order.customer_email}<br>
-                                            <strong>Tipo:</strong> ${order.order_type === 'gallery' ? 'Galería completa' : `${order.photo_ids.length} foto(s)`}<br>
+                                            <strong>Tipo:</strong> ${order.order_type === 'gallery' ? 'Galería completa' : `${(order.photo_ids || []).length} foto(s)`}<br>
                                             <strong>Fecha:</strong> ${date}
                                         </div>
                                     </div>
@@ -1278,7 +1376,7 @@
                     <p style="font-size: 13px; color: #475569; margin-bottom: 8px;"><strong>Cliente:</strong> ${order.customer_name || 'No especificado'}</p>
                     <p style="font-size: 13px; color: #475569; margin-bottom: 8px;"><strong>Email:</strong> ${order.customer_email}</p>
                     <p style="font-size: 13px; color: #475569; margin-bottom: 8px;"><strong>Evento:</strong> ${order.event_title}</p>
-                    <p style="font-size: 13px; color: #475569; margin-bottom: 8px;"><strong>Tipo:</strong> ${order.order_type === 'gallery' ? 'Galería completa' : `${order.photo_ids.length} foto(s)`}</p>
+                    <p style="font-size: 13px; color: #475569; margin-bottom: 8px;"><strong>Tipo:</strong> ${order.order_type === 'gallery' ? 'Galería completa' : `${(order.photo_ids || []).length} foto(s)`}</p>
                     <p style="font-size: 13px; color: #475569; margin-bottom: 8px;"><strong>Monto total:</strong> $${Number(order.amount).toLocaleString('es-CO')}</p>
                     <p style="font-size: 13px; color: #475569; margin-bottom: 8px;"><strong>Tu ganancia (90%):</strong> $${Number(order.photographer_net).toLocaleString('es-CO')}</p>
                     <p style="font-size: 13px; color: #475569;"><strong>Comisión GlobalFoto (10%):</strong> $${Number(order.commission_amount).toLocaleString('es-CO')}</p>
@@ -1353,8 +1451,193 @@
             }
         }
 
-        function openPurchaseModal(eventId, photoId) {
-            alert('Formulario de compra en desarrollo. Próximamente podrás comprar fotos directamente desde aquí.');
+        // =====================================================
+        // FORMULARIO DE COMPRA (CLIENTE)
+        // =====================================================
+        function openPurchaseModal(type, photoId = null) {
+            if (!currentPublicEvent) return;
+            
+            const modal = document.getElementById('purchaseModal');
+            const title = document.getElementById('purchaseModalTitle');
+            const body = document.getElementById('purchaseModalBody');
+
+            let orderType = type;
+            let photoIds = [];
+            let amount = 0;
+            let description = '';
+
+            if (type === 'gallery') {
+                orderType = 'gallery';
+                amount = parseFloat(currentPublicEvent.price_full_gallery) || 0;
+                description = `Galería completa: ${currentPublicEvent.title}`;
+                title.innerHTML = '<i class="fa-solid fa-images"></i> Comprar Galería Completa';
+            } else {
+                // Single o múltiples seleccionadas
+                if (photoId) {
+                    photoIds = [photoId];
+                } else {
+                    photoIds = Array.from(selectedPhotos);
+                }
+                
+                if (photoIds.length === 0) {
+                    alert('Selecciona al menos una foto haciendo clic en ella.');
+                    return;
+                }
+                
+                orderType = 'single';
+                amount = (parseFloat(currentPublicEvent.price_per_photo) || 0) * photoIds.length;
+                description = `${photoIds.length} foto(s) seleccionada(s)`;
+                title.innerHTML = `<i class="fa-solid fa-cart-shopping"></i> Comprar ${photoIds.length} foto(s)`;
+            }
+
+            if (amount <= 0) {
+                alert('Los precios no están configurados para este evento.');
+                return;
+            }
+
+            body.innerHTML = `
+                <div class="purchase-summary">
+                    <div class="purchase-summary-row">
+                        <span>Evento:</span>
+                        <strong>${currentPublicEvent.title}</strong>
+                    </div>
+                    <div class="purchase-summary-row">
+                        <span>Tipo:</span>
+                        <span>${description}</span>
+                    </div>
+                    <div class="purchase-summary-row">
+                        <span>Precio unitario:</span>
+                        <span>$${Number(currentPublicEvent.price_per_photo).toLocaleString('es-CO')}</span>
+                    </div>
+                    <div class="purchase-summary-row total">
+                        <span>Total a pagar:</span>
+                        <span style="color: var(--accent);">$${amount.toLocaleString('es-CO')}</span>
+                    </div>
+                </div>
+
+                <div class="nequi-info">
+                    <h4><i class="fa-solid fa-mobile-screen"></i> Datos para transferir por Nequi</h4>
+                    <p><strong>Número:</strong> ${currentPublicEvent.nequi_phone || 'No configurado'}</p>
+                    <p><strong>Titular:</strong> ${currentPublicEvent.nequi_name || 'No configurado'}</p>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">
+                        <i class="fa-solid fa-circle-info"></i> Transfiere exactamente <strong>$${amount.toLocaleString('es-CO')}</strong> y sube el comprobante abajo.
+                    </p>
+                </div>
+
+                <form id="purchaseForm">
+                    <div class="form-group">
+                        <label>Nombre Completo *</label>
+                        <input type="text" id="customerName" required placeholder="Tu nombre">
+                    </div>
+                    <div class="form-group">
+                        <label>Correo Electrónico * (aquí recibirás las fotos)</label>
+                        <input type="email" id="customerEmail" required placeholder="tu@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Comprobante de Pago * (captura de pantalla)</label>
+                        <label for="receiptFile" class="receipt-upload" id="receiptUploadLabel">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <p>Haz clic o arrastra tu comprobante aquí</p>
+                            <p style="font-size: 11px; margin-top: 4px;">JPG, PNG (máx. 5MB)</p>
+                            <input type="file" id="receiptFile" accept="image/*" required style="display: none;" onchange="previewReceipt(event)">
+                        </label>
+                        <img id="receiptPreview" class="receipt-preview hidden">
+                    </div>
+                    <button type="submit" class="btn-primary" id="submitPurchaseBtn">
+                        <i class="fa-solid fa-paper-plane"></i> Enviar Pedido
+                    </button>
+                    <div id="purchaseResult"></div>
+                </form>
+
+                <p style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 16px;">
+                    <i class="fa-solid fa-shield-halved"></i> El fotógrafo revisará tu comprobante y te enviará las fotos por email en las próximas horas.
+                </p>
+            `;
+
+            // Guardar datos en variables para el submit
+            body.dataset.orderType = orderType;
+            body.dataset.photoIds = JSON.stringify(photoIds);
+            body.dataset.amount = amount;
+
+            document.getElementById('purchaseForm').addEventListener('submit', submitPurchase);
+            modal.classList.remove('hidden');
+        }
+
+        function previewReceipt(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const preview = document.getElementById('receiptPreview');
+                    preview.src = e.target.result;
+                    preview.classList.remove('hidden');
+                    document.getElementById('receiptUploadLabel').querySelector('p').textContent = file.name;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function submitPurchase(e) {
+            e.preventDefault();
+            
+            const body = document.getElementById('purchaseModalBody');
+            const orderType = body.dataset.orderType;
+            const photoIds = JSON.parse(body.dataset.photoIds);
+            const amount = body.dataset.amount;
+            
+            const customerName = document.getElementById('customerName').value;
+            const customerEmail = document.getElementById('customerEmail').value;
+            const receiptFile = document.getElementById('receiptFile').files[0];
+            const resultDiv = document.getElementById('purchaseResult');
+            const submitBtn = document.getElementById('submitPurchaseBtn');
+
+            if (!receiptFile) {
+                resultDiv.className = 'alert alert-error';
+                resultDiv.textContent = 'Debes subir el comprobante de pago.';
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
+
+            const formData = new FormData();
+            formData.append('event_id', currentPublicEvent.id);
+            formData.append('customer_email', customerEmail);
+            formData.append('customer_name', customerName);
+            formData.append('order_type', orderType);
+            formData.append('photo_ids', JSON.stringify(photoIds));
+            formData.append('receipt', receiptFile);
+
+            try {
+                const res = await fetch('/api/orders/create', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    resultDiv.className = 'alert alert-success';
+                    resultDiv.innerHTML = `
+                        <i class="fa-solid fa-circle-check"></i> 
+                        <strong>¡Pedido enviado con éxito!</strong><br>
+                        <span style="font-size: 12px;">El fotógrafo revisará tu comprobante y te enviará las fotos a <strong>${customerEmail}</strong> en las próximas horas.</span>
+                    `;
+                    setTimeout(() => {
+                        closePurchaseModal();
+                        resultDiv.className = '';
+                        resultDiv.innerHTML = '';
+                    }, 4000);
+                } else {
+                    resultDiv.className = 'alert alert-error';
+                    resultDiv.textContent = data.error || 'Error al enviar el pedido.';
+                }
+            } catch (err) {
+                resultDiv.className = 'alert alert-error';
+                resultDiv.textContent = 'Error de conexión.';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Pedido';
+            }
         }
 
         window.addEventListener('DOMContentLoaded', async () => {

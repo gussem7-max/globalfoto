@@ -40,10 +40,8 @@ const transporter = nodemailer.createTransport({
 
 const isValidId = (id) => /^\d+$/.test(id) && parseInt(id) > 0;
 
-// =====================================================
 // CLIENTE: Crear pedido y subir comprobante
-// =====================================================
-router.post('/create', async (req, res) => {
+router.post('/create', upload.single('receipt'), async (req, res) => {
     try {
         const { event_id, customer_email, customer_name, order_type, photo_ids } = req.body;
         const receiptImage = req.file;
@@ -70,11 +68,21 @@ router.post('/create', async (req, res) => {
 
         // Calcular monto
         let amount = 0;
+        let finalPhotoIds = [];
+        
         if (order_type === 'gallery') {
             amount = parseFloat(event.price_full_gallery) || 0;
-        } else if (order_type === 'single' && photo_ids && photo_ids.length > 0) {
+            // Obtener todas las fotos del evento
+            const photosResult = await pool.query('SELECT id FROM photos WHERE event_id = $1', [event_id]);
+            finalPhotoIds = photosResult.rows.map(p => p.id);
+        } else if (order_type === 'single') {
             const pricePerPhoto = parseFloat(event.price_per_photo) || 0;
-            amount = pricePerPhoto * photo_ids.length;
+            const selectedPhotos = photo_ids ? JSON.parse(photo_ids) : [];
+            if (selectedPhotos.length === 0) {
+                return res.status(400).json({ error: 'Debe seleccionar al menos una foto.' });
+            }
+            amount = pricePerPhoto * selectedPhotos.length;
+            finalPhotoIds = selectedPhotos;
         }
 
         if (amount <= 0) {
@@ -82,7 +90,7 @@ router.post('/create', async (req, res) => {
         }
 
         // Subir comprobante a S3
-        const receiptFileName = `receipts/${event_id}/${Date.now()}_${crypto.randomBytes(8).toString('hex')}.jpg`;
+        const receiptFileName = `receipts/${event_id}/${Date.now()}_${crypto.randomBytes(8).toString('hex')}.${receiptImage.mimetype.split('/')[1]}`;
         await s3Client.send(new PutObjectCommand({
             Bucket: process.env.AWS_BUCKET_NAME,
             Key: receiptFileName,
@@ -106,7 +114,7 @@ router.post('/create', async (req, res) => {
             RETURNING *
         `, [
             event_id, customer_email, customer_name || '', order_type,
-            photo_ids || [], amount, event.currency || 'COP',
+            `{${finalPhotoIds.join(',')}}`, amount, event.currency || 'COP',
             receiptUrl, receiptFileName, commissionAmount, photographerNet
         ]);
 
