@@ -15,22 +15,23 @@ const s3Client = new S3Client({
     }
 });
 
-// Ruta para crear un nuevo evento (Protegida con verificarToken)
+// Ruta para crear un nuevo evento (Protegida)
 router.post('/', verificarToken, async (req, res) => {
     try {
         const { title, description, event_date, location } = req.body;
         
-        // Validación básica para evitar errores en la base de datos si falta la fecha
         if (!title || !event_date) {
             return res.status(400).json({ error: 'El título y la fecha del evento son obligatorios.' });
         }
 
-        // El ID del fotógrafo lo extraemos directamente del token verificado (req.user.id)
         const photographer_id = req.user.id;
+
+        // Limpiar la fecha asegurando formato AAAA-MM-DD
+        const formattedDate = new Date(event_date).toISOString().split('T')[0];
 
         const newEvent = await pool.query(
             'INSERT INTO events (title, description, event_date, location, photographer_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [title, description, event_date, location, photographer_id]
+            [title, description || '', formattedDate, location || '', photographer_id]
         );
 
         res.status(201).json({
@@ -39,8 +40,13 @@ router.post('/', verificarToken, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error al crear el evento:', error);
-        res.status(500).json({ error: 'Error interno del servidor al crear el evento.' });
+        // Imprimir el error exacto en la consola del servidor (Logs de Render)
+        console.error('Error detallado de PostgreSQL:', error);
+        
+        // Devolver el mensaje real de la base de datos para diagnosticar en pantalla
+        res.status(500).json({ 
+            error: `Error en BD: ${error.message || 'Error interno al crear el evento.'}` 
+        });
     }
 });
 
@@ -55,7 +61,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Ruta para eliminar un evento (Protegida)
+// Ruta para eliminar un evento
 router.delete('/:id', verificarToken, async (req, res) => {
     try {
         const { id } = req.params;
@@ -83,7 +89,7 @@ router.delete('/:id', verificarToken, async (req, res) => {
     }
 });
 
-// Ruta pública para ver un evento específico y sus fotos
+// Ruta pública para ver un evento específico
 router.get('/:id/public', async (req, res) => {
     try {
         const { id } = req.params;
@@ -106,7 +112,7 @@ router.get('/:id/public', async (req, res) => {
     }
 });
 
-// Ruta pública para descargar todas las fotos de un evento en un archivo ZIP desde S3
+// Ruta pública para descargar ZIP
 router.get('/:id/download-zip', async (req, res) => {
     try {
         const { id } = req.params;
