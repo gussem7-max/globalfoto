@@ -39,10 +39,17 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// NUEVA RUTA: Validar token y mantener sesión activa al refrescar
+// Ruta para validar token y mantener sesión activa al refrescar
 router.get('/me', verificarToken, async (req, res) => {
     try {
-        const userResult = await pool.query('SELECT id, name, email, role FROM users WHERE id = $1', [req.user.id]);
+        // Soportar tanto req.user como req.usuario según cómo lo devuelva el middleware
+        const userId = req.user?.id || req.usuario?.id;
+
+        if (!userId) {
+            return res.status(401).json({ error: 'No autorizado.' });
+        }
+
+        const userResult = await pool.query('SELECT id, name, email, role FROM users WHERE id = $1', [userId]);
         if (userResult.rows.length === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado.' });
         }
