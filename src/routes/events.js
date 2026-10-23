@@ -17,7 +17,9 @@ const s3Client = new S3Client({
 // Validar que un ID sea número entero positivo
 const isValidId = (id) => /^\d+$/.test(id) && parseInt(id) > 0;
 
-// Crear evento (Protegido)
+// ---------------------------------------------------------------
+// CREAR EVENTO (Protegido)
+// ---------------------------------------------------------------
 router.post('/', verificarToken, async (req, res) => {
     try {
         const { title, description, event_date, location } = req.body;
@@ -48,7 +50,9 @@ router.post('/', verificarToken, async (req, res) => {
     }
 });
 
-// Listar eventos SOLO del usuario autenticado (Protegido)
+// ---------------------------------------------------------------
+// LISTAR EVENTOS SOLO DEL USUARIO AUTENTICADO (Protegido)
+// ---------------------------------------------------------------
 router.get('/', verificarToken, async (req, res) => {
     try {
         const photographer_id = req.user.id;
@@ -75,17 +79,27 @@ router.get('/', verificarToken, async (req, res) => {
     }
 });
 
-// Eliminar evento (Protegido + verificación de propiedad)
-router.delete('/:id', verificarToken, async (req, res) => {
+// ---------------------------------------------------------------
+// CONFIGURAR PRECIOS Y DATOS DE PAGO (Protegido + propiedad)
+// ---------------------------------------------------------------
+router.put('/:id/pricing', verificarToken, async (req, res) => {
     try {
         const { id } = req.params;
         const photographer_id = req.user.id;
+        const { 
+            price_per_photo, 
+            price_full_gallery, 
+            currency = 'COP',
+            nequi_phone,
+            nequi_name,
+            qr_code_url,
+            sales_enabled 
+        } = req.body;
 
         if (!isValidId(id)) {
             return res.status(400).json({ error: 'ID de evento inválido.' });
         }
 
-        // Verificar que el evento existe Y pertenece al usuario autenticado
         const eventCheck = await pool.query(
             'SELECT id FROM events WHERE id = $1 AND photographer_id = $2',
             [id, photographer_id]
@@ -95,16 +109,66 @@ router.delete('/:id', verificarToken, async (req, res) => {
             return res.status(404).json({ error: 'Evento no encontrado o sin permisos.' });
         }
 
-        // Eliminar fotos de S3
+        const photoPrice = parseFloat(price_per_photo) || 0;
+        const galleryPrice = parseFloat(price_full_gallery) || 0;
+
+        if (photoPrice < 0 || galleryPrice < 0) {
+            return res.status(400).json({ error: 'Los precios no pueden ser negativos.' });
+        }
+
+        const updated = await pool.query(`
+            UPDATE events SET 
+                price_per_photo = $1, 
+                price_full_gallery = $2, 
+                currency = $3,
+                nequi_phone = $4,
+                nequi_name = $5,
+                qr_code_url = $6,
+                sales_enabled = $7
+            WHERE id = $8
+            RETURNING *
+        `, [photoPrice, galleryPrice, currency, nequi_phone || '', nequi_name || '', qr_code_url || '', sales_enabled === true, id]);
+
+        res.json({
+            mensaje: 'Configuración de precios actualizada.',
+            event: updated.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Error al actualizar precios:', error);
+        res.status(500).json({ error: 'Error interno al guardar la configuración.' });
+    }
+});
+
+// ---------------------------------------------------------------
+// ELIMINAR EVENTO (Protegido + propiedad)
+// ---------------------------------------------------------------
+router.delete('/:id', verificarToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const photographer_id = req.user.id;
+
+        if (!isValidId(id)) {
+            return res.status(400).json({ error: 'ID de evento inválido.' });
+        }
+
+        const eventCheck = await pool.query(
+            'SELECT id FROM events WHERE id = $1 AND photographer_id = $2',
+            [id, photographer_id]
+        );
+
+        if (eventCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'Evento no encontrado o sin permisos.' });
+        }
+
         const photosResult = await pool.query('SELECT * FROM photos WHERE event_id = $1', [id]);
         
         for (const photo of photosResult.rows) {
             try {
-                const deleteParams = {
+                await s3Client.send(new DeleteObjectCommand({
                     Bucket: process.env.AWS_BUCKET_NAME,
                     Key: photo.filename
-                };
-                await s3Client.send(new DeleteObjectCommand(deleteParams));
+                }));
             } catch (s3Error) {
                 console.error(`Error al eliminar archivo de S3 (${photo.filename}):`, s3Error);
             }
@@ -119,7 +183,9 @@ router.delete('/:id', verificarToken, async (req, res) => {
     }
 });
 
-// Galería pública (sin autenticación)
+// ---------------------------------------------------------------
+// GALERÍA PÚBLICA
+// ---------------------------------------------------------------
 router.get('/:id/public', async (req, res) => {
     try {
         const { id } = req.params;
@@ -133,11 +199,10 @@ router.get('/:id/public', async (req, res) => {
             return res.status(404).json({ error: 'El evento no existe.' });
         }
 
-        const event = eventResult.rows[0];
         const photosResult = await pool.query('SELECT * FROM photos WHERE event_id = $1 ORDER BY created_at DESC', [id]);
 
         res.json({
-            event: event,
+            event: eventResult.rows[0],
             photos: photosResult.rows
         });
     } catch (error) {
@@ -146,7 +211,9 @@ router.get('/:id/public', async (req, res) => {
     }
 });
 
-// Descarga ZIP (público, pero con validación)
+// ---------------------------------------------------------------
+// DESCARGA ZIP PÚBLICA
+// ---------------------------------------------------------------
 router.get('/:id/download-zip', async (req, res) => {
     try {
         const { id } = req.params;
@@ -199,68 +266,6 @@ router.get('/:id/download-zip', async (req, res) => {
         if (!res.headersSent) {
             res.status(500).json({ error: 'Error interno al generar la descarga masiva.' });
         }
-    }
-});
-
-// Configurar precios y datos de pago de un evento (Protegido)
-router.put('/:id/pricing', verificarToken, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const photographer_id = req.user.id;
-        const { 
-            price_per_photo, 
-            price_full_gallery, 
-            currency = 'COP',
-            nequi_phone,
-            nequi_name,
-            qr_code_url,
-            sales_enabled 
-        } = req.body;
-
-        if (!isValidId(id)) {
-            return res.status(400).json({ error: 'ID de evento inválido.' });
-        }
-
-        // Verificar propiedad
-        const eventCheck = await pool.query(
-            'SELECT id FROM events WHERE id = $1 AND photographer_id = $2',
-            [id, photographer_id]
-        );
-
-        if (eventCheck.rows.length === 0) {
-            return res.status(404).json({ error: 'Evento no encontrado o sin permisos.' });
-        }
-
-        // Validaciones de precio
-        const photoPrice = parseFloat(price_per_photo) || 0;
-        const galleryPrice = parseFloat(price_full_gallery) || 0;
-
-        if (photoPrice < 0 || galleryPrice < 0) {
-            return res.status(400).json({ error: 'Los precios no pueden ser negativos.' });
-        }
-
-        const updated = await pool.query(`
-            UPDATE events SET 
-                price_per_photo = $1, 
-                price_full_gallery = $2, 
-                currency = $3,
-                nequi_phone = $4,
-                nequi_name = $5,
-                qr_code_url = $6,
-                sales_enabled = $7,
-                updated_at = NOW()
-            WHERE id = $8
-            RETURNING *
-        `, [photoPrice, galleryPrice, currency, nequi_phone, nequi_name, qr_code_url, sales_enabled === true, id]);
-
-        res.json({
-            mensaje: 'Configuración de precios actualizada.',
-            event: updated.rows[0]
-        });
-
-    } catch (error) {
-        console.error('Error al actualizar precios:', error);
-        res.status(500).json({ error: 'Error interno al guardar la configuración.' });
     }
 });
 
