@@ -25,25 +25,14 @@
         body { background-color: #f8fafc; color: var(--text-main); min-height: 100vh; display: flex; }
 
         .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: #f8fafc;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            transition: opacity 0.3s ease;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #f8fafc; display: flex; justify-content: center; align-items: center;
+            z-index: 9999; transition: opacity 0.3s ease;
         }
         .loading-overlay.hidden { opacity: 0; pointer-events: none; }
         .spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid #e2e8f0;
-            border-top-color: var(--accent);
-            border-radius: 50%;
+            width: 50px; height: 50px; border: 4px solid #e2e8f0;
+            border-top-color: var(--accent); border-radius: 50%;
             animation: spin 1s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -62,6 +51,8 @@
         .btn-primary { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
         .btn-primary:hover { background: var(--accent-hover); }
         .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-secondary { width: 100%; padding: 10px; background: white; color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-secondary:hover { background: #eff6ff; }
 
         .dashboard-layout { display: flex; width: 100vw; min-height: 100vh; }
         .sidebar { width: 260px; background: var(--bg-primary); color: white; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; }
@@ -103,6 +94,14 @@
         .file-label { flex: 1; border: 1px dashed var(--accent); color: var(--accent); background: #eff6ff; padding: 8px; border-radius: 6px; text-align: center; font-size: 12px; font-weight: 600; cursor: pointer; }
         .btn-upload { background: var(--accent); color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
 
+        /* MINIATURAS DE FOTOS */
+        .photos-preview { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); }
+        .photos-preview-title { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .photos-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        .photo-thumb { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid var(--border-color); transition: transform 0.2s; }
+        .photo-thumb:hover { transform: scale(1.05); }
+        .photo-more { width: 100%; aspect-ratio: 1; background: #f1f5f9; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--text-muted); }
+
         .public-wrapper { width: 100vw; min-height: 100vh; background: #0f172a; color: white; padding: 40px 20px; display: flex; justify-content: center; }
         .public-container { width: 100%; max-width: 1000px; }
         .public-header { text-align: center; margin-bottom: 40px; }
@@ -129,16 +128,27 @@
         .alert-success { background: #d1fae5; color: #065f46; }
         .alert-error { background: #fee2e2; color: #991b1b; }
 
+        /* PRICING */
         .pricing-section { margin-top: 24px; padding-top: 24px; border-top: 2px solid var(--border-color); }
-        .pricing-card { background: #f8fafc; padding: 20px; border-radius: 10px; border: 1px solid var(--border-color); }
-        .pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .pricing-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .pricing-header h4 { font-size: 14px; color: #0f172a; display: flex; align-items: center; gap: 6px; }
         .toggle-switch { position: relative; display: inline-block; width: 50px; height: 26px; }
         .toggle-switch input { opacity: 0; width: 0; height: 0; }
         .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 26px; }
         .toggle-slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
         input:checked + .toggle-slider { background-color: var(--accent); }
         input:checked + .toggle-slider:before { transform: translateX(24px); }
+        .pricing-card { background: #f8fafc; padding: 20px; border-radius: 10px; border: 1px solid var(--border-color); margin-top: 12px; }
+        .pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .commission-note { font-size: 11px; color: var(--text-muted); margin-top: 10px; padding: 8px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; }
+
+        /* MODO VISUALIZACIÓN DE PRECIOS */
+        .pricing-view { background: #f8fafc; padding: 16px; border-radius: 10px; border: 1px solid var(--border-color); margin-top: 12px; }
+        .pricing-view-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-color); }
+        .pricing-view-row:last-child { border-bottom: none; }
+        .pricing-view-label { font-size: 12px; color: var(--text-muted); }
+        .pricing-view-value { font-size: 13px; font-weight: 600; color: #0f172a; }
+        .pricing-view-actions { display: flex; gap: 8px; margin-top: 12px; }
     </style>
 </head>
 <body>
@@ -359,6 +369,8 @@
     <script>
         let currentUser = null;
         let cachedEvents = [];
+        let cachedPhotos = {}; // Cache de fotos por evento
+        let editingPricingId = null; // ID del evento en modo edición de precios
 
         function hideLoadingOverlay() {
             const overlay = document.getElementById('loadingOverlay');
@@ -614,12 +626,165 @@
             }
         });
 
+        // Cargar fotos de un evento (para miniaturas)
+        async function loadEventPhotos(eventId) {
+            if (cachedPhotos[eventId]) return cachedPhotos[eventId];
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`/api/events/${eventId}/photos`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    cachedPhotos[eventId] = data.photos || [];
+                    return cachedPhotos[eventId];
+                }
+            } catch (err) {
+                console.error('Error al cargar fotos:', err);
+            }
+            return [];
+        }
+
+        // Renderizar sección de pricing (modo visualización o edición)
+        function renderPricingSection(ev) {
+            const isEditing = editingPricingId === ev.id;
+            const hasData = ev.price_per_photo > 0 || ev.nequi_phone;
+            const salesEnabled = ev.sales_enabled;
+
+            // Header siempre visible
+            let html = `
+                <div class="pricing-section">
+                    <div class="pricing-header">
+                        <h4>💰 Configuración de Ventas</h4>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="salesToggle_${ev.id}" ${salesEnabled ? 'checked' : ''} onchange="toggleSales(${ev.id})">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+            `;
+
+            // Si ventas desactivadas, solo mostrar mensaje
+            if (!salesEnabled) {
+                html += `
+                    <div style="font-size: 12px; color: var(--text-muted); padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px dashed var(--border-color);">
+                        <i class="fa-solid fa-lock"></i> Las ventas están desactivadas. Activa el toggle para configurar precios.
+                    </div>
+                </div>`;
+                return html;
+            }
+
+            // Si está en modo edición, mostrar formulario
+            if (isEditing) {
+                html += `
+                    <div class="pricing-card">
+                        <div class="pricing-grid">
+                            <div class="form-group">
+                                <label style="font-size: 12px;">Precio por foto (COP)</label>
+                                <input type="number" id="pricePhoto_${ev.id}" value="${ev.price_per_photo || 0}" min="0" step="1000">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 12px;">Galería completa (COP)</label>
+                                <input type="number" id="priceGallery_${ev.id}" value="${ev.price_full_gallery || 0}" min="0" step="5000">
+                            </div>
+                            <div class="form-group" style="grid-column: 1/-1;">
+                                <label style="font-size: 12px;">Número Nequi del fotógrafo</label>
+                                <input type="text" id="nequiPhone_${ev.id}" value="${ev.nequi_phone || ''}" placeholder="3001234567">
+                            </div>
+                            <div class="form-group" style="grid-column: 1/-1;">
+                                <label style="font-size: 12px;">Nombre titular Nequi</label>
+                                <input type="text" id="nequiName_${ev.id}" value="${ev.nequi_name || ''}" placeholder="Juan Pérez">
+                            </div>
+                        </div>
+                        <div class="commission-note">
+                            <i class="fa-solid fa-circle-info"></i> <strong>Comisión GlobalFoto:</strong> 10% por venta aprobada. Ej: galería de $50.000 → el fotógrafo recibe $45.000 y quedan $5.000 de comisión a favor de la plataforma.
+                        </div>
+                        <div style="display: flex; gap: 8px; margin-top: 12px;">
+                            <button onclick="savePricing(${ev.id})" class="btn-primary" style="flex: 1;">
+                                <i class="fa-solid fa-save"></i> Guardar
+                            </button>
+                            <button onclick="cancelEditPricing(${ev.id})" class="btn-secondary" style="flex: 1;">
+                                <i class="fa-solid fa-xmark"></i> Cancelar
+                            </button>
+                        </div>
+                        <div id="pricingMsg_${ev.id}"></div>
+                    </div>
+                </div>`;
+                return html;
+            }
+
+            // Modo visualización (datos guardados)
+            if (hasData) {
+                const photoPrice = ev.price_per_photo ? `$${Number(ev.price_per_photo).toLocaleString('es-CO')}` : 'No definido';
+                const galleryPrice = ev.price_full_gallery ? `$${Number(ev.price_full_gallery).toLocaleString('es-CO')}` : 'No definido';
+                const nequiInfo = ev.nequi_phone ? `${ev.nequi_phone} - ${ev.nequi_name || 'Sin nombre'}` : 'No configurado';
+                
+                html += `
+                    <div class="pricing-view">
+                        <div class="pricing-view-row">
+                            <span class="pricing-view-label">Precio por foto</span>
+                            <span class="pricing-view-value">${photoPrice}</span>
+                        </div>
+                        <div class="pricing-view-row">
+                            <span class="pricing-view-label">Galería completa</span>
+                            <span class="pricing-view-value">${galleryPrice}</span>
+                        </div>
+                        <div class="pricing-view-row">
+                            <span class="pricing-view-label">Nequi</span>
+                            <span class="pricing-view-value">${nequiInfo}</span>
+                        </div>
+                        <div class="pricing-view-actions">
+                            <button onclick="editPricing(${ev.id})" class="btn-secondary">
+                                <i class="fa-solid fa-pen"></i> Editar configuración
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+                return html;
+            }
+
+            // Ventas activadas pero sin datos: mostrar formulario vacío
+            html += `
+                <div class="pricing-card">
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+                        <i class="fa-solid fa-circle-info"></i> Configura tus precios y datos de pago para comenzar a vender.
+                    </p>
+                    <div class="pricing-grid">
+                        <div class="form-group">
+                            <label style="font-size: 12px;">Precio por foto (COP)</label>
+                            <input type="number" id="pricePhoto_${ev.id}" value="0" min="0" step="1000">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size: 12px;">Galería completa (COP)</label>
+                            <input type="number" id="priceGallery_${ev.id}" value="0" min="0" step="5000">
+                        </div>
+                        <div class="form-group" style="grid-column: 1/-1;">
+                            <label style="font-size: 12px;">Número Nequi del fotógrafo</label>
+                            <input type="text" id="nequiPhone_${ev.id}" value="" placeholder="3001234567">
+                        </div>
+                        <div class="form-group" style="grid-column: 1/-1;">
+                            <label style="font-size: 12px;">Nombre titular Nequi</label>
+                            <input type="text" id="nequiName_${ev.id}" value="" placeholder="Juan Pérez">
+                        </div>
+                    </div>
+                    <div class="commission-note">
+                        <i class="fa-solid fa-circle-info"></i> <strong>Comisión GlobalFoto:</strong> 10% por venta aprobada. Ej: galería de $50.000 → el fotógrafo recibe $45.000 y quedan $5.000 de comisión a favor de la plataforma.
+                    </div>
+                    <button onclick="savePricing(${ev.id})" class="btn-primary" style="margin-top: 12px;">
+                        <i class="fa-solid fa-save"></i> Guardar Precios
+                    </button>
+                    <div id="pricingMsg_${ev.id}"></div>
+                </div>
+            </div>`;
+            return html;
+        }
+
         async function loadEvents() {
             try {
                 const token = localStorage.getItem('token');
                 const res = await fetch('/api/events', { headers: { 'Authorization': `Bearer ${token}` } });
                 const events = await res.json();
                 cachedEvents = events;
+                cachedPhotos = {}; // Reset cache
                 document.getElementById('statEventsCount').textContent = events.length;
                 let totalPhotos = 0;
                 events.forEach(ev => { if(ev.photosCount) totalPhotos += parseInt(ev.photosCount, 10); });
@@ -658,49 +823,57 @@
                                         <button type="submit" class="btn-upload">Subir</button>
                                     </form>
                                 </div>
-                                <div class="pricing-section">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                        <h4 style="font-size: 14px; color: #0f172a;">💰 Configuración de Ventas</h4>
-                                        <label class="toggle-switch">
-                                            <input type="checkbox" id="salesToggle_${ev.id}" ${ev.sales_enabled ? 'checked' : ''}>
-                                            <span class="toggle-slider"></span>
-                                        </label>
-                                    </div>
-                                    <div class="pricing-card">
-                                        <div class="pricing-grid">
-                                            <div class="form-group">
-                                                <label style="font-size: 12px;">Precio por foto (COP)</label>
-                                                <input type="number" id="pricePhoto_${ev.id}" value="${ev.price_per_photo || 0}" min="0" step="1000">
-                                            </div>
-                                            <div class="form-group">
-                                                <label style="font-size: 12px;">Galería completa (COP)</label>
-                                                <input type="number" id="priceGallery_${ev.id}" value="${ev.price_full_gallery || 0}" min="0" step="5000">
-                                            </div>
-                                            <div class="form-group" style="grid-column: 1/-1;">
-                                                <label style="font-size: 12px;">Número Nequi del fotógrafo</label>
-                                                <input type="text" id="nequiPhone_${ev.id}" value="${ev.nequi_phone || ''}" placeholder="3001234567">
-                                            </div>
-                                            <div class="form-group" style="grid-column: 1/-1;">
-                                                <label style="font-size: 12px;">Nombre titular Nequi</label>
-                                                <input type="text" id="nequiName_${ev.id}" value="${ev.nequi_name || ''}" placeholder="Juan Pérez">
+                                <div id="photosPreview_${ev.id}">
+                                    <div class="photos-preview">
+                                        <div class="photos-preview-title">
+                                            <span><i class="fa-solid fa-images"></i> Fotos del evento</span>
+                                            <span id="photosCount_${ev.id}">Cargando...</span>
+                                        </div>
+                                        <div class="photos-grid" id="photosGrid_${ev.id}">
+                                            <div style="grid-column: 1/-1; text-align: center; padding: 12px; font-size: 12px; color: var(--text-muted);">
+                                                <i class="fa-solid fa-spinner fa-spin"></i> Cargando miniaturas...
                                             </div>
                                         </div>
-                                        <div class="commission-note">
-                                            <i class="fa-solid fa-circle-info"></i> <strong>Comisión GlobalFoto:</strong> 10% por venta aprobada. Ej: galería de $50.000 → el fotógrafo recibe $45.000 y quedan $5.000 de comisión a favor de la plataforma.
-                                        </div>
-                                        <button onclick="savePricing(${ev.id})" class="btn-primary" style="margin-top: 12px;">
-                                            <i class="fa-solid fa-save"></i> Guardar Precios
-                                        </button>
-                                        <div id="pricingMsg_${ev.id}"></div>
                                     </div>
                                 </div>
+                                ${renderPricingSection(ev)}
                             </div>
                         </div>
                     `;
                 }).join('');
+
+                // Cargar miniaturas de fotos para cada evento
+                events.forEach(async (ev) => {
+                    const photos = await loadEventPhotos(ev.id);
+                    renderPhotosPreview(ev.id, photos);
+                });
             } catch (err) {
                 console.error('Error al cargar eventos:', err);
             }
+        }
+
+        function renderPhotosPreview(eventId, photos) {
+            const grid = document.getElementById(`photosGrid_${eventId}`);
+            const countLabel = document.getElementById(`photosCount_${eventId}`);
+            if (!grid) return;
+
+            if (photos.length === 0) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 12px; font-size: 12px; color: var(--text-muted);">Sin fotos aún. ¡Sube la primera!</div>';
+                if (countLabel) countLabel.textContent = '0 fotos';
+                return;
+            }
+
+            // Mostrar máximo 4 miniaturas
+            const maxThumbs = 4;
+            const thumbs = photos.slice(0, maxThumbs).map(p => `
+                <img src="${p.url}" class="photo-thumb" onclick="openLightbox('${p.url}')" title="Ver foto">
+            `).join('');
+
+            const remaining = photos.length - maxThumbs;
+            const moreHtml = remaining > 0 ? `<div class="photo-more">+${remaining} más</div>` : '';
+
+            grid.innerHTML = thumbs + moreHtml;
+            if (countLabel) countLabel.textContent = `${photos.length} foto${photos.length !== 1 ? 's' : ''}`;
         }
 
         function updateFileLabel(eventId) {
@@ -735,6 +908,8 @@
                 const data = await res.json();
                 if (res.ok) {
                     alert('¡Fotos subidas exitosamente a S3!');
+                    // Limpiar cache de fotos para recargar
+                    delete cachedPhotos[eventId];
                     loadEvents();
                 } else {
                     alert(`Error al subir las fotos: ${data.error || 'Desconocido'}`);
@@ -799,12 +974,69 @@
             window.location.href = '/';
         }
 
+        // Toggle de ventas
+        async function toggleSales(eventId) {
+            const checkbox = document.getElementById(`salesToggle_${eventId}`);
+            const salesEnabled = checkbox.checked;
+            
+            // Si se está desactivando y había datos, confirmar
+            if (!salesEnabled) {
+                const ev = cachedEvents.find(e => e.id === eventId);
+                if (ev && (ev.price_per_photo > 0 || ev.nequi_phone)) {
+                    if (!confirm('¿Desactivar las ventas? Los precios configurados se mantendrán guardados.')) {
+                        checkbox.checked = true;
+                        return;
+                    }
+                }
+            }
+
+            const token = localStorage.getItem('token');
+            try {
+                const res = await fetch(`/api/events/${eventId}/pricing`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        price_per_photo: 0,
+                        price_full_gallery: 0,
+                        currency: 'COP',
+                        nequi_phone: '',
+                        nequi_name: '',
+                        sales_enabled: salesEnabled,
+                        qr_code_url: ''
+                    })
+                });
+                if (res.ok) {
+                    loadEvents();
+                } else {
+                    alert('Error al actualizar el estado de ventas.');
+                    checkbox.checked = !salesEnabled;
+                }
+            } catch (err) {
+                alert('Error de conexión.');
+                checkbox.checked = !salesEnabled;
+            }
+        }
+
+        // Entrar en modo edición
+        function editPricing(eventId) {
+            editingPricingId = eventId;
+            loadEvents();
+        }
+
+        // Cancelar edición
+        function cancelEditPricing(eventId) {
+            editingPricingId = null;
+            loadEvents();
+        }
+
+        // Guardar precios
         async function savePricing(eventId) {
             const token = localStorage.getItem('token');
             const msgDiv = document.getElementById(`pricingMsg_${eventId}`);
-            const btn = msgDiv.previousElementSibling;
-            
-            console.log('💾 Guardando precios para evento:', eventId);
+            const btn = msgDiv ? msgDiv.previousElementSibling : null;
             
             const data = {
                 price_per_photo: parseFloat(document.getElementById(`pricePhoto_${eventId}`).value) || 0,
@@ -812,14 +1044,16 @@
                 currency: 'COP',
                 nequi_phone: document.getElementById(`nequiPhone_${eventId}`).value.trim(),
                 nequi_name: document.getElementById(`nequiName_${eventId}`).value.trim(),
-                sales_enabled: document.getElementById(`salesToggle_${eventId}`).checked,
+                sales_enabled: true,
                 qr_code_url: ''
             };
 
-            btn.disabled = true;
-            btn.style.opacity = '0.6';
-            btn.style.cursor = 'not-allowed';
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+            if (btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.6';
+                btn.style.cursor = 'not-allowed';
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+            }
 
             try {
                 const res = await fetch(`/api/events/${eventId}/pricing`, {
@@ -833,37 +1067,37 @@
                 const result = await res.json();
 
                 if (res.ok) {
-                    msgDiv.className = 'alert alert-success';
-                    msgDiv.style.padding = '12px 16px';
-                    msgDiv.style.fontSize = '14px';
-                    msgDiv.style.fontWeight = '600';
-                    msgDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i> ✓ Configuración guardada correctamente';
-                    msgDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    
-                    setTimeout(async () => {
-                        await loadEvents();
-                        msgDiv.style.padding = '';
-                        msgDiv.style.fontSize = '';
-                        msgDiv.style.fontWeight = '';
+                    editingPricingId = null; // Salir de modo edición
+                    if (msgDiv) {
+                        msgDiv.className = 'alert alert-success';
+                        msgDiv.style.padding = '12px 16px';
+                        msgDiv.style.fontSize = '14px';
+                        msgDiv.style.fontWeight = '600';
                         msgDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i> ✓ Configuración guardada';
-                        setTimeout(() => { 
-                            msgDiv.textContent = ''; 
-                            msgDiv.className = ''; 
-                        }, 4000);
-                    }, 1000);
+                        msgDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                    setTimeout(() => {
+                        loadEvents();
+                    }, 800);
                 } else {
-                    msgDiv.className = 'alert alert-error';
-                    msgDiv.textContent = `Error ${res.status}: ${result.error || 'Desconocido'}`;
+                    if (msgDiv) {
+                        msgDiv.className = 'alert alert-error';
+                        msgDiv.textContent = `Error ${res.status}: ${result.error || 'Desconocido'}`;
+                    }
                 }
             } catch (err) {
                 console.error('❌ Error en fetch:', err);
-                msgDiv.className = 'alert alert-error';
-                msgDiv.textContent = `Error de red: ${err.message}`;
+                if (msgDiv) {
+                    msgDiv.className = 'alert alert-error';
+                    msgDiv.textContent = `Error de red: ${err.message}`;
+                }
             } finally {
-                btn.disabled = false;
-                btn.style.opacity = '';
-                btn.style.cursor = '';
-                btn.innerHTML = '<i class="fa-solid fa-save"></i> Guardar Precios';
+                if (btn) {
+                    btn.disabled = false;
+                    btn.style.opacity = '';
+                    btn.style.cursor = '';
+                    btn.innerHTML = '<i class="fa-solid fa-save"></i> Guardar';
+                }
             }
         }
 

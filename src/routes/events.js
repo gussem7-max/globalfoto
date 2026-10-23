@@ -269,4 +269,36 @@ router.get('/:id/download-zip', async (req, res) => {
     }
 });
 
+// Listar fotos de un evento (Protegido + propiedad)
+router.get('/:id/photos', verificarToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const photographer_id = req.user.id;
+
+        if (!isValidId(id)) {
+            return res.status(400).json({ error: 'ID de evento inválido.' });
+        }
+
+        // Verificar propiedad
+        const eventCheck = await pool.query(
+            'SELECT id FROM events WHERE id = $1 AND photographer_id = $2',
+            [id, photographer_id]
+        );
+
+        if (eventCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'Evento no encontrado o sin permisos.' });
+        }
+
+        const photosResult = await pool.query(
+            'SELECT id, url, filename, created_at FROM photos WHERE event_id = $1 ORDER BY created_at DESC',
+            [id]
+        );
+
+        res.json({ photos: photosResult.rows });
+    } catch (error) {
+        console.error('Error al obtener fotos:', error);
+        res.status(500).json({ error: 'Error interno al cargar las fotos.' });
+    }
+});
+
 module.exports = router;
