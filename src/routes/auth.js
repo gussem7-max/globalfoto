@@ -43,12 +43,30 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// Ruta para el Registro
+// Ruta para el Registro (con validaciones de seguridad)
 router.post('/register', async (req, res) => {
     try {
         const { name, email, password, role } = req.body;
 
-        const userExists = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        // Validaciones de entrada
+        if (!name || name.trim().length < 3) {
+            return res.status(400).json({ error: 'El nombre debe tener al menos 3 caracteres.' });
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email || !emailRegex.test(email)) {
+            return res.status(400).json({ error: 'El correo electrónico no es válido.' });
+        }
+
+        if (!password || password.length < 8) {
+            return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres.' });
+        }
+
+        // Lista blanca de roles: nunca aceptar roles arbitrarios desde el cliente
+        const allowedRoles = ['photographer', 'admin'];
+        const finalRole = allowedRoles.includes(role) ? role : 'photographer';
+
+        const userExists = await pool.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
         if (userExists.rows.length > 0) {
             return res.status(400).json({ error: 'El correo electrónico ya está registrado.' });
         }
@@ -58,7 +76,7 @@ router.post('/register', async (req, res) => {
 
         const newUser = await pool.query(
             'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
-            [name, email, hashedPassword, role || 'photographer']
+            [name.trim(), email.toLowerCase(), hashedPassword, finalRole]
         );
 
         res.status(201).json({
