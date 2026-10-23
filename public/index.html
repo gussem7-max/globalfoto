@@ -587,21 +587,26 @@
                     return;
                 }
 
-                grid.innerHTML = data.photos.map(p => `
-                    <div class="public-photo-card" id="photoCard_${p.id}" onclick="togglePhotoSelection(${p.id})">
-                        <div class="public-photo-wrapper" onclick="event.stopPropagation(); openLightbox('${p.url}')">
-                            <img src="${p.url}" class="public-photo-img">
-                            <div class="photo-watermark">GlobalFoto</div>
-                            <div class="photo-select-check"><i class="fa-solid fa-check"></i></div>
+                grid.innerHTML = data.photos.map(p => {
+                    // Usar preview_url si existe, si no usar url (para fotos antiguas)
+                    const displayUrl = p.preview_url || p.url;
+                    
+                    return `
+                        <div class="public-photo-card" id="photoCard_${p.id}" onclick="togglePhotoSelection(${p.id})">
+                            <div class="public-photo-wrapper" onclick="event.stopPropagation(); openLightbox('${displayUrl}')">
+                                <img src="${displayUrl}" class="public-photo-img">
+                                <div class="photo-watermark">GlobalFoto</div>
+                                <div class="photo-select-check"><i class="fa-solid fa-check"></i></div>
+                            </div>
+                            <div class="public-photo-footer">
+                                <span class="photo-price-tag">${data.event.price_per_photo ? '$' + Number(data.event.price_per_photo).toLocaleString('es-CO') : 'Consultar'}</span>
+                                <button class="btn-buy-photo" onclick="event.stopPropagation(); openPurchaseModal('single', ${p.id})">
+                                    <i class="fa-solid fa-cart-shopping"></i> Comprar
+                                </button>
+                            </div>
                         </div>
-                        <div class="public-photo-footer">
-                            <span class="photo-price-tag">${data.event.price_per_photo ? '$' + Number(data.event.price_per_photo).toLocaleString('es-CO') : 'Consultar'}</span>
-                            <button class="btn-buy-photo" onclick="event.stopPropagation(); openPurchaseModal('single', ${p.id})">
-                                <i class="fa-solid fa-cart-shopping"></i> Comprar
-                            </button>
-                        </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             } catch (err) {
                 document.getElementById('pubEventTitle').textContent = 'Error de conexión';
             }
@@ -1403,6 +1408,12 @@
         async function approveOrder(orderId) {
             if (!confirm('¿Aprobar este pedido? Se enviará un email al cliente con los enlaces de descarga.')) return;
             
+            const btn = event.target.closest('button');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
+            }
+            
             try {
                 const token = localStorage.getItem('token');
                 const res = await fetch(`/api/orders/${orderId}/approve`, {
@@ -1410,16 +1421,26 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
+                const data = await res.json();
+                
                 if (res.ok) {
                     alert('✅ Pedido aprobado. Email enviado al cliente.');
-                    loadOrders();
-                    loadPendingOrdersCount();
+                    await loadOrders();
+                    await loadPendingOrdersCount();
                 } else {
-                    const data = await res.json();
-                    alert(`Error: ${data.error}`);
+                    alert(`Error: ${data.error || 'Error desconocido'}`);
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fa-solid fa-check"></i> Aprobar';
+                    }
                 }
             } catch (err) {
+                console.error('Error al aprobar:', err);
                 alert('Error de conexión al aprobar el pedido.');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-check"></i> Aprobar';
+                }
             }
         }
 

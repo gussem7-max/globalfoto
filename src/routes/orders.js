@@ -40,7 +40,9 @@ const transporter = nodemailer.createTransport({
 
 const isValidId = (id) => /^\d+$/.test(id) && parseInt(id) > 0;
 
+// =====================================================
 // CLIENTE: Crear pedido y subir comprobante
+// =====================================================
 router.post('/create', upload.single('receipt'), async (req, res) => {
     try {
         const { event_id, customer_email, customer_name, order_type, photo_ids } = req.body;
@@ -54,7 +56,6 @@ router.post('/create', upload.single('receipt'), async (req, res) => {
             return res.status(400).json({ error: 'Debe subir el comprobante de pago.' });
         }
 
-        // Verificar que el evento existe y tiene ventas activas
         const eventResult = await pool.query(
             'SELECT * FROM events WHERE id = $1 AND sales_enabled = true',
             [event_id]
@@ -65,14 +66,11 @@ router.post('/create', upload.single('receipt'), async (req, res) => {
         }
 
         const event = eventResult.rows[0];
-
-        // Calcular monto
         let amount = 0;
         let finalPhotoIds = [];
         
         if (order_type === 'gallery') {
             amount = parseFloat(event.price_full_gallery) || 0;
-            // Obtener todas las fotos del evento
             const photosResult = await pool.query('SELECT id FROM photos WHERE event_id = $1', [event_id]);
             finalPhotoIds = photosResult.rows.map(p => p.id);
         } else if (order_type === 'single') {
@@ -89,7 +87,6 @@ router.post('/create', upload.single('receipt'), async (req, res) => {
             return res.status(400).json({ error: 'El monto del pedido es inválido.' });
         }
 
-        // Subir comprobante a S3
         const receiptFileName = `receipts/${event_id}/${Date.now()}_${crypto.randomBytes(8).toString('hex')}.${receiptImage.mimetype.split('/')[1]}`;
         await s3Client.send(new PutObjectCommand({
             Bucket: process.env.AWS_BUCKET_NAME,
@@ -99,12 +96,9 @@ router.post('/create', upload.single('receipt'), async (req, res) => {
         }));
 
         const receiptUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${receiptFileName}`;
-
-        // Calcular comisión (10%) y neto para fotógrafo (90%)
         const commissionAmount = amount * 0.10;
         const photographerNet = amount * 0.90;
 
-        // Crear pedido
         const newOrder = await pool.query(`
             INSERT INTO orders (
                 event_id, customer_email, customer_name, order_type, photo_ids,
@@ -137,14 +131,12 @@ router.get('/photographer', verificarToken, async (req, res) => {
         const photographer_id = req.user.id;
         const { status, event_id } = req.query;
 
-        // Obtener todos los eventos del fotógrafo
         const eventsResult = await pool.query(
             'SELECT id FROM events WHERE photographer_id = $1',
             [photographer_id]
         );
 
         const eventIds = eventsResult.rows.map(e => e.id);
-
         if (eventIds.length === 0) {
             return res.json({ orders: [] });
         }
@@ -172,7 +164,6 @@ router.get('/photographer', verificarToken, async (req, res) => {
         }
 
         query += ' ORDER BY o.created_at DESC';
-
         const ordersResult = await pool.query(query, queryParams);
 
         res.json({ orders: ordersResult.rows });
@@ -195,7 +186,6 @@ router.put('/:id/approve', verificarToken, async (req, res) => {
             return res.status(400).json({ error: 'ID de pedido inválido.' });
         }
 
-        // Verificar que el pedido existe y pertenece al fotógrafo
         const orderCheck = await pool.query(`
             SELECT o.*, e.photographer_id
             FROM orders o
@@ -213,11 +203,9 @@ router.put('/:id/approve', verificarToken, async (req, res) => {
             return res.status(400).json({ error: 'El pedido ya fue procesado.' });
         }
 
-        // Generar token de descarga único
         const downloadToken = crypto.randomBytes(32).toString('hex');
         const downloadExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 horas
 
-        // Actualizar pedido
         await pool.query(`
             UPDATE orders SET
                 status = 'approved',
@@ -228,7 +216,6 @@ router.put('/:id/approve', verificarToken, async (req, res) => {
             WHERE id = $3
         `, [downloadToken, downloadExpiresAt, id]);
 
-        // Obtener URLs de descarga
         let downloadUrls = [];
         let eventTitle = '';
 
@@ -237,7 +224,7 @@ router.put('/:id/approve', verificarToken, async (req, res) => {
                 'SELECT url FROM photos WHERE event_id = $1 ORDER BY created_at',
                 [order.event_id]
             );
-            downloadUrls = photosResult.rows.map(p => p.url);
+            downloadUrls = photosResult.rows.map(p => p.url); // 'url' es la original sin marca de agua
             
             const eventResult = await pool.query('SELECT title FROM events WHERE id = $1', [order.event_id]);
             eventTitle = eventResult.rows[0]?.title || 'Galería';
@@ -250,53 +237,57 @@ router.put('/:id/approve', verificarToken, async (req, res) => {
             eventTitle = 'Fotos seleccionadas';
         }
 
-        // Enviar email al cliente con links de descarga
-        const downloadLinksHtml = downloadUrls.map(url => `
+        const downloadLinksHtml = downloadUrls.map((url, index) => `
             <div style="margin: 10px 0; padding: 10px; background: #f0f9ff; border-left: 4px solid #0ea5e9; border-radius: 4px;">
                 <a href="${url}" style="color: #0ea5e9; text-decoration: none; font-weight: 600;" target="_blank">
-                    📥 Descargar foto ${downloadUrls.indexOf(url) + 1}
+                    📥 Descargar foto ${index + 1}
                 </a>
                 <p style="margin: 5px 0 0 0; font-size: 12px; color: #64748b;">
-                    <em>Este enlace expira en 24 horas</em>
+                    <em>Enlace de alta calidad (sin marca de agua)</em>
                 </p>
             </div>
         `).join('');
 
-        await transporter.sendMail({
-            from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
-            to: order.customer_email,
-            subject: `✅ Pago aprobado - ${eventTitle} | GlobalFoto`,
-            html: `
-                <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                    <h1 style="color: #0f172a; margin-bottom: 20px;">¡Tu pago fue aprobado! </h1>
-                    
-                    <p style="color: #334155; font-size: 16px; line-height: 1.6;">
-                        Hola ${order.customer_name || 'cliente'},<br><br>
-                        Tu comprobante de pago ha sido verificado y aprobado. 
-                        A continuación encontrarás los enlaces para descargar tus fotos:
-                    </p>
+        // LOGS PARA DEPURAR EL ENVÍO DE EMAIL
+        console.log('📧 [EMAIL] Intentando enviar a:', order.customer_email);
+        console.log('📧 [EMAIL] From:', process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev');
+        console.log('📧 [EMAIL] API Key configurada:', process.env.RESEND_API_KEY ? 'SÍ (oculta)' : 'NO');
 
-                    <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                        <h2 style="color: #0f172a; font-size: 18px; margin-bottom: 15px;">
-                            📦 Tus fotos están listas
-                        </h2>
-                        ${downloadLinksHtml}
-                    </div>
-
-                    <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                        <p style="color: #92400e; font-size: 14px; margin: 0;">
-                            <strong>⚠️ Importante:</strong> Estos enlaces expiran en <strong>24 horas</strong>. 
-                            Te recomendamos descargar todas tus fotos antes de ese tiempo.
+        try {
+            await transporter.sendMail({
+                from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+                to: order.customer_email,
+                subject: `✅ Pago aprobado - ${eventTitle} | GlobalFoto`,
+                html: `
+                    <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h1 style="color: #0f172a; margin-bottom: 20px;">¡Tu pago fue aprobado!</h1>
+                        <p style="color: #334155; font-size: 16px; line-height: 1.6;">
+                            Hola ${order.customer_name || 'cliente'},<br><br>
+                            Tu comprobante de pago ha sido verificado y aprobado. 
+                            A continuación encontrarás los enlaces para descargar tus fotos en alta calidad:
+                        </p>
+                        <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                            <h2 style="color: #0f172a; font-size: 18px; margin-bottom: 15px;">📦 Tus fotos están listas</h2>
+                            ${downloadLinksHtml}
+                        </div>
+                        <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                            <p style="color: #92400e; font-size: 14px; margin: 0;">
+                                <strong>⚠️ Importante:</strong> Estos enlaces expiran en <strong>24 horas</strong>. 
+                                Te recomendamos descargar todas tus fotos antes de ese tiempo.
+                            </p>
+                        </div>
+                        <p style="color: #64748b; font-size: 14px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+                            Gracias por confiar en GlobalFoto<br>
+                            <em>Si tienes alguna duda, responde a este correo.</em>
                         </p>
                     </div>
-
-                    <p style="color: #64748b; font-size: 14px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-                        Gracias por confiar en GlobalFoto<br>
-                        <em>Si tienes alguna duda, responde a este correo.</em>
-                    </p>
-                </div>
-            `
-        });
+                `
+            });
+            console.log('✅ [EMAIL] Enviado exitosamente a:', order.customer_email);
+        } catch (emailError) {
+            console.error('❌ [EMAIL] Error al enviar:', emailError.message);
+            // No fallamos la aprobación si el email falla, pero lo registramos
+        }
 
         res.json({
             mensaje: 'Pedido aprobado y correo enviado al cliente.',
@@ -348,39 +339,39 @@ router.put('/:id/reject', verificarToken, async (req, res) => {
             WHERE id = $2
         `, [reason || 'Sin motivo especificado', id]);
 
-        // Enviar email de rechazo al cliente
-        await transporter.sendMail({
-            from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
-            to: order.customer_email,
-            subject: `❌ Pedido rechazado - GlobalFoto`,
-            html: `
-                <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                    <h1 style="color: #0f172a; margin-bottom: 20px;">Información sobre tu pedido</h1>
-                    
-                    <p style="color: #334155; font-size: 16px; line-height: 1.6;">
-                        Hola ${order.customer_name || 'cliente'},<br><br>
-                        Lamentamos informarte que tu pedido no pudo ser aprobado.
-                    </p>
-
-                    ${reason ? `
-                        <div style="background: #fee2e2; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                            <p style="color: #991b1b; margin: 0;">
-                                <strong>Motivo:</strong> ${reason}
-                            </p>
-                        </div>
-                    ` : ''}
-
-                    <p style="color: #334155; font-size: 16px; line-height: 1.6; margin-top: 20px;">
-                        Por favor, verifica tu comprobante de pago y vuelve a intentarlo. 
-                        Si crees que esto es un error, contáctanos respondiendo a este correo.
-                    </p>
-
-                    <p style="color: #64748b; font-size: 14px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-                        Equipo GlobalFoto
-                    </p>
-                </div>
-            `
-        });
+        try {
+            await transporter.sendMail({
+                from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+                to: order.customer_email,
+                subject: `❌ Pedido rechazado - GlobalFoto`,
+                html: `
+                    <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h1 style="color: #0f172a; margin-bottom: 20px;">Información sobre tu pedido</h1>
+                        <p style="color: #334155; font-size: 16px; line-height: 1.6;">
+                            Hola ${order.customer_name || 'cliente'},<br><br>
+                            Lamentamos informarte que tu pedido no pudo ser aprobado.
+                        </p>
+                        ${reason ? `
+                            <div style="background: #fee2e2; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                                <p style="color: #991b1b; margin: 0;">
+                                    <strong>Motivo:</strong> ${reason}
+                                </p>
+                            </div>
+                        ` : ''}
+                        <p style="color: #334155; font-size: 16px; line-height: 1.6; margin-top: 20px;">
+                            Por favor, verifica tu comprobante de pago y vuelve a intentarlo. 
+                            Si crees que esto es un error, contáctanos respondiendo a este correo.
+                        </p>
+                        <p style="color: #64748b; font-size: 14px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+                            Equipo GlobalFoto
+                        </p>
+                    </div>
+                `
+            });
+            console.log('✅ [EMAIL RECHAZO] Enviado exitosamente a:', order.customer_email);
+        } catch (emailError) {
+            console.error('❌ [EMAIL RECHAZO] Error al enviar:', emailError.message);
+        }
 
         res.json({
             mensaje: 'Pedido rechazado y cliente notificado.',
@@ -413,7 +404,6 @@ router.get('/status/:token', async (req, res) => {
 
         const order = orderResult.rows[0];
 
-        // Verificar si expiró
         if (order.download_expires_at && new Date(order.download_expires_at) < new Date()) {
             return res.status(410).json({ 
                 error: 'El enlace de descarga ha expirado.',
