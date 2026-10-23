@@ -91,4 +91,68 @@ router.get('/me', verificarToken, async (req, res) => {
     }
 });
 
+// Ruta para actualizar datos del perfil
+router.put('/profile', verificarToken, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { name, email } = req.body;
+
+        if (!name || !email) {
+            return res.status(400).json({ error: 'El nombre y el correo son obligatorios.' });
+        }
+
+        // Verificar que el email no lo use otro usuario
+        const emailExists = await pool.query('SELECT * FROM users WHERE email = $1 AND id <> $2', [email, userId]);
+        if (emailExists.rows.length > 0) {
+            return res.status(400).json({ error: 'Ese correo ya está en uso por otra cuenta.' });
+        }
+
+        const result = await pool.query(
+            'UPDATE users SET name = $1, email = $2 WHERE id = $3 RETURNING id, name, email, role',
+            [name, email, userId]
+        );
+
+        res.json({ mensaje: 'Perfil actualizado correctamente.', user: result.rows[0] });
+    } catch (error) {
+        console.error('Error al actualizar perfil:', error);
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+
+// Ruta para cambiar la contraseña
+router.put('/password', verificarToken, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: 'Debes proporcionar la contraseña actual y la nueva.' });
+        }
+
+        if (newPassword.length < 8) {
+            return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 8 caracteres.' });
+        }
+
+        const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado.' });
+        }
+
+        const validPassword = await bcrypt.compare(currentPassword, userResult.rows[0].password);
+        if (!validPassword) {
+            return res.status(400).json({ error: 'La contraseña actual no es correcta.' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, userId]);
+
+        res.json({ mensaje: 'Contraseña actualizada correctamente.' });
+    } catch (error) {
+        console.error('Error al cambiar contraseña:', error);
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+
 module.exports = router;

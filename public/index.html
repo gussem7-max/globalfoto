@@ -336,7 +336,7 @@
                             </div>
                             <div class="form-group">
                                 <label>Nueva Contraseña</label>
-                                <input type="password" id="newPassword" required placeholder="••••••••">
+                                <input type="password" id="newPassword" required placeholder="••••••••" minlength="8">
                             </div>
                             <button type="submit" class="btn-primary" style="background: var(--bg-primary);">Actualizar Contraseña</button>
                         </form>
@@ -417,8 +417,10 @@
             } else if (section === 'settings') {
                 document.getElementById('sectionSettings').classList.remove('hidden');
                 document.getElementById('navSettings').classList.add('active');
-                document.getElementById('cfgName').value = currentUser.name;
-                document.getElementById('cfgEmail').value = currentUser.email;
+                if (currentUser) {
+                    document.getElementById('cfgName').value = currentUser.name || '';
+                    document.getElementById('cfgEmail').value = currentUser.email || '';
+                }
             }
         }
 
@@ -554,6 +556,77 @@
                     resDiv.className = 'alert alert-success';
                     resDiv.textContent = '¡Cuenta creada con éxito! Ya puedes iniciar sesión.';
                     e.target.reset();
+                } else {
+                    resDiv.className = 'alert alert-error';
+                    resDiv.textContent = data.error;
+                }
+            } catch (err) {
+                resDiv.className = 'alert alert-error';
+                resDiv.textContent = 'Error de conexión.';
+            }
+        });
+
+        // ACTUALIZAR PERFIL (Datos Personales)
+        document.getElementById('profileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('cfgName').value;
+            const email = document.getElementById('cfgEmail').value;
+            const resDiv = document.getElementById('resProfile');
+            const token = localStorage.getItem('token');
+
+            try {
+                const res = await fetch('/api/auth/profile', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ name, email })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    currentUser = data.user;
+                    // Refrescar nombre y avatar en la barra lateral
+                    document.getElementById('userName').textContent = currentUser.name;
+                    document.getElementById('userAvatar').textContent = currentUser.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                    resDiv.className = 'alert alert-success';
+                    resDiv.textContent = data.mensaje;
+                    setTimeout(() => { resDiv.textContent = ''; resDiv.className = ''; }, 3000);
+                } else {
+                    resDiv.className = 'alert alert-error';
+                    resDiv.textContent = data.error;
+                }
+            } catch (err) {
+                resDiv.className = 'alert alert-error';
+                resDiv.textContent = 'Error de conexión.';
+            }
+        });
+
+        // CAMBIAR CONTRASEÑA
+        document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const resDiv = document.getElementById('resPassword');
+            const token = localStorage.getItem('token');
+
+            try {
+                const res = await fetch('/api/auth/password', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ currentPassword, newPassword })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    resDiv.className = 'alert alert-success';
+                    resDiv.textContent = data.mensaje;
+                    e.target.reset();
+                    setTimeout(() => { resDiv.textContent = ''; resDiv.className = ''; }, 3000);
                 } else {
                     resDiv.className = 'alert alert-error';
                     resDiv.textContent = data.error;
