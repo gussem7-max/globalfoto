@@ -19,6 +19,7 @@
             --border-color: #e2e8f0;
             --danger: #ef4444;
             --success: #10b981;
+            --warning: #f59e0b;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
@@ -53,6 +54,10 @@
         .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
         .btn-secondary { width: 100%; padding: 10px; background: white; color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
         .btn-secondary:hover { background: #eff6ff; }
+        .btn-danger { background: var(--danger); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-success { background: var(--success); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .btn-success:hover { background: #059669; }
 
         .dashboard-layout { display: flex; width: 100vw; min-height: 100vh; }
         .sidebar { width: 260px; background: var(--bg-primary); color: white; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; }
@@ -61,6 +66,7 @@
         .nav-menu { margin-top: 32px; list-style: none; }
         .nav-item { padding: 12px 16px; border-radius: 8px; color: #94a3b8; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 12px; cursor: pointer; margin-bottom: 4px; transition: all 0.2s; }
         .nav-item.active, .nav-item:hover { background: var(--bg-secondary); color: white; }
+        .nav-badge { background: var(--danger); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: auto; }
         .user-profile { display: flex; align-items: center; gap: 12px; padding-top: 16px; border-top: 1px solid #334155; }
         .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; }
         .user-info { flex: 1; overflow: hidden; }
@@ -84,7 +90,7 @@
         .event-title { font-size: 16px; font-weight: 600; color: #0f172a; margin-bottom: 6px; }
         .event-meta { font-size: 12px; color: var(--text-muted); display: flex; gap: 12px; }
         .event-actions { display: flex; gap: 8px; align-items: center; }
-        .btn-action { background: #f1f5f9; border: none; color: #475569; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; text-decoration: none; }
+        .btn-action { background: #f1f5f9; border: none; color: #475569; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
         .btn-action:hover { background: #e2e8f0; color: var(--accent); }
 
         .event-body { padding: 20px; flex: 1; }
@@ -94,7 +100,6 @@
         .file-label { flex: 1; border: 1px dashed var(--accent); color: var(--accent); background: #eff6ff; padding: 8px; border-radius: 6px; text-align: center; font-size: 12px; font-weight: 600; cursor: pointer; }
         .btn-upload { background: var(--accent); color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
 
-        /* MINIATURAS DE FOTOS */
         .photos-preview { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); }
         .photos-preview-title { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
         .photos-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
@@ -108,8 +113,9 @@
         .public-header h1 { font-size: 32px; margin-bottom: 10px; }
         .public-header p { color: #94a3b8; font-size: 15px; }
         .public-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
-        .public-photo-card { background: #1e293b; border-radius: 12px; overflow: hidden; border: 1px solid #334155; display: flex; flex-direction: column; }
+        .public-photo-card { background: #1e293b; border-radius: 12px; overflow: hidden; border: 1px solid #334155; display: flex; flex-direction: column; position: relative; }
         .public-photo-img { width: 100%; height: 180px; object-fit: cover; cursor: pointer; }
+        .photo-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.7); text-shadow: 2px 2px 4px rgba(0,0,0,0.5); pointer-events: none; }
         .public-photo-footer { padding: 12px; display: flex; justify-content: space-between; align-items: center; }
         .btn-download { background: var(--accent); color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 6px; }
 
@@ -117,7 +123,7 @@
         .config-card { background: white; padding: 28px; border-radius: 12px; border: 1px solid var(--border-color); }
 
         .modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.7); display: flex; justify-content: center; align-items: center; backdrop-filter: blur(4px); z-index: 1000; }
-        .modal-content { background: white; padding: 32px; border-radius: 16px; width: 100%; max-width: 480px; }
+        .modal-content { background: white; padding: 32px; border-radius: 16px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .close-modal { font-size: 20px; color: var(--text-muted); cursor: pointer; }
         .lightbox-content { max-width: 80vw; max-height: 80vh; background: transparent; display: flex; flex-direction: column; align-items: center; }
@@ -128,7 +134,6 @@
         .alert-success { background: #d1fae5; color: #065f46; }
         .alert-error { background: #fee2e2; color: #991b1b; }
 
-        /* PRICING */
         .pricing-section { margin-top: 24px; padding-top: 24px; border-top: 2px solid var(--border-color); }
         .pricing-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .pricing-header h4 { font-size: 14px; color: #0f172a; display: flex; align-items: center; gap: 6px; }
@@ -141,14 +146,29 @@
         .pricing-card { background: #f8fafc; padding: 20px; border-radius: 10px; border: 1px solid var(--border-color); margin-top: 12px; }
         .pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .commission-note { font-size: 11px; color: var(--text-muted); margin-top: 10px; padding: 8px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; }
-
-        /* MODO VISUALIZACIÓN DE PRECIOS */
         .pricing-view { background: #f8fafc; padding: 16px; border-radius: 10px; border: 1px solid var(--border-color); margin-top: 12px; }
         .pricing-view-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-color); }
         .pricing-view-row:last-child { border-bottom: none; }
         .pricing-view-label { font-size: 12px; color: var(--text-muted); }
         .pricing-view-value { font-size: 13px; font-weight: 600; color: #0f172a; }
         .pricing-view-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+        /* SECCIÓN VENTAS */
+        .orders-list { display: flex; flex-direction: column; gap: 16px; }
+        .order-card { background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; gap: 20px; }
+        .order-receipt { width: 120px; height: 120px; border-radius: 8px; object-fit: cover; cursor: pointer; border: 1px solid var(--border-color); }
+        .order-details { flex: 1; }
+        .order-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px; }
+        .order-title { font-size: 16px; font-weight: 600; color: #0f172a; }
+        .order-status { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-approved { background: #d1fae5; color: #065f46; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+        .order-info { font-size: 13px; color: #475569; margin-bottom: 8px; }
+        .order-info strong { color: #0f172a; }
+        .order-actions { display: flex; gap: 8px; margin-top: 12px; }
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
     </style>
 </head>
 <body>
@@ -231,6 +251,7 @@
                 <ul class="nav-menu">
                     <li class="nav-item active" id="navEvents" onclick="showSection('events')"><i class="fa-solid fa-calendar-days"></i> Eventos</li>
                     <li class="nav-item" id="navGalleries" onclick="showSection('galleries')"><i class="fa-solid fa-images"></i> Galerías</li>
+                    <li class="nav-item" id="navSales" onclick="showSection('sales')"><i class="fa-solid fa-cart-shopping"></i> Ventas <span class="nav-badge hidden" id="pendingOrdersBadge">0</span></li>
                     <li class="nav-item" id="navSettings" onclick="showSection('settings')"><i class="fa-solid fa-gear"></i> Configuración</li>
                 </ul>
             </div>
@@ -285,6 +306,40 @@
                     </div>
                 </div>
                 <div class="events-grid" id="galleriesGrid"></div>
+            </div>
+
+            <div id="sectionSales" class="hidden">
+                <div class="header">
+                    <div>
+                        <h1>Ventas y Pedidos</h1>
+                        <p style="font-size: 14px; color: var(--text-muted);">Gestiona los pedidos de tus clientes.</p>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fa-solid fa-clock"></i></div>
+                        <div class="stat-data">
+                            <h3 id="pendingCount">0</h3>
+                            <p>Pendientes</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fa-solid fa-check"></i></div>
+                        <div class="stat-data">
+                            <h3 id="approvedCount">0</h3>
+                            <p>Aprobados</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fa-solid fa-dollar-sign"></i></div>
+                        <div class="stat-data">
+                            <h3 id="totalRevenue">$0</h3>
+                            <p>Ingresos Totales</p>
+                        </div>
+                    </div>
+                </div>
+                <h2 style="font-size: 18px; margin-bottom: 16px; color: #0f172a;">Pedidos Recientes</h2>
+                <div class="orders-list" id="ordersList"></div>
             </div>
 
             <div id="sectionSettings" class="hidden">
@@ -359,6 +414,16 @@
         </div>
     </div>
 
+    <div id="orderModal" class="modal hidden">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 style="font-size: 18px; color: #0f172a;">Detalles del Pedido</h3>
+                <i class="fa-solid fa-xmark close-modal" onclick="closeOrderModal()"></i>
+            </div>
+            <div id="orderModalContent"></div>
+        </div>
+    </div>
+
     <div id="lightboxModal" class="modal hidden" onclick="closeLightbox()">
         <div class="lightbox-content" onclick="event.stopPropagation()">
             <img id="lightboxImg" class="lightbox-img" src="" alt="Vista previa">
@@ -369,8 +434,9 @@
     <script>
         let currentUser = null;
         let cachedEvents = [];
-        let cachedPhotos = {}; // Cache de fotos por evento
-        let editingPricingId = null; // ID del evento en modo edición de precios
+        let cachedPhotos = {};
+        let editingPricingId = null;
+        let cachedOrders = [];
 
         function hideLoadingOverlay() {
             const overlay = document.getElementById('loadingOverlay');
@@ -383,9 +449,11 @@
         function showSection(section) {
             document.getElementById('sectionEvents').classList.add('hidden');
             document.getElementById('sectionGalleries').classList.add('hidden');
+            document.getElementById('sectionSales').classList.add('hidden');
             document.getElementById('sectionSettings').classList.add('hidden');
             document.getElementById('navEvents').classList.remove('active');
             document.getElementById('navGalleries').classList.remove('active');
+            document.getElementById('navSales').classList.remove('active');
             document.getElementById('navSettings').classList.remove('active');
 
             if (section === 'events') {
@@ -395,6 +463,10 @@
                 document.getElementById('sectionGalleries').classList.remove('hidden');
                 document.getElementById('navGalleries').classList.add('active');
                 renderGalleriesView();
+            } else if (section === 'sales') {
+                document.getElementById('sectionSales').classList.remove('hidden');
+                document.getElementById('navSales').classList.add('active');
+                loadOrders();
             } else if (section === 'settings') {
                 document.getElementById('sectionSettings').classList.remove('hidden');
                 document.getElementById('navSettings').classList.add('active');
@@ -439,11 +511,12 @@
                 grid.innerHTML = data.photos.map(p => `
                     <div class="public-photo-card">
                         <img src="${p.url}" class="public-photo-img" onclick="openLightbox('${p.url}')">
+                        <div class="photo-watermark">GlobalFoto</div>
                         <div class="public-photo-footer">
                             <span style="font-size: 11px; color: #94a3b8;">GlobalFoto</span>
-                            <a href="${p.url}" download class="btn-download" target="_blank">
-                                <i class="fa-solid fa-download"></i> Descargar
-                            </a>
+                            <button onclick="openPurchaseModal(${eventId}, ${p.id})" class="btn-download">
+                                <i class="fa-solid fa-cart-shopping"></i> Comprar
+                            </button>
                         </div>
                     </div>
                 `).join('');
@@ -470,6 +543,7 @@
 
         function openModal() { document.getElementById('eventModal').classList.remove('hidden'); }
         function closeModal() { document.getElementById('eventModal').classList.add('hidden'); }
+        function closeOrderModal() { document.getElementById('orderModal').classList.add('hidden'); }
         function openLightbox(url) {
             document.getElementById('lightboxImg').src = url;
             document.getElementById('lightboxModal').classList.remove('hidden');
@@ -626,7 +700,6 @@
             }
         });
 
-        // Cargar fotos de un evento (para miniaturas)
         async function loadEventPhotos(eventId) {
             if (cachedPhotos[eventId]) return cachedPhotos[eventId];
             try {
@@ -645,13 +718,11 @@
             return [];
         }
 
-        // Renderizar sección de pricing (modo visualización o edición)
         function renderPricingSection(ev) {
             const isEditing = editingPricingId === ev.id;
             const hasData = ev.price_per_photo > 0 || ev.nequi_phone;
             const salesEnabled = ev.sales_enabled;
 
-            // Header siempre visible
             let html = `
                 <div class="pricing-section">
                     <div class="pricing-header">
@@ -663,7 +734,6 @@
                     </div>
             `;
 
-            // Si ventas desactivadas, solo mostrar mensaje
             if (!salesEnabled) {
                 html += `
                     <div style="font-size: 12px; color: var(--text-muted); padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px dashed var(--border-color);">
@@ -673,7 +743,6 @@
                 return html;
             }
 
-            // Si está en modo edición, mostrar formulario
             if (isEditing) {
                 html += `
                     <div class="pricing-card">
@@ -712,7 +781,6 @@
                 return html;
             }
 
-            // Modo visualización (datos guardados)
             if (hasData) {
                 const photoPrice = ev.price_per_photo ? `$${Number(ev.price_per_photo).toLocaleString('es-CO')}` : 'No definido';
                 const galleryPrice = ev.price_full_gallery ? `$${Number(ev.price_full_gallery).toLocaleString('es-CO')}` : 'No definido';
@@ -742,7 +810,6 @@
                 return html;
             }
 
-            // Ventas activadas pero sin datos: mostrar formulario vacío
             html += `
                 <div class="pricing-card">
                     <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
@@ -784,7 +851,7 @@
                 const res = await fetch('/api/events', { headers: { 'Authorization': `Bearer ${token}` } });
                 const events = await res.json();
                 cachedEvents = events;
-                cachedPhotos = {}; // Reset cache
+                cachedPhotos = {};
                 document.getElementById('statEventsCount').textContent = events.length;
                 let totalPhotos = 0;
                 events.forEach(ev => { if(ev.photosCount) totalPhotos += parseInt(ev.photosCount, 10); });
@@ -842,7 +909,6 @@
                     `;
                 }).join('');
 
-                // Cargar miniaturas de fotos para cada evento
                 events.forEach(async (ev) => {
                     const photos = await loadEventPhotos(ev.id);
                     renderPhotosPreview(ev.id, photos);
@@ -863,7 +929,6 @@
                 return;
             }
 
-            // Mostrar máximo 4 miniaturas
             const maxThumbs = 4;
             const thumbs = photos.slice(0, maxThumbs).map(p => `
                 <img src="${p.url}" class="photo-thumb" onclick="openLightbox('${p.url}')" title="Ver foto">
@@ -908,7 +973,6 @@
                 const data = await res.json();
                 if (res.ok) {
                     alert('¡Fotos subidas exitosamente a S3!');
-                    // Limpiar cache de fotos para recargar
                     delete cachedPhotos[eventId];
                     loadEvents();
                 } else {
@@ -967,6 +1031,7 @@
             document.getElementById('userAvatar').textContent = currentUser.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
             document.getElementById('welcomeTitle').textContent = `¡Hola de nuevo, ${currentUser.name}!`;
             loadEvents();
+            loadPendingOrdersCount();
         }
 
         function logout() {
@@ -974,12 +1039,10 @@
             window.location.href = '/';
         }
 
-        // Toggle de ventas
         async function toggleSales(eventId) {
             const checkbox = document.getElementById(`salesToggle_${eventId}`);
             const salesEnabled = checkbox.checked;
             
-            // Si se está desactivando y había datos, confirmar
             if (!salesEnabled) {
                 const ev = cachedEvents.find(e => e.id === eventId);
                 if (ev && (ev.price_per_photo > 0 || ev.nequi_phone)) {
@@ -1020,19 +1083,16 @@
             }
         }
 
-        // Entrar en modo edición
         function editPricing(eventId) {
             editingPricingId = eventId;
             loadEvents();
         }
 
-        // Cancelar edición
         function cancelEditPricing(eventId) {
             editingPricingId = null;
             loadEvents();
         }
 
-        // Guardar precios
         async function savePricing(eventId) {
             const token = localStorage.getItem('token');
             const msgDiv = document.getElementById(`pricingMsg_${eventId}`);
@@ -1067,7 +1127,7 @@
                 const result = await res.json();
 
                 if (res.ok) {
-                    editingPricingId = null; // Salir de modo edición
+                    editingPricingId = null;
                     if (msgDiv) {
                         msgDiv.className = 'alert alert-success';
                         msgDiv.style.padding = '12px 16px';
@@ -1099,6 +1159,202 @@
                     btn.innerHTML = '<i class="fa-solid fa-save"></i> Guardar';
                 }
             }
+        }
+
+        async function loadPendingOrdersCount() {
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch('/api/orders/photographer?status=pending', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const count = data.orders.length;
+                    const badge = document.getElementById('pendingOrdersBadge');
+                    if (count > 0) {
+                        badge.textContent = count;
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+            } catch (err) {
+                console.error('Error al cargar pedidos pendientes:', err);
+            }
+        }
+
+        async function loadOrders() {
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch('/api/orders/photographer', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('Error al cargar pedidos');
+                
+                const data = await res.json();
+                cachedOrders = data.orders;
+
+                const pending = cachedOrders.filter(o => o.status === 'pending').length;
+                const approved = cachedOrders.filter(o => o.status === 'approved').length;
+                const totalRevenue = cachedOrders
+                    .filter(o => o.status === 'approved')
+                    .reduce((sum, o) => sum + parseFloat(o.photographer_net || 0), 0);
+
+                document.getElementById('pendingCount').textContent = pending;
+                document.getElementById('approvedCount').textContent = approved;
+                document.getElementById('totalRevenue').textContent = `$${totalRevenue.toLocaleString('es-CO')}`;
+
+                const ordersList = document.getElementById('ordersList');
+                if (cachedOrders.length === 0) {
+                    ordersList.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fa-solid fa-cart-shopping"></i>
+                            <p>No hay pedidos aún</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                ordersList.innerHTML = cachedOrders.map(order => {
+                    const statusClass = `status-${order.status}`;
+                    const statusText = order.status === 'pending' ? 'Pendiente' : order.status === 'approved' ? 'Aprobado' : 'Rechazado';
+                    const date = new Date(order.created_at).toLocaleDateString('es-CO');
+                    
+                    return `
+                        <div class="order-card">
+                            <img src="${order.receipt_url}" class="order-receipt" onclick="viewOrderDetails(${order.id})" title="Ver comprobante">
+                            <div class="order-details">
+                                <div class="order-header">
+                                    <div>
+                                        <div class="order-title">Pedido #${order.id} - ${order.event_title}</div>
+                                        <div class="order-info">
+                                            <strong>Cliente:</strong> ${order.customer_name || order.customer_email}<br>
+                                            <strong>Email:</strong> ${order.customer_email}<br>
+                                            <strong>Tipo:</strong> ${order.order_type === 'gallery' ? 'Galería completa' : `${order.photo_ids.length} foto(s)`}<br>
+                                            <strong>Fecha:</strong> ${date}
+                                        </div>
+                                    </div>
+                                    <span class="order-status ${statusClass}">${statusText}</span>
+                                </div>
+                                <div class="order-info">
+                                    <strong>Monto:</strong> $${Number(order.amount).toLocaleString('es-CO')} | 
+                                    <strong>Tu ganancia:</strong> $${Number(order.photographer_net).toLocaleString('es-CO')}
+                                </div>
+                                ${order.status === 'pending' ? `
+                                    <div class="order-actions">
+                                        <button onclick="approveOrder(${order.id})" class="btn-success">
+                                            <i class="fa-solid fa-check"></i> Aprobar
+                                        </button>
+                                        <button onclick="rejectOrder(${order.id})" class="btn-danger">
+                                            <i class="fa-solid fa-xmark"></i> Rechazar
+                                        </button>
+                                        <button onclick="viewOrderDetails(${order.id})" class="btn-secondary" style="width: auto; padding: 10px 16px;">
+                                            <i class="fa-solid fa-eye"></i> Ver detalles
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error('Error al cargar pedidos:', err);
+                document.getElementById('ordersList').innerHTML = '<div class="alert alert-error">Error al cargar los pedidos.</div>';
+            }
+        }
+
+        function viewOrderDetails(orderId) {
+            const order = cachedOrders.find(o => o.id === orderId);
+            if (!order) return;
+
+            const modalContent = document.getElementById('orderModalContent');
+            modalContent.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <img src="${order.receipt_url}" style="width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px; border: 1px solid var(--border-color);">
+                </div>
+                <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 12px; color: #0f172a;">Información del Pedido</h4>
+                    <p style="font-size: 13px; color: #475569; margin-bottom: 8px;"><strong>Cliente:</strong> ${order.customer_name || 'No especificado'}</p>
+                    <p style="font-size: 13px; color: #475569; margin-bottom: 8px;"><strong>Email:</strong> ${order.customer_email}</p>
+                    <p style="font-size: 13px; color: #475569; margin-bottom: 8px;"><strong>Evento:</strong> ${order.event_title}</p>
+                    <p style="font-size: 13px; color: #475569; margin-bottom: 8px;"><strong>Tipo:</strong> ${order.order_type === 'gallery' ? 'Galería completa' : `${order.photo_ids.length} foto(s)`}</p>
+                    <p style="font-size: 13px; color: #475569; margin-bottom: 8px;"><strong>Monto total:</strong> $${Number(order.amount).toLocaleString('es-CO')}</p>
+                    <p style="font-size: 13px; color: #475569; margin-bottom: 8px;"><strong>Tu ganancia (90%):</strong> $${Number(order.photographer_net).toLocaleString('es-CO')}</p>
+                    <p style="font-size: 13px; color: #475569;"><strong>Comisión GlobalFoto (10%):</strong> $${Number(order.commission_amount).toLocaleString('es-CO')}</p>
+                </div>
+                ${order.status === 'pending' ? `
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="approveOrder(${order.id}); closeOrderModal();" class="btn-success" style="flex: 1;">
+                            <i class="fa-solid fa-check"></i> Aprobar Pedido
+                        </button>
+                        <button onclick="rejectOrder(${order.id}); closeOrderModal();" class="btn-danger" style="flex: 1;">
+                            <i class="fa-solid fa-xmark"></i> Rechazar
+                        </button>
+                    </div>
+                ` : `
+                    <div class="alert ${order.status === 'approved' ? 'alert-success' : 'alert-error'}">
+                        Pedido ${order.status === 'approved' ? 'aprobado' : 'rechazado'}
+                    </div>
+                `}
+            `;
+
+            document.getElementById('orderModal').classList.remove('hidden');
+        }
+
+        async function approveOrder(orderId) {
+            if (!confirm('¿Aprobar este pedido? Se enviará un email al cliente con los enlaces de descarga.')) return;
+            
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`/api/orders/${orderId}/approve`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (res.ok) {
+                    alert('✅ Pedido aprobado. Email enviado al cliente.');
+                    loadOrders();
+                    loadPendingOrdersCount();
+                } else {
+                    const data = await res.json();
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (err) {
+                alert('Error de conexión al aprobar el pedido.');
+            }
+        }
+
+        async function rejectOrder(orderId) {
+            const reason = prompt('Motivo del rechazo (opcional):');
+            if (reason === null) return;
+            
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`/api/orders/${orderId}/reject`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ reason: reason || 'Sin motivo especificado' })
+                });
+                
+                if (res.ok) {
+                    alert('❌ Pedido rechazado. Cliente notificado.');
+                    loadOrders();
+                    loadPendingOrdersCount();
+                } else {
+                    const data = await res.json();
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (err) {
+                alert('Error de conexión al rechazar el pedido.');
+            }
+        }
+
+        function openPurchaseModal(eventId, photoId) {
+            alert('Formulario de compra en desarrollo. Próximamente podrás comprar fotos directamente desde aquí.');
         }
 
         window.addEventListener('DOMContentLoaded', async () => {
