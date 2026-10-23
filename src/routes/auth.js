@@ -39,10 +39,37 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// Ruta para el Registro
+router.post('/register', async (req, res) => {
+    try {
+        const { name, email, password, role } = req.body;
+
+        const userExists = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        if (userExists.rows.length > 0) {
+            return res.status(400).json({ error: 'El correo electrónico ya está registrado.' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        const newUser = await pool.query(
+            'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
+            [name, email, hashedPassword, role || 'photographer']
+        );
+
+        res.status(201).json({
+            mensaje: '¡Usuario registrado con éxito!',
+            user: newUser.rows[0]
+        });
+    } catch (error) {
+        console.error('Error en registro:', error);
+        res.status(500).json({ error: 'Error interno en el servidor.' });
+    }
+});
+
 // Ruta para validar token y mantener sesión activa al refrescar
 router.get('/me', verificarToken, async (req, res) => {
     try {
-        // Soportar tanto req.user como req.usuario según cómo lo devuelva el middleware
         const userId = req.user?.id || req.usuario?.id;
 
         if (!userId) {
