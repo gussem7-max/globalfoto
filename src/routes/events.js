@@ -50,11 +50,25 @@ router.post('/', verificarToken, async (req, res) => {
     }
 });
 
-// Ruta para listar todos los eventos
+// Ruta para listar todos los eventos (Actualizada con conteo de fotos)
 router.get('/', async (req, res) => {
     try {
-        const allEvents = await pool.query('SELECT * FROM events ORDER BY created_at DESC');
-        res.json(allEvents.rows);
+        const query = `
+            SELECT e.*, COUNT(p.id) as "photosCount"
+            FROM events e
+            LEFT JOIN photos p ON e.id = p.event_id
+            GROUP BY e.id
+            ORDER BY e.created_at DESC;
+        `;
+        const allEvents = await pool.query(query);
+        
+        // Asegurarnos de que photosCount sea un número entero
+        const eventsWithCount = allEvents.rows.map(ev => ({
+            ...ev,
+            photosCount: parseInt(ev.photosCount, 10) || 0
+        }));
+
+        res.json(eventsWithCount);
     } catch (error) {
         console.error('Error al obtener los eventos:', error);
         res.status(500).json({ error: 'Error interno al listar los eventos.' });
