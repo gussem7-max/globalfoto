@@ -106,6 +106,10 @@ app.use('/api/photos', photoRoutes);
 const orderRoutes = require('./src/routes/orders');
 app.use('/api/orders', orderRoutes);
 
+// 👉 NUEVA RUTA: USUARIOS REGISTRADOS 👈
+const usersRoutes = require('./src/routes/users');
+app.use('/api/users', usersRoutes);
+
 // Subidas locales (legacy): en producción las fotos viven en S3
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

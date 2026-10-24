@@ -201,10 +201,9 @@
         .receipt-preview { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 12px; }
 
         /* ============================================
-        RESPONSIVE - BARRA INFERIOR MODERNA TIPO APP
-        ============================================ */
+           RESPONSIVE - BARRA INFERIOR MODERNA TIPO APP
+           ============================================ */
         @media (max-width: 768px) {
-            /* Sidebar se convierte en barra inferior */
             .sidebar { 
                 width: 100%;
                 height: 72px;
@@ -222,16 +221,8 @@
                 background: var(--bg-primary);
                 border-top: 1px solid #334155;
             }
-            
-            /* Ocultar marca y perfil */
-            .sidebar .brand { 
-                display: none; 
-            }
-            .sidebar .user-profile { 
-                display: none; 
-            }
-            
-            /* Menú de navegación con espacio entre íconos */
+            .sidebar .brand { display: none; }
+            .sidebar .user-profile { display: none; }
             .sidebar .nav-menu { 
                 display: flex !important;
                 flex-direction: row;
@@ -243,7 +234,6 @@
                 padding: 0 20px;
                 gap: 8px;
             }
-            
             .nav-item { 
                 flex: 1;
                 display: flex;
@@ -258,144 +248,38 @@
                 transition: all 0.3s ease;
                 min-height: 52px;
             }
-            
-            .nav-item i {
-                font-size: 26px;
-                margin: 0;
-                color: #64748b;
-                transition: all 0.3s ease;
-            }
-            
-            .nav-item span:not(.nav-badge) {
-                display: block !important;
-                font-size: 11px;
-                font-weight: 600;
-                color: #64748b;
-                transition: all 0.3s ease;
-            }
-            
-            /* Estado activo con fondo destacado */
-            .nav-item.active {
-                background: rgba(37, 99, 235, 0.15);
-            }
-            
-            .nav-item.active i {
-                color: var(--accent);
-                transform: scale(1.15);
-            }
-            
-            .nav-item.active span:not(.nav-badge) {
-                color: white;
-                font-weight: 700;
-            }
-            
-            /* Hover effect */
-            .nav-item:hover:not(.active) {
-                background: rgba(255, 255, 255, 0.05);
-            }
-            
-            .nav-item:hover:not(.active) i {
-                color: #94a3b8;
-            }
-            
-            /* Badge de notificaciones */
+            .nav-item i { font-size: 26px; margin: 0; color: #64748b; transition: all 0.3s ease; }
+            .nav-item span:not(.nav-badge) { display: block !important; font-size: 11px; font-weight: 600; color: #64748b; transition: all 0.3s ease; }
+            .nav-item.active { background: rgba(37, 99, 235, 0.15); }
+            .nav-item.active i { color: var(--accent); transform: scale(1.15); }
+            .nav-item.active span:not(.nav-badge) { color: white; font-weight: 700; }
+            .nav-item:hover:not(.active) { background: rgba(255, 255, 255, 0.05); }
+            .nav-item:hover:not(.active) i { color: #94a3b8; }
             .nav-badge { 
-                position: absolute;
-                top: 2px;
-                right: calc(50% - 22px);
-                font-size: 10px;
-                padding: 2px 6px;
-                min-width: 18px;
-                text-align: center;
-                background: var(--danger);
-                color: white;
-                border-radius: 10px;
-                font-weight: 700;
-                box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);
+                position: absolute; top: 2px; right: calc(50% - 22px); font-size: 10px; padding: 2px 6px;
+                min-width: 18px; text-align: center; background: var(--danger); color: white;
+                border-radius: 10px; font-weight: 700; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);
             }
-            
-            /* Contenido principal con espacio para la barra */
-            .main-content { 
-                padding: 16px;
-                padding-bottom: 90px;
-                margin-left: 0;
-            }
-            
-            /* Header en columna */
-            .header { 
-                flex-direction: column; 
-                align-items: flex-start; 
-                gap: 12px;
-            }
-            .header h1 { 
-                font-size: 20px; 
-            }
-            .header .btn-primary {
-                width: 100%;
-            }
-            
-            /* Stats en 1 columna */
-            .stats-grid { 
-                grid-template-columns: 1fr;
-            }
-            
-            /* Eventos en 1 columna */
-            .events-grid { 
-                grid-template-columns: 1fr;
-            }
-            
-            /* Pedidos en columna */
-            .order-card {
-                flex-direction: column;
-            }
-            .order-receipt {
-                width: 100%;
-                height: 200px;
-            }
-            
-            /* Precios en 1 columna */
-            .pricing-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            /* Galería pública en 2 columnas */
-            .public-gallery {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .public-pricing-bar {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .btn-buy-gallery {
-                width: 100%;
-                justify-content: center;
-            }
-            
-            /* Modales más pequeños */
-            .modal-content {
-                padding: 20px;
-                margin: 10px;
-                max-height: 95vh;
-            }
-            
-            /* Formulario de compra */
-            .nequi-info {
-                font-size: 12px;
-            }
+            .main-content { padding: 16px; padding-bottom: 90px; margin-left: 0; }
+            .header { flex-direction: column; align-items: flex-start; gap: 12px; }
+            .header h1 { font-size: 20px; }
+            .header .btn-primary { width: 100%; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .events-grid { grid-template-columns: 1fr; }
+            .order-card { flex-direction: column; }
+            .order-receipt { width: 100%; height: 200px; }
+            .pricing-grid { grid-template-columns: 1fr; }
+            .public-gallery { grid-template-columns: repeat(2, 1fr); }
+            .public-pricing-bar { flex-direction: column; align-items: stretch; }
+            .btn-buy-gallery { width: 100%; justify-content: center; }
+            .modal-content { padding: 20px; margin: 10px; max-height: 95vh; }
+            .nequi-info { font-size: 12px; }
         }
-
         @media (max-width: 480px) {
-            .public-gallery {
-                grid-template-columns: 1fr;
-            }
-            .public-photo-img {
-                height: 250px;
-            }
-            .header h1 {
-                font-size: 18px;
-            }
+            .public-gallery { grid-template-columns: 1fr; }
+            .public-photo-img { height: 250px; }
+            .header h1 { font-size: 18px; }
         }
-
     </style>
 </head>
 <body>
@@ -415,7 +299,6 @@
                 <p id="pubEventDetails"></p>
             </div>
             
-            <!-- Barra de precios y compra de galería -->
             <div id="pubPricingBar" class="public-pricing-bar hidden">
                 <div class="public-pricing-info">
                     <div class="public-price-item">
@@ -503,6 +386,7 @@
                     <li class="nav-item active" id="navEvents" onclick="showSection('events')"><i class="fa-solid fa-calendar-days"></i> <span>Eventos</span></li>
                     <li class="nav-item" id="navGalleries" onclick="showSection('galleries')"><i class="fa-solid fa-images"></i> <span>Galerías</span></li>
                     <li class="nav-item" id="navSales" onclick="showSection('sales')"><i class="fa-solid fa-cart-shopping"></i> <span>Ventas</span> <span class="nav-badge hidden" id="pendingOrdersBadge">0</span></li>
+                    <li class="nav-item" id="navUsers" onclick="showSection('users')"><i class="fa-solid fa-users"></i> <span>Usuarios</span></li>
                     <li class="nav-item" id="navSettings" onclick="showSection('settings')"><i class="fa-solid fa-gear"></i> <span>Configuración</span></li>
                 </ul>
             </div>
@@ -576,6 +460,30 @@
                 </div>
                 <h2 style="font-size: 18px; margin-bottom: 16px; color: #0f172a;">Pedidos Recientes</h2>
                 <div class="orders-list" id="ordersList"></div>
+            </div>
+
+            <div id="sectionUsers" class="hidden">
+                <div class="header">
+                    <div>
+                        <h1>Usuarios Registrados</h1>
+                        <p style="font-size: 14px; color: var(--text-muted);">Lista de fotógrafos que se han registrado en la plataforma.</p>
+                    </div>
+                </div>
+                <div style="background: white; border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left; min-width: 600px;">
+                        <thead style="background: #f8fafc; border-bottom: 1px solid var(--border-color);">
+                            <tr>
+                                <th style="padding: 16px; font-size: 13px; font-weight: 600; color: var(--text-muted);">Nombre</th>
+                                <th style="padding: 16px; font-size: 13px; font-weight: 600; color: var(--text-muted);">Correo</th>
+                                <th style="padding: 16px; font-size: 13px; font-weight: 600; color: var(--text-muted);">Rol</th>
+                                <th style="padding: 16px; font-size: 13px; font-weight: 600; color: var(--text-muted);">Fecha de Registro</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <!-- Aquí se cargarán los usuarios con JS -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <div id="sectionSettings" class="hidden">
@@ -703,10 +611,12 @@
             document.getElementById('sectionGalleries').classList.add('hidden');
             document.getElementById('sectionSales').classList.add('hidden');
             document.getElementById('sectionSettings').classList.add('hidden');
+            document.getElementById('sectionUsers').classList.add('hidden');
             document.getElementById('navEvents').classList.remove('active');
             document.getElementById('navGalleries').classList.remove('active');
             document.getElementById('navSales').classList.remove('active');
             document.getElementById('navSettings').classList.remove('active');
+            document.getElementById('navUsers').classList.remove('active');
 
             if (section === 'events') {
                 document.getElementById('sectionEvents').classList.remove('hidden');
@@ -719,6 +629,10 @@
                 document.getElementById('sectionSales').classList.remove('hidden');
                 document.getElementById('navSales').classList.add('active');
                 loadOrders();
+            } else if (section === 'users') {
+                document.getElementById('sectionUsers').classList.remove('hidden');
+                document.getElementById('navUsers').classList.add('active');
+                loadUsers();
             } else if (section === 'settings') {
                 document.getElementById('sectionSettings').classList.remove('hidden');
                 document.getElementById('navSettings').classList.add('active');
@@ -726,6 +640,40 @@
                     document.getElementById('cfgName').value = currentUser.name || '';
                     document.getElementById('cfgEmail').value = currentUser.email || '';
                 }
+            }
+        }
+
+        async function loadUsers() {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center; color: var(--text-muted);">Cargando usuarios...</td></tr>';
+            
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch('/api/users', { headers: { 'Authorization': `Bearer ${token}` } });
+                
+                if (res.ok) {
+                    const users = await res.json();
+                    if (users.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center; color: var(--text-muted);">No hay usuarios registrados aún.</td></tr>';
+                        return;
+                    }
+                    tbody.innerHTML = users.map(u => {
+                        const fecha = new Date(u.created_at).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' });
+                        const roleBadge = u.role === 'photographer' 
+                            ? '<span style="background: #eff6ff; color: #2563eb; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">Fotógrafo</span>'
+                            : '<span style="background: #f3f4f6; color: #4b5563; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">' + u.role + '</span>';
+                        return `
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 16px; font-size: 14px; font-weight: 500; color: #0f172a;">${u.name}</td>
+                                <td style="padding: 16px; font-size: 14px; color: #475569;">${u.email}</td>
+                                <td style="padding: 16px;">${roleBadge}</td>
+                                <td style="padding: 16px; font-size: 13px; color: #64748b;">${fecha}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center; color: var(--danger);">Error al cargar la lista.</td></tr>';
             }
         }
 
@@ -777,7 +725,6 @@
 
                 grid.innerHTML = data.photos.map(p => {
                     const safeUrl = p.preview_url || p.url;
-                    
                     return `
                         <div class="public-photo-card" id="photoCard_${p.id}" onclick="togglePhotoSelection(${p.id})">
                             <div class="public-photo-wrapper" onclick="event.stopPropagation(); openLightbox('${safeUrl}')">
@@ -810,7 +757,6 @@
 
         function togglePhotoSelection(photoId) {
             if (!currentPublicEvent || !currentPublicEvent.sales_enabled) return;
-            
             const card = document.getElementById(`photoCard_${photoId}`);
             if (selectedPhotos.has(photoId)) {
                 selectedPhotos.delete(photoId);
@@ -850,7 +796,6 @@
             if (url.includes('/original/')) {
                 safeUrl = url.replace('/original/', '/preview/').replace(/\.\w+$/, '.jpg');
             }
-            
             document.getElementById('lightboxImg').src = safeUrl;
             document.getElementById('lightboxModal').classList.remove('hidden');
         }
@@ -1608,22 +1553,18 @@
 
         async function approveOrder(orderId) {
             if (!confirm('¿Aprobar este pedido? Se enviará un email al cliente con los enlaces de descarga.')) return;
-            
             const btn = event.target.closest('button');
             if (btn) {
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
             }
-            
             try {
                 const token = localStorage.getItem('token');
                 const res = await fetch(`/api/orders/${orderId}/approve`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                
                 const data = await res.json();
-                
                 if (res.ok) {
                     alert('✅ Pedido aprobado. Email enviado al cliente.');
                     await loadOrders();
@@ -1648,7 +1589,6 @@
         async function rejectOrder(orderId) {
             const reason = prompt('Motivo del rechazo (opcional):');
             if (reason === null) return;
-            
             try {
                 const token = localStorage.getItem('token');
                 const res = await fetch(`/api/orders/${orderId}/reject`, {
@@ -1659,7 +1599,6 @@
                     },
                     body: JSON.stringify({ reason: reason || 'Sin motivo especificado' })
                 });
-                
                 if (res.ok) {
                     alert('❌ Pedido rechazado. Cliente notificado.');
                     loadOrders();
@@ -1675,7 +1614,6 @@
 
         function openPurchaseModal(type, photoId = null) {
             if (!currentPublicEvent) return;
-            
             const modal = document.getElementById('purchaseModal');
             const title = document.getElementById('purchaseModalTitle');
             const body = document.getElementById('purchaseModalBody');
@@ -1696,12 +1634,10 @@
                 } else {
                     photoIds = Array.from(selectedPhotos);
                 }
-                
                 if (photoIds.length === 0) {
                     alert('Selecciona al menos una foto haciendo clic en ella.');
                     return;
                 }
-                
                 orderType = 'single';
                 amount = (parseFloat(currentPublicEvent.price_per_photo) || 0) * photoIds.length;
                 description = `${photoIds.length} foto(s) seleccionada(s)`;
@@ -1796,7 +1732,6 @@
 
         async function submitPurchase(e) {
             e.preventDefault();
-            
             const body = document.getElementById('purchaseModalBody');
             const orderType = body.dataset.orderType;
             const photoIds = JSON.parse(body.dataset.photoIds);
