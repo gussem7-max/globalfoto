@@ -200,47 +200,92 @@
         .receipt-upload p { font-size: 13px; color: var(--text-muted); }
         .receipt-preview { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 12px; }
 
-        @media (max-width: 768px) {
-            .sidebar { width: 70px; padding: 16px 8px; }
-            .brand span, .nav-item span:not(.nav-badge), .user-info { display: none; }
-            .nav-item { justify-content: center; }
-            .main-content { padding: 16px; }
-            .public-pricing-bar { flex-direction: column; align-items: stretch; }
-        }
-
         /* ============================================
-        RESPONSIVE - PANEL MÓVIL MEJORADO
-        ============================================ */
+           RESPONSIVE - BARRA INFERIOR TIPO APP
+           ============================================ */
         @media (max-width: 768px) {
-            /* Sidebar colapsada */
+            /* Sidebar se convierte en barra inferior fija */
             .sidebar { 
-                width: 70px; 
-                padding: 16px 8px;
+                width: 100%;
+                height: 70px;
+                padding: 0;
                 position: fixed;
-                height: 100vh;
-                z-index: 100;
-            }
-            .brand span, 
-            .nav-item span:not(.nav-badge), 
-            .user-info { 
-                display: none; 
-            }
-            .nav-item { 
-                justify-content: center; 
-                padding: 12px 8px;
-            }
-            .nav-badge { 
-                position: absolute;
-                top: 4px;
-                right: 4px;
-                font-size: 10px;
-                padding: 2px 6px;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                top: auto;
+                z-index: 1000;
+                display: flex;
+                flex-direction: row;
+                justify-content: space-around;
+                align-items: center;
+                background: var(--bg-primary);
+                border-top: 1px solid #334155;
             }
             
-            /* Contenido principal con margen para sidebar */
+            /* Ocultar marca y perfil en móvil */
+            .sidebar > div:first-child { 
+                display: none; 
+            }
+            .user-profile { 
+                display: none; 
+            }
+            
+            /* Menú de navegación en fila */
+            .nav-menu { 
+                display: flex;
+                flex-direction: row;
+                justify-content: space-around;
+                align-items: center;
+                width: 100%;
+                margin: 0;
+                padding: 0 10px;
+            }
+            
+            .nav-item { 
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 8px 4px;
+                margin: 0;
+                border-radius: 8px;
+                gap: 4px;
+                position: relative;
+            }
+            
+            .nav-item i {
+                font-size: 20px;
+                margin: 0;
+            }
+            
+            .nav-item span:not(.nav-badge) {
+                display: block !important;
+                font-size: 10px;
+                font-weight: 500;
+                color: #94a3b8;
+            }
+            
+            .nav-item.active span:not(.nav-badge) {
+                color: white;
+            }
+            
+            .nav-badge { 
+                position: absolute;
+                top: 2px;
+                right: calc(50% - 18px);
+                font-size: 9px;
+                padding: 2px 5px;
+                min-width: 16px;
+                text-align: center;
+            }
+            
+            /* Contenido principal con espacio para la barra inferior */
             .main-content { 
                 padding: 16px;
-                margin-left: 70px;
+                padding-bottom: 90px;
+                margin-left: 0;
             }
             
             /* Header en columna */
@@ -280,7 +325,7 @@
                 grid-template-columns: 1fr;
             }
             
-            /* Galería pública */
+            /* Galería pública en 2 columnas */
             .public-gallery {
                 grid-template-columns: repeat(2, 1fr);
             }
@@ -669,7 +714,6 @@
                 currentPublicEvent = data.event;
                 document.getElementById('pubEventTitle').textContent = data.event.title;
 
-                // Barra de precios
                 const pricingBar = document.getElementById('pubPricingBar');
                 if (data.event.sales_enabled && (data.event.price_per_photo > 0 || data.event.price_full_gallery > 0)) {
                     pricingBar.classList.remove('hidden');
@@ -698,9 +742,7 @@
                     return;
                 }
 
-                // 🔒 PROTECCIÓN: Usar preview_url (con marca de agua) en TODAS las vistas
                 grid.innerHTML = data.photos.map(p => {
-                    // Usar preview_url si existe, si no usar url (para fotos antiguas)
                     const safeUrl = p.preview_url || p.url;
                     
                     return `
@@ -723,7 +765,6 @@
                     `;
                 }).join('');
 
-                // 🔒 Bloquear clic derecho en toda la galería pública
                 document.getElementById('publicView').oncontextmenu = (e) => {
                     e.preventDefault();
                     return false;
@@ -772,7 +813,6 @@
             document.querySelectorAll('.public-photo-card').forEach(c => c.classList.remove('selected'));
         }
         function openLightbox(url) {
-            // Si la URL contiene 'original/', reemplazarla por 'preview/' y cambiar extensión a .jpg
             let safeUrl = url;
             if (url.includes('/original/')) {
                 safeUrl = url.replace('/original/', '/preview/').replace(/\.\w+$/, '.jpg');
@@ -1600,9 +1640,6 @@
             }
         }
 
-        // =====================================================
-        // FORMULARIO DE COMPRA (CLIENTE)
-        // =====================================================
         function openPurchaseModal(type, photoId = null) {
             if (!currentPublicEvent) return;
             
@@ -1621,7 +1658,6 @@
                 description = `Galería completa: ${currentPublicEvent.title}`;
                 title.innerHTML = '<i class="fa-solid fa-images"></i> Comprar Galería Completa';
             } else {
-                // Single o múltiples seleccionadas
                 if (photoId) {
                     photoIds = [photoId];
                 } else {
@@ -1703,7 +1739,6 @@
                 </p>
             `;
 
-            // Guardar datos en variables para el submit
             body.dataset.orderType = orderType;
             body.dataset.photoIds = JSON.stringify(photoIds);
             body.dataset.amount = amount;
