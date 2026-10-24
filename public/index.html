@@ -190,6 +190,15 @@
                     </select>
                 </div>
                 <div class="form-group"><label>Expira el (Opcional)</label><input type="datetime-local" id="event_expires"></div>
+                                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="event_selfie" style="width: auto;">
+                        🤳 Requerir selfie de verificación
+                    </label>
+                    <small style="color: var(--text-muted); display: block; margin-top: 4px;">
+                        Actívalo en graduaciones o eventos donde debas garantizar que cada persona solo vea y compre sus propias fotos. El cliente deberá tomarse una selfie para filtrar la galería.
+                    </small>
+                </div>
                 <button type="submit" class="btn-primary" id="eventSubmitBtn">Guardar Evento</button>
             </form>
             <div id="resultadoEvento"></div>

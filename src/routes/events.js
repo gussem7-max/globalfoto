@@ -25,16 +25,16 @@ const isValidId = (id) => /^\d+$/.test(id) && parseInt(id) > 0;
 // =====================================================
 router.post('/', verificarToken, async (req, res) => {
     try {
-        const { title, event_date, location, description, status, expires_at } = req.body;
+        const { title, event_date, location, description, status, expires_at, selfie_required } = req.body;
         const photographer_id = req.user.id;
 
         if (!title) return res.status(400).json({ error: 'El título del evento es requerido.' });
 
         const newEvent = await pool.query(`
-            INSERT INTO events (photographer_id, title, event_date, location, description, status, expires_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO events (photographer_id, title, event_date, location, description, status, expires_at, selfie_required)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
-        `, [photographer_id, title, event_date || null, location || '', description || '', status || 'published', expires_at || null]);
+        `, [photographer_id, title, event_date || null, location || '', description || '', status || 'published', expires_at || null, selfie_required === true]);
 
         const event = newEvent.rows[0];
 
@@ -116,7 +116,7 @@ router.put('/:id', verificarToken, async (req, res) => {
     try {
         const { id } = req.params;
         const photographer_id = req.user.id;
-        const { title, event_date, location, description, status, expires_at } = req.body;
+        const { title, event_date, location, description, status, expires_at, selfie_required } = req.body;
 
         if (!isValidId(id)) return res.status(400).json({ error: 'ID de evento inválido.' });
 
@@ -129,9 +129,9 @@ router.put('/:id', verificarToken, async (req, res) => {
         const updated = await pool.query(`
             UPDATE events SET 
                 title = $1, event_date = $2, location = $3, description = $4, 
-                status = $5, expires_at = $6
-            WHERE id = $7 RETURNING *
-        `, [title, event_date, location, description, status || 'published', expires_at || null, id]);
+                status = $5, expires_at = $6, selfie_required = $7
+            WHERE id = $8 RETURNING *
+        `, [title, event_date, location, description, status || 'published', expires_at || null, selfie_required === true, id]);
 
         res.json({ mensaje: 'Evento actualizado.', event: updated.rows[0] });
     } catch (error) {

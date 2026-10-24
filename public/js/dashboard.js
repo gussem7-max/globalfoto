@@ -10,6 +10,7 @@ function openModal(eventId = null) {
     document.getElementById('eventSubmitBtn').textContent = 'Guardar Evento';
     document.getElementById('event_status').value = 'published';
     document.getElementById('event_expires').value = '';
+    document.getElementById('event_selfie').checked = false;
     if (eventId) {
         const ev = cachedEvents.find(e => e.id === eventId);
         if (ev) {
@@ -20,6 +21,7 @@ function openModal(eventId = null) {
             document.getElementById('description').value = ev.description || '';
             document.getElementById('event_status').value = ev.status || 'published';
             document.getElementById('event_expires').value = ev.expires_at ? ev.expires_at.slice(0, 16) : '';
+            document.getElementById('event_selfie').checked = ev.selfie_required === true;
             document.getElementById('eventModalTitle').textContent = 'Editar Evento';
             document.getElementById('eventSubmitBtn').textContent = 'Actualizar Evento';
         }
@@ -44,12 +46,13 @@ document.getElementById('eventForm').addEventListener('submit', async (e) => {
     const description = document.getElementById('description').value;
     const status = document.getElementById('event_status').value;
     const expires_at = document.getElementById('event_expires').value || null;
+    const selfie_required = document.getElementById('event_selfie').checked;
     const resDiv = document.getElementById('resultadoEvento');
     const event_date = rawDate ? new Date(rawDate).toISOString().split('T')[0] : '';
     try {
         const url = editId ? `/api/events/${editId}` : '/api/events';
         const method = editId ? 'PUT' : 'POST';
-        const res = await fetch(url, { method, headers: jsonHeaders(), body: JSON.stringify({ title, event_date, location, description, status, expires_at }) });
+        const res = await fetch(url, { method, headers: jsonHeaders(), body: JSON.stringify({ title, event_date, location, description, status, expires_at, selfie_required }) });
         const data = await res.json();
         if (res.ok) {
             resDiv.className = 'alert alert-success';
@@ -144,11 +147,12 @@ async function loadEvents() {
             const publicUrl = `${window.location.origin}/?galeria=${ev.id}`;
             const statusClass = `status-${ev.status || 'published'}`;
             const statusText = ev.status === 'published' ? 'Publicada' : ev.status === 'draft' ? 'Borrador' : 'Archivada';
+            const selfieBadge = ev.selfie_required ? ' <span class="event-status-badge" style="background:#ede9fe;color:#6d28d9;">🤳 Selfie</span>' : '';
             const expiryText = ev.expires_at ? `<br><small style="color: var(--warning);">Expira: ${new Date(ev.expires_at).toLocaleString('es-CO')}</small>` : '';
             return `<div class="event-card">
                 <div class="event-header">
                     <div>
-                        <div class="event-title">${ev.title} <span class="event-status-badge ${statusClass}">${statusText}</span></div>
+                        <div class="event-title">${ev.title} <span class="event-status-badge ${statusClass}">${statusText}</span>${selfieBadge}</div>
                         <div class="event-meta"><span><i class="fa-solid fa-calendar"></i> ${ev.event_date ? ev.event_date.split('T')[0] : ''}</span><span><i class="fa-solid fa-location-dot"></i> ${ev.location || 'Sin ubicación'}</span>${expiryText}</div>
                     </div>
                     <div class="event-actions">
