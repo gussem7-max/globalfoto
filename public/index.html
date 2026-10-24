@@ -207,6 +207,117 @@
             .main-content { padding: 16px; }
             .public-pricing-bar { flex-direction: column; align-items: stretch; }
         }
+
+        /* ============================================
+        RESPONSIVE - PANEL MÓVIL MEJORADO
+        ============================================ */
+        @media (max-width: 768px) {
+            /* Sidebar colapsada */
+            .sidebar { 
+                width: 70px; 
+                padding: 16px 8px;
+                position: fixed;
+                height: 100vh;
+                z-index: 100;
+            }
+            .brand span, 
+            .nav-item span:not(.nav-badge), 
+            .user-info { 
+                display: none; 
+            }
+            .nav-item { 
+                justify-content: center; 
+                padding: 12px 8px;
+            }
+            .nav-badge { 
+                position: absolute;
+                top: 4px;
+                right: 4px;
+                font-size: 10px;
+                padding: 2px 6px;
+            }
+            
+            /* Contenido principal con margen para sidebar */
+            .main-content { 
+                padding: 16px;
+                margin-left: 70px;
+            }
+            
+            /* Header en columna */
+            .header { 
+                flex-direction: column; 
+                align-items: flex-start; 
+                gap: 12px;
+            }
+            .header h1 { 
+                font-size: 20px; 
+            }
+            .header .btn-primary {
+                width: 100%;
+            }
+            
+            /* Stats en 1 columna */
+            .stats-grid { 
+                grid-template-columns: 1fr;
+            }
+            
+            /* Eventos en 1 columna */
+            .events-grid { 
+                grid-template-columns: 1fr;
+            }
+            
+            /* Pedidos en columna */
+            .order-card {
+                flex-direction: column;
+            }
+            .order-receipt {
+                width: 100%;
+                height: 200px;
+            }
+            
+            /* Precios en 1 columna */
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            /* Galería pública */
+            .public-gallery {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .public-pricing-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .btn-buy-gallery {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            /* Modales más pequeños */
+            .modal-content {
+                padding: 20px;
+                margin: 10px;
+                max-height: 95vh;
+            }
+            
+            /* Formulario de compra */
+            .nequi-info {
+                font-size: 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .public-gallery {
+                grid-template-columns: 1fr;
+            }
+            .public-photo-img {
+                height: 250px;
+            }
+            .header h1 {
+                font-size: 18px;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -558,7 +669,7 @@
                 currentPublicEvent = data.event;
                 document.getElementById('pubEventTitle').textContent = data.event.title;
 
-                // Mostrar barra de precios si ventas activas
+                // Barra de precios
                 const pricingBar = document.getElementById('pubPricingBar');
                 if (data.event.sales_enabled && (data.event.price_per_photo > 0 || data.event.price_full_gallery > 0)) {
                     pricingBar.classList.remove('hidden');
@@ -587,14 +698,18 @@
                     return;
                 }
 
+                // 🔒 PROTECCIÓN: Usar preview_url (con marca de agua) en TODAS las vistas
                 grid.innerHTML = data.photos.map(p => {
                     // Usar preview_url si existe, si no usar url (para fotos antiguas)
-                    const displayUrl = p.preview_url || p.url;
+                    const safeUrl = p.preview_url || p.url;
                     
                     return `
                         <div class="public-photo-card" id="photoCard_${p.id}" onclick="togglePhotoSelection(${p.id})">
-                            <div class="public-photo-wrapper" onclick="event.stopPropagation(); openLightbox('${displayUrl}')">
-                                <img src="${displayUrl}" class="public-photo-img">
+                            <div class="public-photo-wrapper" onclick="event.stopPropagation(); openLightbox('${safeUrl}')">
+                                <img src="${safeUrl}" class="public-photo-img" 
+                                    oncontextmenu="return false;" 
+                                    ondragstart="return false;"
+                                    style="pointer-events: none; user-select: none;">
                                 <div class="photo-watermark">GlobalFoto</div>
                                 <div class="photo-select-check"><i class="fa-solid fa-check"></i></div>
                             </div>
@@ -607,6 +722,13 @@
                         </div>
                     `;
                 }).join('');
+
+                // 🔒 Bloquear clic derecho en toda la galería pública
+                document.getElementById('publicView').oncontextmenu = (e) => {
+                    e.preventDefault();
+                    return false;
+                };
+
             } catch (err) {
                 document.getElementById('pubEventTitle').textContent = 'Error de conexión';
             }
