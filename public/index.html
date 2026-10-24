@@ -121,8 +121,9 @@
         .public-photo-wrapper { position: relative; cursor: pointer; }
         .public-photo-img { width: 100%; height: 200px; object-fit: cover; display: block; }
         .photo-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg); font-size: 22px; font-weight: 900; color: rgba(255,255,255,0.5); text-shadow: 2px 2px 8px rgba(0,0,0,0.8); pointer-events: none; letter-spacing: 2px; white-space: nowrap; user-select: none; }
-        .photo-select-check { position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; background: var(--accent); border-radius: 50%; display: none; align-items: center; justify-content: center; color: white; font-size: 14px; }
-        .public-photo-card.selected .photo-select-check { display: flex; }
+        .photo-select-check { position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.7); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; cursor: pointer; z-index: 10; transition: all 0.2s; backdrop-filter: blur(4px); }
+        .photo-select-check:hover { background: rgba(255,255,255,0.35); transform: scale(1.1); }
+        .public-photo-card.selected .photo-select-check { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 12px rgba(37,99,235,0.6); }
         .public-photo-footer { padding: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
         .photo-price-tag { font-size: 12px; color: #94a3b8; }
         .btn-buy-photo { background: var(--accent); color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; border: none; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
@@ -255,7 +256,7 @@
                 <div class="public-pricing-info">
                     <div class="public-price-item"><span class="public-price-label">Por foto</span><span class="public-price-value" id="pubPricePhoto">$0</span></div>
                     <div class="public-price-item"><span class="public-price-label">Galería completa</span><span class="public-price-value" id="pubPriceGallery">$0</span></div>
-                    <div class="public-price-item" style="font-size: 12px; color: #94a3b8; align-self: center;"><i class="fa-solid fa-circle-info"></i> Selecciona las fotos que quieras comprar</div>
+                    <div class="public-price-item" style="font-size: 12px; color: #94a3b8; align-self: center;"><i class="fa-solid fa-circle-info"></i> Haz clic en el círculo de cada foto para seleccionarla</div>
                 </div>
                 <button class="btn-buy-gallery" onclick="openPurchaseModal('gallery')"><i class="fa-solid fa-cart-shopping"></i> Comprar galería completa</button>
             </div>
@@ -541,6 +542,12 @@
         function closeOrderModal() { document.getElementById('orderModal').classList.add('hidden'); }
         function closePackageModal() { document.getElementById('packageModal').classList.add('hidden'); }
         function closeEditUserModal() { document.getElementById('editUserModal').classList.add('hidden'); document.getElementById('editUserResult').textContent = ''; }
+        function closePurchaseModal() {
+            document.getElementById('purchaseModal').classList.add('hidden');
+            selectedPhotos.clear();
+            document.querySelectorAll('.public-photo-card').forEach(c => c.classList.remove('selected'));
+            cancelPackageMode();
+        }
 
         function openLightbox(url) {
             let safeUrl = url;
@@ -1122,15 +1129,17 @@
                 if (data.photos.length === 0) { grid.innerHTML = '<p style="color: #94a3b8; grid-column: 1/-1; text-align: center;">Este evento aún no tiene fotografías publicadas.</p>'; return; }
                 grid.innerHTML = data.photos.map(p => {
                     const safeUrl = p.preview_url || p.url;
-                    return `<div class="public-photo-card" id="photoCard_${p.id}" onclick="togglePhotoSelection(${p.id})">
-                        <div class="public-photo-wrapper" onclick="event.stopPropagation(); openLightbox('${safeUrl}')">
+                    return `<div class="public-photo-card" id="photoCard_${p.id}">
+                        <div class="public-photo-wrapper" onclick="openLightbox('${safeUrl}')">
                             <img src="${safeUrl}" class="public-photo-img" oncontextmenu="return false;" ondragstart="return false;" style="pointer-events: none; user-select: none;">
                             <div class="photo-watermark">GlobalFoto</div>
-                            <div class="photo-select-check"><i class="fa-solid fa-check"></i></div>
                         </div>
+                        <button class="photo-select-check" onclick="togglePhotoSelection(${p.id})" title="Seleccionar esta foto">
+                            <i class="fa-solid fa-check"></i>
+                        </button>
                         <div class="public-photo-footer">
                             <span class="photo-price-tag">${data.event.price_per_photo ? '$' + Number(data.event.price_per_photo).toLocaleString('es-CO') : 'Consultar'}</span>
-                            <button class="btn-buy-photo" onclick="event.stopPropagation(); openPurchaseModal('single', ${p.id})"><i class="fa-solid fa-cart-shopping"></i> Comprar</button>
+                            <button class="btn-buy-photo" onclick="openPurchaseModal('single', ${p.id})"><i class="fa-solid fa-cart-shopping"></i> Comprar</button>
                         </div>
                     </div>`;
                 }).join('');
@@ -1148,7 +1157,6 @@
 
         function togglePhotoSelection(photoId) {
             if (!currentPublicEvent) return;
-            
             const card = document.getElementById(`photoCard_${photoId}`);
             if (!card) return;
             
@@ -1156,7 +1164,6 @@
                 selectedPhotos.delete(photoId);
                 card.classList.remove('selected');
             } else {
-                // Si hay un paquete activo, validar límite
                 if (window.activePackageMode) {
                     const pkg = currentPublicEvent.packages.find(p => p.id === window.activePackageMode);
                     if (pkg && selectedPhotos.size >= pkg.photo_limit) {
@@ -1168,15 +1175,12 @@
                 card.classList.add('selected');
             }
             
-            // Actualizar contador flotante
             const counter = document.getElementById('selectionCounter');
             if (!counter) return;
-            
             const countSpan = document.getElementById('selectionCount');
             if (selectedPhotos.size > 0) {
                 counter.style.display = 'block';
                 countSpan.textContent = selectedPhotos.size;
-                
                 let actionsHtml = '';
                 if (window.activePackageMode) {
                     const pkg = currentPublicEvent.packages.find(p => p.id === window.activePackageMode);
@@ -1187,9 +1191,7 @@
                     actionsHtml = `<br><button onclick="openPurchaseModal('multiple')" style="margin-top: 8px; background: var(--success); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; width: 100%;"><i class="fa-solid fa-cart-shopping"></i> Comprar Seleccionadas</button><button onclick="clearSelection()" style="margin-top: 4px; background: transparent; color: white; border: 1px solid white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; width: 100%;">Limpiar selección</button>`;
                 }
                 counter.innerHTML = `<i class="fa-solid fa-images"></i> <span id="selectionCount">${selectedPhotos.size}</span> fotos seleccionadas${actionsHtml}`;
-            } else {
-                counter.style.display = 'none';
-            }
+            } else { counter.style.display = 'none'; }
         }
 
         function clearSelection() {
@@ -1202,7 +1204,7 @@
             window.activePackageMode = packageId;
             const pkg = currentPublicEvent.packages.find(p => p.id === packageId);
             clearSelection();
-            alert(`📦 Modo Paquete activado: "${pkg.name}"\n\nHaz clic en las fotos que quieras incluir (máximo ${pkg.photo_limit}).\n\nCuando termines, usa el botón flotante para comprar.`);
+            alert(`📦 Modo Paquete activado: "${pkg.name}"\n\nPara elegir tus fotos, haz clic en el CÍRCULO BLANCO con el check que aparece en la esquina superior derecha de cada foto (máximo ${pkg.photo_limit}).\n\nLa foto se marcará en azul cuando esté seleccionada.\n\nCuando termines, presiona el botón azul flotante para comprar.`);
         }
 
         function cancelPackageMode() {
@@ -1234,7 +1236,7 @@
                 clearSelection();
             } else if (type === 'multiple') {
                 photoIds = Array.from(selectedPhotos);
-                if (photoIds.length === 0) { alert('Selecciona al menos una foto haciendo clic en ella.'); return; }
+                if (photoIds.length === 0) { alert('Selecciona al menos una foto haciendo clic en el círculo de cada foto.'); return; }
                 orderType = 'single'; amount = (parseFloat(currentPublicEvent.price_per_photo) || 0) * photoIds.length; description = `${photoIds.length} foto(s) seleccionada(s)`;
                 title.innerHTML = `<i class="fa-solid fa-cart-shopping"></i> Comprar ${photoIds.length} foto(s)`;
                 clearSelection();
@@ -1320,13 +1322,6 @@
                 } else { resultDiv.className = 'alert alert-error'; resultDiv.textContent = data.error || 'Error al enviar el pedido.'; }
             } catch (err) { resultDiv.className = 'alert alert-error'; resultDiv.textContent = 'Error de conexión.'; }
             finally { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Pedido'; }
-        }
-
-        function closePurchaseModal() { 
-            document.getElementById('purchaseModal').classList.add('hidden'); 
-            selectedPhotos.clear(); 
-            document.querySelectorAll('.public-photo-card').forEach(c => c.classList.remove('selected'));
-            cancelPackageMode();
         }
 
         window.addEventListener('DOMContentLoaded', async () => {
