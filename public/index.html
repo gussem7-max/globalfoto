@@ -1147,36 +1147,49 @@
         }
 
         function togglePhotoSelection(photoId) {
-            if (!currentPublicEvent || !currentPublicEvent.sales_enabled) return;
+            if (!currentPublicEvent) return;
+            
             const card = document.getElementById(`photoCard_${photoId}`);
+            if (!card) return;
+            
             if (selectedPhotos.has(photoId)) {
                 selectedPhotos.delete(photoId);
                 card.classList.remove('selected');
             } else {
+                // Si hay un paquete activo, validar límite
                 if (window.activePackageMode) {
                     const pkg = currentPublicEvent.packages.find(p => p.id === window.activePackageMode);
                     if (pkg && selectedPhotos.size >= pkg.photo_limit) {
-                        alert(`Este paquete incluye máximo ${pkg.photo_limit} fotos.`);
+                        alert(`Este paquete incluye máximo ${pkg.photo_limit} fotos. Ya seleccionaste ${selectedPhotos.size}.`);
                         return;
                     }
                 }
                 selectedPhotos.add(photoId);
                 card.classList.add('selected');
             }
+            
+            // Actualizar contador flotante
             const counter = document.getElementById('selectionCounter');
+            if (!counter) return;
+            
             const countSpan = document.getElementById('selectionCount');
             if (selectedPhotos.size > 0) {
                 counter.style.display = 'block';
                 countSpan.textContent = selectedPhotos.size;
+                
                 let actionsHtml = '';
                 if (window.activePackageMode) {
                     const pkg = currentPublicEvent.packages.find(p => p.id === window.activePackageMode);
-                    actionsHtml = `<br><button onclick="openPurchaseModal('package', ${pkg.id})" style="margin-top: 8px; background: var(--success); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; width: 100%;"><i class="fa-solid fa-check"></i> Comprar Paquete ($${Number(pkg.price).toLocaleString('es-CO')})</button><button onclick="cancelPackageMode()" style="margin-top: 4px; background: transparent; color: white; border: 1px solid white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; width: 100%;">Cancelar selección</button>`;
+                    if (pkg) {
+                        actionsHtml = `<br><button onclick="openPurchaseModal('package', ${pkg.id})" style="margin-top: 8px; background: var(--success); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; width: 100%;"><i class="fa-solid fa-check"></i> Comprar Paquete ($${Number(pkg.price).toLocaleString('es-CO')})</button><button onclick="cancelPackageMode()" style="margin-top: 4px; background: transparent; color: white; border: 1px solid white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; width: 100%;">Cancelar selección</button>`;
+                    }
                 } else {
                     actionsHtml = `<br><button onclick="openPurchaseModal('multiple')" style="margin-top: 8px; background: var(--success); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; width: 100%;"><i class="fa-solid fa-cart-shopping"></i> Comprar Seleccionadas</button><button onclick="clearSelection()" style="margin-top: 4px; background: transparent; color: white; border: 1px solid white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; width: 100%;">Limpiar selección</button>`;
                 }
                 counter.innerHTML = `<i class="fa-solid fa-images"></i> <span id="selectionCount">${selectedPhotos.size}</span> fotos seleccionadas${actionsHtml}`;
-            } else { counter.style.display = 'none'; }
+            } else {
+                counter.style.display = 'none';
+            }
         }
 
         function clearSelection() {
