@@ -5,11 +5,12 @@ const verificarToken = require('../middleware/auth');
 const multer = require('multer');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const crypto = require('crypto');
+const Jimp = require('jimp');
 
 const upload = multer({ 
     storage: multer.memoryStorage(),
     limits: { 
-        fileSize: 25 * 1024 * 1024, // 25MB por foto
+        fileSize: 25 * 1024 * 1024,
         files: 50
     },
     fileFilter: (req, file, cb) => {
@@ -31,6 +32,53 @@ const s3Client = new S3Client({
 });
 
 const isValidId = (id) => /^\d+$/.test(id) && parseInt(id) > 0;
+
+// Función para agregar marca de agua con Jimp
+async function addWatermark(imageBuffer) {
+    try {
+        const image = await Jimp.read(imageBuffer);
+        
+        // Redimensionar si es muy grande (máximo 1200px)
+        if (image.getWidth() > 1200 || image.getHeight() > 1200) {
+            image.resize(1200, Jimp.AUTO);
+        }
+
+        // Crear marca de agua
+        const watermark = await Jimp.create(800, 200, 0x00000000, (err, img) => {
+            if (err) throw err;
+            return img;
+        });
+
+        // Cargar fuente y escribir texto
+        const font = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE);
+        watermark.print(font, 100, 50, {
+            text: 'GlobalFoto',
+            alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
+            alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE
+        }, 800, 200);
+
+        // Rotar la marca de agua -30 grados
+        watermark.rotate(-30);
+
+        // Hacer la marca de agua semi-transparente (50% opacidad)
+        watermark.opacity(0.5);
+
+        // Calcular posición centrada
+        const x = (image.getWidth() - watermark.getWidth()) / 2;
+        const y = (image.getHeight() - watermark.getHeight()) / 2;
+
+        // Superponer marca de agua
+        image.composite(watermark, x, y);
+
+        // Convertir a buffer JPEG
+        const buffer = await image.getBufferAsync(Jimp.MIME_JPEG);
+        return buffer;
+
+    } catch (error) {
+        console.error('Error al agregar marca de agua:', error);
+        return imageBuffer; // Retornar original si falla
+    }
+}
 
 router.post('/upload', verificarToken, upload.array('photos', 50), async (req, res) => {
     try {
@@ -64,9 +112,11 @@ router.post('/upload', verificarToken, upload.array('photos', 50), async (req, r
             const ext = file.mimetype === 'image/jpeg' ? 'jpg' : file.mimetype.split('/')[1];
             
             const originalFileName = `events/${event_id}/original/${uniqueId}.${ext}`;
+            const previewFileName = `events/${event_id}/preview/${uniqueId}.jpg`;
             
             console.log(`⬆️ Subiendo ${file.originalname} a S3...`);
             
+            // Subir versión ORIGINAL
             await s3Client.send(new PutObjectCommand({
                 Bucket: process.env.AWS_BUCKET_NAME,
                 Key: originalFileName,
@@ -75,16 +125,29 @@ router.post('/upload', verificarToken, upload.array('photos', 50), async (req, r
                 ServerSideEncryption: 'AES256'
             }));
 
-            const originalUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${originalFileName}`;
+            // Generar versión con marca de agua
+            console.log(`🎨 Generando marca de agua para ${file.originalname}...`);
+            const previewBuffer = await addWatermark(file.buffer);
+            
+            await s3Client.send(new PutObjectCommand({
+                Bucket: process.env.AWS_BUCKET_NAME,
+                Key: previewFileName,
+                Body: previewBuffer,
+                ContentType: 'image/jpeg',
+                ServerSideEncryption: 'AES256'
+            }));
 
-            // 🔑 CLAVE: preview_url = url (temporalmente, hasta arreglar sharp)
+            const originalUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${originalFileName}`;
+            const previewUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${previewFileName}`;
+
+            // Guardar en BD con ambas URLs
             const newPhoto = await pool.query(
                 'INSERT INTO photos (event_id, url, filename, preview_url) VALUES ($1, $2, $3, $4) RETURNING *',
-                [event_id, originalUrl, originalFileName, originalUrl]
+                [event_id, originalUrl, originalFileName, previewUrl]
             );
 
             uploadedPhotos.push(newPhoto.rows[0]);
-            console.log(`✅ Foto ${file.originalname} subida exitosamente`);
+            console.log(`✅ Foto ${file.originalname} subida con marca de agua`);
         }
 
         res.status(201).json({
