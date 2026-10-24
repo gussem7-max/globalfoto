@@ -19,6 +19,27 @@
                 <h1 id="pubEventTitle">Cargando evento...</h1>
                 <p id="pubEventDetails"></p>
             </div>
+                        <!-- GATE DE VERIFICACIÓN POR SELFIE -->
+            <div id="selfieGate" class="hidden" style="max-width: 420px; margin: 0 auto 30px; background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 24px; text-align: center;">
+                <h2 style="color: white; font-size: 20px; margin-bottom: 8px;">🤳 Verificación de identidad</h2>
+                <p style="color: #94a3b8; font-size: 13px; margin-bottom: 16px;">Esta galería protege tu privacidad: solo verás las fotos donde apareces. Tómate una selfie para filtrarlas.</p>
+                <video id="selfieVideo" autoplay playsinline muted class="hidden" style="width: 100%; border-radius: 12px; background: #0f172a;"></video>
+                <canvas id="selfieCanvas" style="display: none;"></canvas>
+                <img id="selfiePreview" class="hidden" alt="Tu selfie" style="width: 100%; border-radius: 12px; margin-bottom: 12px;">
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
+                    <button id="btnStartCamera" class="btn-primary">Encender cámara</button>
+                    <button id="btnCapture" class="btn-success hidden">Tomar selfie</button>
+                    <button id="btnRetake" class="btn-secondary hidden">Repetir selfie</button>
+                    <button id="btnVerify" class="btn-primary hidden">Verificar y ver mis fotos</button>
+                    <label id="selfieFileFallback" class="hidden" style="font-size: 12px; color: #94a3b8; cursor: pointer; text-decoration: underline;">
+                        O sube una foto tuya
+                        <input type="file" id="selfieFileFallbackInput" accept="image/*" capture="user" style="display: none;">
+                    </label>
+                </div>
+                <div id="selfieStatus" style="color: #94a3b8; font-size: 12px; margin-top: 12px;"></div>
+                <div id="selfieProgress" style="color: #60a5fa; font-size: 13px; font-weight: 600; margin-top: 6px;"></div>
+                <p style="color: #64748b; font-size: 11px; margin-top: 14px;">🔒 Tu selfie se procesa únicamente en tu dispositivo. No se sube a ningún servidor.</p>
+            </div>
             <div id="pubPackagesGrid" class="packages-grid"></div>
             <div id="pubPricingBar" class="public-pricing-bar hidden">
                 <div class="public-pricing-info">
@@ -260,11 +281,13 @@
     </div>
 
     <!-- Scripts en orden: estado → ui → auth → dashboard → public → admin -->
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <script src="/js/state.js"></script>
     <script src="/js/ui.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/dashboard.js"></script>
     <script src="/js/public.js"></script>
     <script src="/js/admin.js"></script>
+    <script src="/js/selfie.js"></script>
 </body>
 </html>

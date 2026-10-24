@@ -22,55 +22,86 @@ async function loadPublicGallery(eventId) {
         currentPublicEvent.packages = data.packages || [];
         document.getElementById('pubEventTitle').textContent = data.event.title;
 
-        const pricingBar = document.getElementById('pubPricingBar');
-        if (data.event.sales_enabled && (data.event.price_per_photo > 0 || data.event.price_full_gallery > 0)) {
-            pricingBar.classList.remove('hidden');
-            document.getElementById('pubPricePhoto').textContent = data.event.price_per_photo ? formatMoney(data.event.price_per_photo) : 'No definido';
-            document.getElementById('pubPriceGallery').textContent = data.event.price_full_gallery ? formatMoney(data.event.price_full_gallery) : 'No definido';
-        } else { pricingBar.classList.add('hidden'); }
-
         const zipDownloadUrl = `/api/events/${eventId}/download-zip`;
         document.getElementById('pubEventDetails').innerHTML = `<div style="margin-bottom: 16px;">📅 ${data.event.event_date ? data.event.event_date.split('T')[0] : ''} | 📍 ${data.event.location || ''}<br>${data.event.description || ''}</div>${data.photos.length > 0 && !data.event.sales_enabled ? `<a href="${zipDownloadUrl}" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px; width: auto; padding: 10px 20px; text-decoration: none; margin-top: 8px;"><i class="fa-solid fa-file-zipper"></i> Descargar Todas las Fotos (.ZIP)</a>` : ''}`;
 
-        const pkgGrid = document.getElementById('pubPackagesGrid');
-        if (currentPublicEvent.packages.length > 0) {
-            pkgGrid.innerHTML = currentPublicEvent.packages.map((p, idx) => `
-                <div class="package-card ${idx === 0 ? 'featured' : ''}">
-                    <h3>${p.name}</h3>
-                    <div class="price">${formatMoney(p.price)}</div>
-                    <div class="limit">Incluye ${p.photo_limit} fotos a elección</div>
-                    <div class="howto">💡 Selecciona exactamente <strong>${p.photo_limit} fotos</strong> con el círculo y este precio se aplicará automáticamente al comprar.</div>
-                </div>
-            `).join('');
-        } else { pkgGrid.innerHTML = ''; }
-
-        const grid = document.getElementById('pubPhotoGrid');
-        if (data.photos.length === 0) { grid.innerHTML = '<p style="color: #94a3b8; grid-column: 1/-1; text-align: center;">Este evento aún no tiene fotografías publicadas.</p>'; return; }
-        grid.innerHTML = data.photos.map(p => {
-            const safeUrl = p.preview_url || p.url;
-            return `<div class="public-photo-card" id="photoCard_${p.id}">
-                <div class="public-photo-wrapper" onclick="openLightbox('${safeUrl}')">
-                    <img src="${safeUrl}" class="public-photo-img" oncontextmenu="return false;" ondragstart="return false;" style="pointer-events: none; user-select: none;">
-                    <div class="photo-watermark">GlobalFoto</div>
-                </div>
-                <button class="photo-select-check" onclick="togglePhotoSelection(${p.id})" title="Seleccionar esta foto">
-                    <i class="fa-solid fa-check"></i>
-                </button>
-                <div class="public-photo-footer">
-                    <span class="photo-price-tag">${data.event.price_per_photo ? formatMoney(data.event.price_per_photo) : 'Consultar'}</span>
-                    <button class="btn-buy-photo" onclick="openPurchaseModal('single', ${p.id})"><i class="fa-solid fa-cart-shopping"></i> Comprar</button>
-                </div>
-            </div>`;
-        }).join('');
-
-        if (!document.getElementById('selectionCounter')) {
-            const counter = document.createElement('div');
-            counter.id = 'selectionCounter';
-            counter.style.cssText = 'position: fixed; bottom: 100px; right: 20px; background: var(--accent); color: white; padding: 12px 20px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); z-index: 999; display: none; font-size: 14px; font-weight: 600; max-width: 260px;';
-            document.body.appendChild(counter);
+        // 🤳 Si el evento requiere selfie, mostrar gate y NO revelar fotos aún
+        if (data.event.selfie_required) {
+            document.getElementById('pubPackagesGrid').innerHTML = '';
+            document.getElementById('pubPricingBar').classList.add('hidden');
+            document.getElementById('pubPhotoGrid').innerHTML = '';
+            pendingGalleryPhotos = data.photos;
+            showSelfieGate();
+            return;
         }
-        document.getElementById('publicView').oncontextmenu = (e) => { e.preventDefault(); return false; };
+
+        revealGallery(data.photos);
     } catch (err) { document.getElementById('pubEventTitle').textContent = 'Error de conexión'; }
+}
+
+// Revela paquetes + barra de precios + fotos (tras verificación o directo)
+function revealGallery(photos) {
+    renderPackages();
+    renderPricingBar();
+    renderPublicPhotos(photos);
+    ensureSelectionCounter();
+    document.getElementById('publicView').oncontextmenu = (e) => { e.preventDefault(); return false; };
+}
+
+function renderPackages() {
+    const pkgGrid = document.getElementById('pubPackagesGrid');
+    if (currentPublicEvent.packages.length > 0) {
+        pkgGrid.innerHTML = currentPublicEvent.packages.map((p, idx) => `
+            <div class="package-card ${idx === 0 ? 'featured' : ''}">
+                <h3>${p.name}</h3>
+                <div class="price">${formatMoney(p.price)}</div>
+                <div class="limit">Incluye ${p.photo_limit} fotos a elección</div>
+                <div class="howto">💡 Selecciona exactamente <strong>${p.photo_limit} fotos</strong> con el círculo y este precio se aplicará automáticamente al comprar.</div>
+            </div>
+        `).join('');
+    } else { pkgGrid.innerHTML = ''; }
+}
+
+function renderPricingBar() {
+    const pricingBar = document.getElementById('pubPricingBar');
+    if (currentPublicEvent.sales_enabled && (currentPublicEvent.price_per_photo > 0 || currentPublicEvent.price_full_gallery > 0)) {
+        pricingBar.classList.remove('hidden');
+        document.getElementById('pubPricePhoto').textContent = currentPublicEvent.price_per_photo ? formatMoney(currentPublicEvent.price_per_photo) : 'No definido';
+        document.getElementById('pubPriceGallery').textContent = currentPublicEvent.price_full_gallery ? formatMoney(currentPublicEvent.price_full_gallery) : 'No definido';
+    } else { pricingBar.classList.add('hidden'); }
+}
+
+function renderPublicPhotos(photos) {
+    const grid = document.getElementById('pubPhotoGrid');
+    if (!photos || photos.length === 0) {
+        grid.innerHTML = '<p style="color: #94a3b8; grid-column: 1/-1; text-align: center;">Este evento aún no tiene fotografías publicadas.</p>';
+        return;
+    }
+    grid.innerHTML = photos.map(p => {
+        const safeUrl = p.preview_url || p.url;
+        return `<div class="public-photo-card" id="photoCard_${p.id}">
+            <div class="public-photo-wrapper" onclick="openLightbox('${safeUrl}')">
+                <img src="${safeUrl}" class="public-photo-img" oncontextmenu="return false;" ondragstart="return false;" style="pointer-events: none; user-select: none;">
+                <div class="photo-watermark">GlobalFoto</div>
+            </div>
+            <button class="photo-select-check" onclick="togglePhotoSelection(${p.id})" title="Seleccionar esta foto">
+                <i class="fa-solid fa-check"></i>
+            </button>
+            <div class="public-photo-footer">
+                <span class="photo-price-tag">${currentPublicEvent.price_per_photo ? formatMoney(currentPublicEvent.price_per_photo) : 'Consultar'}</span>
+                <button class="btn-buy-photo" onclick="openPurchaseModal('single', ${p.id})"><i class="fa-solid fa-cart-shopping"></i> Comprar</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function ensureSelectionCounter() {
+    if (!document.getElementById('selectionCounter')) {
+        const counter = document.createElement('div');
+        counter.id = 'selectionCounter';
+        counter.style.cssText = 'position: fixed; bottom: 100px; right: 20px; background: var(--accent); color: white; padding: 12px 20px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); z-index: 999; display: none; font-size: 14px; font-weight: 600; max-width: 260px;';
+        document.body.appendChild(counter);
+    }
 }
 
 function calculateBestPrice() {
