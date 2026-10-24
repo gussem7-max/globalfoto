@@ -229,15 +229,38 @@ function updateFileLabel(eventId) {
     else label.textContent = 'Seleccionar fotos';
 }
 
+// Convierte la foto a una versión ya orientada (aplica EXIF en el navegador)
+async function normalizeImageFile(file) {
+    try {
+        const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(bitmap, 0, 0);
+        if (bitmap.close) bitmap.close();
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+        if (blob) {
+            return new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' });
+        }
+    } catch (e) {
+        console.warn('No se pudo normalizar la orientación; se sube el original:', e);
+    }
+    return file;
+}
+
 async function uploadPhotos(e, eventId) {
     e.preventDefault();
     const input = document.getElementById(`fileInput_${eventId}`);
     if (!input.files || input.files.length === 0) { alert('Por favor selecciona al menos una foto.'); return; }
     const progressDiv = document.getElementById(`uploadProgress_${eventId}`);
-    progressDiv.innerHTML = '<div class="upload-progress"><i class="fa-solid fa-spinner fa-spin"></i> Subiendo fotos... Por favor espera.</div>';
+    progressDiv.innerHTML = '<div class="upload-progress"><i class="fa-solid fa-spinner fa-spin"></i> Preparando y subiendo fotos... Por favor espera.</div>';
     const formData = new FormData();
     formData.append('event_id', eventId);
-    for (let i = 0; i < input.files.length; i++) formData.append('photos', input.files[i]);
+    for (let i = 0; i < input.files.length; i++) {
+        const normalized = await normalizeImageFile(input.files[i]);
+        formData.append('photos', normalized);
+    }
     try {
         const res = await fetch('/api/photos/upload', { method: 'POST', headers: authHeaders(), body: formData });
         const data = await res.json();
@@ -248,7 +271,6 @@ async function uploadPhotos(e, eventId) {
         } else { progressDiv.innerHTML = `<div class="upload-progress error"><i class="fa-solid fa-xmark"></i> Error: ${data.error || 'Desconocido'}</div>`; }
     } catch (err) { progressDiv.innerHTML = '<div class="upload-progress error"><i class="fa-solid fa-xmark"></i> Error de conexión.</div>'; }
 }
-
 async function deleteEvent(id) {
     if (!confirm('¿Estás seguro de eliminar este evento y todas sus fotos?')) return;
     try {

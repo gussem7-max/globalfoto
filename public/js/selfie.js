@@ -156,14 +156,23 @@ async function verifySelfie() {
         const total = pendingGalleryPhotos.length;
         const matched = [];
         let failed = 0;
+        let totalFaces = 0;
+        let bestDistance = Infinity;
+
         for (let i = 0; i < total; i++) {
             setProgress(`Analizando foto ${i + 1} de ${total}...`);
             const p = pendingGalleryPhotos[i];
             try {
                 const img = await faceapi.fetchImage(p.url);
                 const dets = await detectFaces(img);
-                const isMatch = dets.some(d => faceapi.euclideanDistance(selfieDescriptor, d.descriptor) < MATCH_THRESHOLD);
-                if (isMatch) matched.push(p);
+                totalFaces += dets.length;
+                let photoMatch = false;
+                for (const d of dets) {
+                    const dist = faceapi.euclideanDistance(selfieDescriptor, d.descriptor);
+                    if (dist < bestDistance) bestDistance = dist;
+                    if (dist < MATCH_THRESHOLD) photoMatch = true;
+                }
+                if (photoMatch) matched.push(p);
             } catch (photoErr) {
                 failed++;
                 console.warn('No se pudo analizar la foto', p.id, photoErr);
@@ -178,7 +187,8 @@ async function verifySelfie() {
         }
 
         if (matched.length === 0) {
-            setStatus('No encontramos fotos tuyas en esta galería. Si crees que es un error, vuelve a intentarlo con otra selfie o contacta al fotógrafo.');
+            const distText = bestDistance === Infinity ? 'n/a' : bestDistance.toFixed(2);
+            setStatus(`No encontramos fotos tuyas en esta galería. [Diagnóstico: rostros detectados=${totalFaces}, mejor distancia=${distText}, umbral=${MATCH_THRESHOLD}] Si crees que es un error, intenta con otra selfie o contacta al fotógrafo.`);
             btn.disabled = false;
             return;
         }
