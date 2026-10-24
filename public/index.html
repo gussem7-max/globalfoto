@@ -1309,11 +1309,12 @@
             finally { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Pedido'; }
         }
 
-        const originalClosePurchaseModal = closePurchaseModal;
-        closePurchaseModal = function() {
-            originalClosePurchaseModal();
+        function closePurchaseModal() { 
+            document.getElementById('purchaseModal').classList.add('hidden'); 
+            selectedPhotos.clear(); 
+            document.querySelectorAll('.public-photo-card').forEach(c => c.classList.remove('selected'));
             cancelPackageMode();
-        };
+        }
 
         window.addEventListener('DOMContentLoaded', async () => {
             const token = localStorage.getItem('token');
