@@ -21,7 +21,7 @@ const s3Client = new S3Client({
 const isValidId = (id) => /^\d+$/.test(id) && parseInt(id) > 0;
 
 // =====================================================
-// CREAR EVENTO (con estado y expiración)
+// CREAR EVENTO (con estado, expiración y correo espectacular)
 // =====================================================
 router.post('/', verificarToken, async (req, res) => {
     try {
@@ -38,51 +38,68 @@ router.post('/', verificarToken, async (req, res) => {
 
         const event = newEvent.rows[0];
 
-        // Correo de confirmación
+        // 📧 CORREO DE CONFIRMACIÓN (versión espectacular restaurada)
         try {
             const photographer = await pool.query('SELECT name, email FROM users WHERE id = $1', [photographer_id]);
             if (photographer.rows.length > 0) {
                 const publicUrl = `${process.env.FRONTEND_URL || 'https://www.globalfotoapp.com'}/?galeria=${event.id}`;
+
+                // Formatear datos para que se vean bonitos en el correo
+                const fechaFormateada = event.event_date
+                    ? new Date(event.event_date).toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+                    : '';
+                const estadoTexto = event.status === 'published' ? 'Publicada ✅' : (event.status === 'draft' ? 'Borrador (oculta) 📝' : 'Archivada 🗄️');
+                const expiraTexto = event.expires_at ? new Date(event.expires_at).toLocaleString('es-CO', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+
                 await resend.emails.send({
                     from: FROM_EMAIL,
                     to: photographer.rows[0].email,
                     subject: `📸 Evento creado: ${event.title}`,
                     html: `
-                        <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <div style="font-family: 'Inter', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8fafc;">
                             <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
                                 <h1 style="color: white; margin: 0; font-size: 28px;">📸 GlobalFoto</h1>
+                                <p style="color: #94a3b8; margin: 8px 0 0; font-size: 14px;">Tu plataforma profesional de fotografía</p>
                             </div>
                             <div style="background: white; padding: 30px; border-radius: 0 0 16px 16px; border: 1px solid #e2e8f0; border-top: none;">
-                                <h2 style="color: #0f172a; margin-bottom: 16px;">¡Evento creado exitosamente!</h2>
-                                <p style="color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 20px;">
-                                    Hola ${photographer.rows[0].name},<br><br>
+                                <h2 style="color: #0f172a; margin: 0 0 16px; font-size: 22px;">¡Evento creado exitosamente!</h2>
+                                <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 20px;">
+                                    Hola <strong>${photographer.rows[0].name}</strong>,<br>
                                     Tu nuevo evento ha sido registrado en la plataforma.
                                 </p>
-                                <div style="background: #f8fafc; padding: 20px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #2563eb;">
-                                    <h3 style="color: #0f172a; margin: 0 0 12px 0; font-size: 16px;">📋 Detalles del evento</h3>
+
+                                <div style="background: #f8fafc; padding: 20px; border-radius: 10px; margin: 0 0 20px; border-left: 4px solid #2563eb;">
+                                    <h3 style="color: #0f172a; margin: 0 0 12px; font-size: 16px;">📋 Detalles del evento</h3>
                                     <p style="color: #475569; font-size: 14px; margin: 8px 0;"><strong>Título:</strong> ${event.title}</p>
-                                    ${event.event_date ? `<p style="color: #475569; font-size: 14px; margin: 8px 0;"><strong>Fecha:</strong> ${event.event_date}</p>` : ''}
+                                    ${fechaFormateada ? `<p style="color: #475569; font-size: 14px; margin: 8px 0;"><strong>Fecha:</strong> ${fechaFormateada}</p>` : ''}
                                     ${event.location ? `<p style="color: #475569; font-size: 14px; margin: 8px 0;"><strong>Ubicación:</strong> ${event.location}</p>` : ''}
-                                    <p style="color: #475569; font-size: 14px; margin: 8px 0;"><strong>Estado:</strong> ${event.status === 'published' ? 'Publicada' : 'Borrador'}</p>
+                                    <p style="color: #475569; font-size: 14px; margin: 8px 0;"><strong>Estado:</strong> ${estadoTexto}</p>
+                                    ${expiraTexto ? `<p style="color: #92400e; font-size: 14px; margin: 8px 0;"><strong>⏰ Expira:</strong> ${expiraTexto}</p>` : ''}
                                 </div>
-                                <div style="background: #eff6ff; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-                                    <h3 style="color: #0f172a; margin: 0 0 12px 0; font-size: 16px;">🔗 Tu enlace público</h3>
-                                    <p style="color: #475569; font-size: 13px; margin-bottom: 12px;">Comparte este enlace con tus clientes:</p>
-                                    <a href="${publicUrl}" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block; word-break: break-all;">
-                                        Ver Galería Pública
-                                    </a>
+
+                                <div style="background: #eff6ff; padding: 20px; border-radius: 10px; margin: 0 0 20px;">
+                                    <h3 style="color: #0f172a; margin: 0 0 12px; font-size: 16px;">🔗 Tu enlace público</h3>
+                                    <p style="color: #475569; font-size: 13px; margin: 0 0 12px;">Comparte este enlace con tus clientes para que vean y compren la galería:</p>
+                                    <a href="${publicUrl}" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">Ver Galería Pública</a>
                                 </div>
-                                <p style="color: #64748b; font-size: 13px; text-align: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+
+                                <div style="background: #fffbeb; padding: 16px; border-radius: 10px; border-left: 4px solid #f59e0b;">
+                                    <p style="color: #92400e; font-size: 13px; margin: 0;">
+                                        <strong>💡 Siguiente paso:</strong> Sube tus fotos, crea paquetes promocionales y configura tus precios y Nequi para comenzar a vender.
+                                    </p>
+                                </div>
+
+                                <p style="color: #64748b; font-size: 13px; text-align: center; margin: 24px 0 0; padding-top: 20px; border-top: 1px solid #e2e8f0;">
                                     GlobalFoto - Tu plataforma profesional de fotografía
                                 </p>
                             </div>
                         </div>
                     `
                 });
-                console.log('✅ [EMAIL] Correo de confirmación enviado a:', photographer.rows[0].email);
+                console.log('✅ [EMAIL] Correo de confirmación de evento enviado a:', photographer.rows[0].email);
             }
         } catch (emailErr) {
-            console.error('⚠️ [EMAIL] No se pudo enviar confirmación:', emailErr.message);
+            console.error('⚠️ [EMAIL] No se pudo enviar confirmación de evento:', emailErr.message);
         }
 
         res.status(201).json({ mensaje: 'Evento creado exitosamente.', event });
@@ -145,7 +162,7 @@ router.get('/', verificarToken, async (req, res) => {
 });
 
 // =====================================================
-// CONFIGURAR PRECIOS (MANTENER - MUY IMPORTANTE)
+// CONFIGURAR PRECIOS
 // =====================================================
 router.put('/:id/pricing', verificarToken, async (req, res) => {
     try {
@@ -218,7 +235,7 @@ router.delete('/:id', verificarToken, async (req, res) => {
 });
 
 // =====================================================
-// GALERÍA PÚBLICA (con validación de estado y expiración + paquetes)
+// GALERÍA PÚBLICA (con validación de estado/expiración + paquetes)
 // =====================================================
 router.get('/:id/public', async (req, res) => {
     try {
@@ -230,11 +247,9 @@ router.get('/:id/public', async (req, res) => {
 
         const event = eventResult.rows[0];
 
-        // Validación de estado
         if (event.status !== 'published') {
             return res.status(404).json({ error: 'Esta galería no está disponible en este momento.' });
         }
-        // Validación de expiración
         if (event.expires_at && new Date(event.expires_at) < new Date()) {
             return res.status(404).json({ error: 'Esta galería ha expirado.' });
         }
@@ -250,7 +265,6 @@ router.get('/:id/public', async (req, res) => {
             created_at: p.created_at
         }));
 
-        // Obtener paquetes activos
         const packagesResult = await pool.query(
             'SELECT * FROM packages WHERE event_id = $1 AND is_active = true ORDER BY price ASC', 
             [id]
@@ -358,7 +372,6 @@ router.delete('/photos/:photoId', verificarToken, async (req, res) => {
 
         const photo = photoCheck.rows[0];
 
-        // Eliminar archivos de S3 (original y preview)
         try {
             if (photo.filename) {
                 await s3Client.send(new DeleteObjectCommand({
