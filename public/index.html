@@ -217,27 +217,28 @@
                 z-index: 1000;
                 display: flex;
                 flex-direction: row;
-                justify-content: space-around;
+                justify-content: center;
                 align-items: center;
                 background: var(--bg-primary);
                 border-top: 1px solid #334155;
             }
             
-            /* Ocultar marca y perfil en móvil */
-            .sidebar > div:first-child { 
+            /* Ocultar SOLO la marca y el perfil, NO el menú */
+            .sidebar .brand { 
                 display: none; 
             }
-            .user-profile { 
+            .sidebar .user-profile { 
                 display: none; 
             }
             
             /* Menú de navegación en fila */
-            .nav-menu { 
-                display: flex;
+            .sidebar .nav-menu { 
+                display: flex !important;
                 flex-direction: row;
                 justify-content: space-around;
                 align-items: center;
                 width: 100%;
+                max-width: 500px;
                 margin: 0;
                 padding: 0 10px;
             }
@@ -268,6 +269,10 @@
             }
             
             .nav-item.active span:not(.nav-badge) {
+                color: white;
+            }
+            
+            .nav-item.active i {
                 color: white;
             }
             
