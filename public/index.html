@@ -204,25 +204,23 @@
         RESPONSIVE - BARRA INFERIOR MODERNA TIPO APP
         ============================================ */
         @media (max-width: 768px) {
-            /* Sidebar se convierte en barra inferior moderna */
+            /* Sidebar se convierte en barra inferior */
             .sidebar { 
-                width: calc(100% - 32px);
-                height: 64px;
+                width: 100%;
+                height: 72px;
                 padding: 0;
                 position: fixed;
-                bottom: 16px;
-                left: 16px;
-                right: 16px;
+                bottom: 0;
+                left: 0;
+                right: 0;
                 top: auto;
                 z-index: 1000;
                 display: flex;
                 flex-direction: row;
                 justify-content: center;
                 align-items: center;
-                background: white;
-                border-radius: 20px;
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-                border: 1px solid #e2e8f0;
+                background: var(--bg-primary);
+                border-top: 1px solid #334155;
             }
             
             /* Ocultar marca y perfil */
@@ -233,16 +231,17 @@
                 display: none; 
             }
             
-            /* Menú de navegación */
+            /* Menú de navegación con espacio entre íconos */
             .sidebar .nav-menu { 
                 display: flex !important;
                 flex-direction: row;
                 justify-content: space-around;
                 align-items: center;
                 width: 100%;
-                max-width: 400px;
+                max-width: 420px;
                 margin: 0;
-                padding: 0 16px;
+                padding: 0 20px;
+                gap: 8px;
             }
             
             .nav-item { 
@@ -251,17 +250,17 @@
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                padding: 8px 4px;
+                padding: 8px 12px;
                 margin: 0;
                 border-radius: 12px;
-                gap: 4px;
+                gap: 6px;
                 position: relative;
                 transition: all 0.3s ease;
-                min-height: 48px;
+                min-height: 52px;
             }
             
             .nav-item i {
-                font-size: 22px;
+                font-size: 26px;
                 margin: 0;
                 color: #64748b;
                 transition: all 0.3s ease;
@@ -269,41 +268,42 @@
             
             .nav-item span:not(.nav-badge) {
                 display: block !important;
-                font-size: 10px;
+                font-size: 11px;
                 font-weight: 600;
                 color: #64748b;
                 transition: all 0.3s ease;
             }
             
-            /* Estado activo con fondo azul suave */
+            /* Estado activo con fondo destacado */
             .nav-item.active {
-                background: #eff6ff;
+                background: rgba(37, 99, 235, 0.15);
             }
             
             .nav-item.active i {
                 color: var(--accent);
-                transform: scale(1.1);
+                transform: scale(1.15);
             }
             
             .nav-item.active span:not(.nav-badge) {
-                color: var(--accent);
+                color: white;
+                font-weight: 700;
             }
             
             /* Hover effect */
             .nav-item:hover:not(.active) {
-                background: #f8fafc;
+                background: rgba(255, 255, 255, 0.05);
             }
             
             .nav-item:hover:not(.active) i {
-                color: var(--accent);
+                color: #94a3b8;
             }
             
             /* Badge de notificaciones */
             .nav-badge { 
                 position: absolute;
-                top: 4px;
-                right: calc(50% - 20px);
-                font-size: 9px;
+                top: 2px;
+                right: calc(50% - 22px);
+                font-size: 10px;
                 padding: 2px 6px;
                 min-width: 18px;
                 text-align: center;
@@ -311,13 +311,13 @@
                 color: white;
                 border-radius: 10px;
                 font-weight: 700;
-                box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+                box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);
             }
             
             /* Contenido principal con espacio para la barra */
             .main-content { 
                 padding: 16px;
-                padding-bottom: 100px;
+                padding-bottom: 90px;
                 margin-left: 0;
             }
             
@@ -393,22 +393,6 @@
             }
             .header h1 {
                 font-size: 18px;
-            }
-            
-            /* Barra aún más compacta en pantallas muy pequeñas */
-            .sidebar {
-                height: 60px;
-                bottom: 12px;
-                left: 12px;
-                right: 12px;
-            }
-            
-            .nav-item i {
-                font-size: 20px;
-            }
-            
-            .nav-item span:not(.nav-badge) {
-                font-size: 9px;
             }
         }
 
