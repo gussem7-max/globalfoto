@@ -110,6 +110,9 @@ app.use('/api/orders', orderRoutes);
 const usersRoutes = require('./src/routes/users');
 app.use('/api/users', usersRoutes);
 
+const adminRoutes = require('./src/routes/admin');
+app.use('/api/admin', adminRoutes);
+
 // Subidas locales (legacy): en producción las fotos viven en S3
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
