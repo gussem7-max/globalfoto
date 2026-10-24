@@ -201,29 +201,31 @@
         .receipt-preview { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 12px; }
 
         /* ============================================
-           RESPONSIVE - BARRA INFERIOR TIPO APP
-           ============================================ */
+        RESPONSIVE - BARRA INFERIOR MODERNA TIPO APP
+        ============================================ */
         @media (max-width: 768px) {
-            /* Sidebar se convierte en barra inferior fija */
+            /* Sidebar se convierte en barra inferior moderna */
             .sidebar { 
-                width: 100%;
-                height: 70px;
+                width: calc(100% - 32px);
+                height: 64px;
                 padding: 0;
                 position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
+                bottom: 16px;
+                left: 16px;
+                right: 16px;
                 top: auto;
                 z-index: 1000;
                 display: flex;
                 flex-direction: row;
                 justify-content: center;
                 align-items: center;
-                background: var(--bg-primary);
-                border-top: 1px solid #334155;
+                background: white;
+                border-radius: 20px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+                border: 1px solid #e2e8f0;
             }
             
-            /* Ocultar SOLO la marca y el perfil, NO el menú */
+            /* Ocultar marca y perfil */
             .sidebar .brand { 
                 display: none; 
             }
@@ -231,16 +233,16 @@
                 display: none; 
             }
             
-            /* Menú de navegación en fila */
+            /* Menú de navegación */
             .sidebar .nav-menu { 
                 display: flex !important;
                 flex-direction: row;
                 justify-content: space-around;
                 align-items: center;
                 width: 100%;
-                max-width: 500px;
+                max-width: 400px;
                 margin: 0;
-                padding: 0 10px;
+                padding: 0 16px;
             }
             
             .nav-item { 
@@ -251,45 +253,71 @@
                 justify-content: center;
                 padding: 8px 4px;
                 margin: 0;
-                border-radius: 8px;
+                border-radius: 12px;
                 gap: 4px;
                 position: relative;
+                transition: all 0.3s ease;
+                min-height: 48px;
             }
             
             .nav-item i {
-                font-size: 20px;
+                font-size: 22px;
                 margin: 0;
+                color: #64748b;
+                transition: all 0.3s ease;
             }
             
             .nav-item span:not(.nav-badge) {
                 display: block !important;
                 font-size: 10px;
-                font-weight: 500;
-                color: #94a3b8;
+                font-weight: 600;
+                color: #64748b;
+                transition: all 0.3s ease;
             }
             
-            .nav-item.active span:not(.nav-badge) {
-                color: white;
+            /* Estado activo con fondo azul suave */
+            .nav-item.active {
+                background: #eff6ff;
             }
             
             .nav-item.active i {
-                color: white;
+                color: var(--accent);
+                transform: scale(1.1);
             }
             
+            .nav-item.active span:not(.nav-badge) {
+                color: var(--accent);
+            }
+            
+            /* Hover effect */
+            .nav-item:hover:not(.active) {
+                background: #f8fafc;
+            }
+            
+            .nav-item:hover:not(.active) i {
+                color: var(--accent);
+            }
+            
+            /* Badge de notificaciones */
             .nav-badge { 
                 position: absolute;
-                top: 2px;
-                right: calc(50% - 18px);
+                top: 4px;
+                right: calc(50% - 20px);
                 font-size: 9px;
-                padding: 2px 5px;
-                min-width: 16px;
+                padding: 2px 6px;
+                min-width: 18px;
                 text-align: center;
+                background: var(--danger);
+                color: white;
+                border-radius: 10px;
+                font-weight: 700;
+                box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
             }
             
-            /* Contenido principal con espacio para la barra inferior */
+            /* Contenido principal con espacio para la barra */
             .main-content { 
                 padding: 16px;
-                padding-bottom: 90px;
+                padding-bottom: 100px;
                 margin-left: 0;
             }
             
@@ -365,6 +393,22 @@
             }
             .header h1 {
                 font-size: 18px;
+            }
+            
+            /* Barra aún más compacta en pantallas muy pequeñas */
+            .sidebar {
+                height: 60px;
+                bottom: 12px;
+                left: 12px;
+                right: 12px;
+            }
+            
+            .nav-item i {
+                font-size: 20px;
+            }
+            
+            .nav-item span:not(.nav-badge) {
+                font-size: 9px;
             }
         }
 
