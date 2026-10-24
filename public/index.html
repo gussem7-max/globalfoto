@@ -58,6 +58,8 @@
         .btn-danger:hover { background: #dc2626; }
         .btn-success { background: var(--success); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
         .btn-success:hover { background: #059669; }
+        .btn-warning { background: var(--warning); color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .btn-warning:hover { background: #d97706; }
 
         .dashboard-layout { display: flex; width: 100vw; min-height: 100vh; }
         .sidebar { width: 260px; background: var(--bg-primary); color: white; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; }
@@ -169,7 +171,6 @@
         .pricing-view-value { font-size: 13px; font-weight: 600; color: #0f172a; }
         .pricing-view-actions { display: flex; gap: 8px; margin-top: 12px; }
 
-        /* SECCIÓN VENTAS */
         .orders-list { display: flex; flex-direction: column; gap: 16px; }
         .order-card { background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; gap: 20px; }
         .order-receipt { width: 120px; height: 120px; border-radius: 8px; object-fit: cover; cursor: pointer; border: 1px solid var(--border-color); }
@@ -186,7 +187,6 @@
         .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
         .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
 
-        /* MODAL DE COMPRA */
         .purchase-summary { background: #f8fafc; padding: 16px; border-radius: 10px; margin-bottom: 20px; border: 1px solid var(--border-color); }
         .purchase-summary-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
         .purchase-summary-row.total { border-top: 1px solid var(--border-color); margin-top: 8px; padding-top: 12px; font-weight: 700; font-size: 15px; }
@@ -200,9 +200,6 @@
         .receipt-upload p { font-size: 13px; color: var(--text-muted); }
         .receipt-preview { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 12px; }
 
-        /* ============================================
-           RESPONSIVE - BARRA INFERIOR MODERNA TIPO APP
-           ============================================ */
         @media (max-width: 768px) {
             .sidebar { 
                 width: 100%;
@@ -288,7 +285,6 @@
         <div class="spinner"></div>
     </div>
 
-    <!-- VISTA PÚBLICA (Cliente) -->
     <div id="publicView" class="public-wrapper hidden">
         <div class="public-container">
             <div style="margin-bottom: 20px;">
@@ -322,7 +318,6 @@
         </div>
     </div>
 
-    <!-- AUTH -->
     <div id="authContainer" class="auth-wrapper hidden">
         <div class="auth-card">
             <div class="brand" style="justify-content: center; margin-bottom: 20px; color: #0f172a;">
@@ -375,7 +370,6 @@
         </div>
     </div>
 
-    <!-- DASHBOARD -->
     <div id="dashboardContainer" class="dashboard-layout hidden">
         <aside class="sidebar">
             <div>
@@ -386,7 +380,7 @@
                     <li class="nav-item active" id="navEvents" onclick="showSection('events')"><i class="fa-solid fa-calendar-days"></i> <span>Eventos</span></li>
                     <li class="nav-item" id="navGalleries" onclick="showSection('galleries')"><i class="fa-solid fa-images"></i> <span>Galerías</span></li>
                     <li class="nav-item" id="navSales" onclick="showSection('sales')"><i class="fa-solid fa-cart-shopping"></i> <span>Ventas</span> <span class="nav-badge hidden" id="pendingOrdersBadge">0</span></li>
-                    <li class="nav-item" id="navUsers" onclick="showSection('users')"><i class="fa-solid fa-users"></i> <span>Usuarios</span></li>
+                    <li class="nav-item hidden" id="navUsers" onclick="showSection('users')"><i class="fa-solid fa-users"></i> <span>Usuarios</span></li>
                     <li class="nav-item" id="navSettings" onclick="showSection('settings')"><i class="fa-solid fa-gear"></i> <span>Configuración</span></li>
                 </ul>
             </div>
@@ -394,7 +388,7 @@
                 <div class="avatar" id="userAvatar">CP</div>
                 <div class="user-info">
                     <div class="user-name" id="userName">Carlos Pérez</div>
-                    <div class="user-role">Fotógrafo</div>
+                    <div class="user-role" id="userRole">Fotógrafo</div>
                 </div>
                 <button class="btn-logout" onclick="logout()" title="Cerrar Sesión">
                     <i class="fa-solid fa-right-from-bracket"></i>
@@ -465,8 +459,8 @@
             <div id="sectionUsers" class="hidden">
                 <div class="header">
                     <div>
-                        <h1>Usuarios Registrados</h1>
-                        <p style="font-size: 14px; color: var(--text-muted);">Lista de fotógrafos que se han registrado en la plataforma.</p>
+                        <h1>Gestión de Usuarios</h1>
+                        <p style="font-size: 14px; color: var(--text-muted);">Administra todos los usuarios registrados en la plataforma.</p>
                     </div>
                 </div>
                 <div style="background: white; border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; overflow-x: auto;">
@@ -477,10 +471,10 @@
                                 <th style="padding: 16px; font-size: 13px; font-weight: 600; color: var(--text-muted);">Correo</th>
                                 <th style="padding: 16px; font-size: 13px; font-weight: 600; color: var(--text-muted);">Rol</th>
                                 <th style="padding: 16px; font-size: 13px; font-weight: 600; color: var(--text-muted);">Fecha de Registro</th>
+                                <th style="padding: 16px; font-size: 13px; font-weight: 600; color: var(--text-muted);">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody">
-                            <!-- Aquí se cargarán los usuarios con JS -->
                         </tbody>
                     </table>
                 </div>
@@ -529,7 +523,6 @@
         </main>
     </div>
 
-    <!-- MODAL NUEVO EVENTO -->
     <div id="eventModal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
@@ -559,7 +552,6 @@
         </div>
     </div>
 
-    <!-- MODAL DE COMPRA (Cliente) -->
     <div id="purchaseModal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
@@ -570,7 +562,6 @@
         </div>
     </div>
 
-    <!-- MODAL DETALLES PEDIDO (Fotógrafo) -->
     <div id="orderModal" class="modal hidden">
         <div class="modal-content large">
             <div class="modal-header">
@@ -581,7 +572,35 @@
         </div>
     </div>
 
-    <!-- LIGHTBOX -->
+    <div id="editUserModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="font-size: 18px; color: #0f172a;">Editar Usuario</h3>
+                <i class="fa-solid fa-xmark close-modal" onclick="closeEditUserModal()"></i>
+            </div>
+            <form id="editUserForm">
+                <input type="hidden" id="editUserId">
+                <div class="form-group">
+                    <label>Nombre Completo</label>
+                    <input type="text" id="editUserName" required>
+                </div>
+                <div class="form-group">
+                    <label>Correo Electrónico</label>
+                    <input type="email" id="editUserEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>Rol</label>
+                    <select id="editUserRole" required>
+                        <option value="photographer">Fotógrafo</option>
+                        <option value="admin">Administrador</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary">Guardar Cambios</button>
+            </form>
+            <div id="editUserResult"></div>
+        </div>
+    </div>
+
     <div id="lightboxModal" class="modal hidden" onclick="closeLightbox()">
         <div class="lightbox-content" onclick="event.stopPropagation()">
             <img id="lightboxImg" class="lightbox-img" src="" alt="Vista previa">
@@ -630,9 +649,11 @@
                 document.getElementById('navSales').classList.add('active');
                 loadOrders();
             } else if (section === 'users') {
-                document.getElementById('sectionUsers').classList.remove('hidden');
-                document.getElementById('navUsers').classList.add('active');
-                loadUsers();
+                if (currentUser && currentUser.role === 'admin') {
+                    document.getElementById('sectionUsers').classList.remove('hidden');
+                    document.getElementById('navUsers').classList.add('active');
+                    loadUsers();
+                }
             } else if (section === 'settings') {
                 document.getElementById('sectionSettings').classList.remove('hidden');
                 document.getElementById('navSettings').classList.add('active');
@@ -644,8 +665,14 @@
         }
 
         async function loadUsers() {
+            if (!currentUser || currentUser.role !== 'admin') {
+                alert('No tienes permisos para ver esta sección.');
+                showSection('events');
+                return;
+            }
+
             const tbody = document.getElementById('usersTableBody');
-            tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center; color: var(--text-muted);">Cargando usuarios...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="padding: 20px; text-align: center; color: var(--text-muted);">Cargando usuarios...</td></tr>';
             
             try {
                 const token = localStorage.getItem('token');
@@ -654,26 +681,110 @@
                 if (res.ok) {
                     const users = await res.json();
                     if (users.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center; color: var(--text-muted);">No hay usuarios registrados aún.</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="5" style="padding: 20px; text-align: center; color: var(--text-muted);">No hay usuarios registrados aún.</td></tr>';
                         return;
                     }
                     tbody.innerHTML = users.map(u => {
                         const fecha = new Date(u.created_at).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' });
-                        const roleBadge = u.role === 'photographer' 
-                            ? '<span style="background: #eff6ff; color: #2563eb; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">Fotógrafo</span>'
-                            : '<span style="background: #f3f4f6; color: #4b5563; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">' + u.role + '</span>';
+                        const roleBadge = u.role === 'admin' 
+                            ? '<span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">Admin</span>'
+                            : '<span style="background: #eff6ff; color: #2563eb; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">Fotógrafo</span>';
+                        
+                        const actionButtons = u.id !== currentUser.id ? `
+                            <button onclick="openEditUserModal(${u.id}, '${u.name}', '${u.email}', '${u.role}')" class="btn-warning" style="margin-right: 4px;">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button onclick="deleteUser(${u.id})" class="btn-danger">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        ` : '<span style="font-size: 11px; color: var(--text-muted);">(Tú)</span>';
+
                         return `
                             <tr style="border-bottom: 1px solid var(--border-color);">
                                 <td style="padding: 16px; font-size: 14px; font-weight: 500; color: #0f172a;">${u.name}</td>
                                 <td style="padding: 16px; font-size: 14px; color: #475569;">${u.email}</td>
                                 <td style="padding: 16px;">${roleBadge}</td>
                                 <td style="padding: 16px; font-size: 13px; color: #64748b;">${fecha}</td>
+                                <td style="padding: 16px;">${actionButtons}</td>
                             </tr>
                         `;
                     }).join('');
                 }
             } catch (err) {
-                tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center; color: var(--danger);">Error al cargar la lista.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="padding: 20px; text-align: center; color: var(--danger);">Error al cargar la lista.</td></tr>';
+            }
+        }
+
+        function openEditUserModal(id, name, email, role) {
+            document.getElementById('editUserId').value = id;
+            document.getElementById('editUserName').value = name;
+            document.getElementById('editUserEmail').value = email;
+            document.getElementById('editUserRole').value = role;
+            document.getElementById('editUserModal').classList.remove('hidden');
+        }
+
+        function closeEditUserModal() {
+            document.getElementById('editUserModal').classList.add('hidden');
+            document.getElementById('editUserResult').textContent = '';
+        }
+
+        document.getElementById('editUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editUserId').value;
+            const name = document.getElementById('editUserName').value;
+            const email = document.getElementById('editUserEmail').value;
+            const role = document.getElementById('editUserRole').value;
+            const resultDiv = document.getElementById('editUserResult');
+            const token = localStorage.getItem('token');
+
+            try {
+                const res = await fetch(`/api/users/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ name, email, role })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    resultDiv.className = 'alert alert-success';
+                    resultDiv.textContent = 'Usuario actualizado exitosamente.';
+                    setTimeout(() => {
+                        closeEditUserModal();
+                        loadUsers();
+                    }, 1500);
+                } else {
+                    resultDiv.className = 'alert alert-error';
+                    resultDiv.textContent = data.error || 'Error al actualizar usuario.';
+                }
+            } catch (err) {
+                resultDiv.className = 'alert alert-error';
+                resultDiv.textContent = 'Error de conexión.';
+            }
+        });
+
+        async function deleteUser(id) {
+            if (!confirm('¿Estás seguro de eliminar este usuario? Esta acción no se puede deshacer.')) return;
+            
+            const token = localStorage.getItem('token');
+            try {
+                const res = await fetch(`/api/users/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.ok) {
+                    alert('Usuario eliminado exitosamente.');
+                    loadUsers();
+                } else {
+                    const data = await res.json();
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (err) {
+                alert('Error de conexión.');
             }
         }
 
@@ -1280,7 +1391,16 @@
             document.getElementById('dashboardContainer').classList.remove('hidden');
             document.getElementById('userName').textContent = currentUser.name;
             document.getElementById('userAvatar').textContent = currentUser.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            document.getElementById('userRole').textContent = currentUser.role === 'admin' ? 'Administrador' : 'Fotógrafo';
             document.getElementById('welcomeTitle').textContent = `¡Hola de nuevo, ${currentUser.name}!`;
+            
+            // Mostrar/ocultar pestaña de Usuarios según el rol
+            if (currentUser.role === 'admin') {
+                document.getElementById('navUsers').classList.remove('hidden');
+            } else {
+                document.getElementById('navUsers').classList.add('hidden');
+            }
+            
             loadEvents();
             loadPendingOrdersCount();
         }
