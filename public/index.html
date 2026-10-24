@@ -134,8 +134,8 @@
         .package-card.featured { border-color: var(--accent); box-shadow: 0 0 20px rgba(37, 99, 235, 0.2); }
         .package-card h3 { font-size: 18px; margin-bottom: 8px; color: white; }
         .package-card .price { font-size: 28px; font-weight: 700; color: var(--accent); margin-bottom: 12px; }
-        .package-card .limit { font-size: 13px; color: #94a3b8; margin-bottom: 16px; }
-        .btn-buy-package { background: var(--success); color: white; padding: 10px 20px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; width: 100%; }
+        .package-card .limit { font-size: 13px; color: #94a3b8; margin-bottom: 12px; }
+        .package-card .howto { font-size: 12px; color: #94a3b8; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; line-height: 1.5; }
 
         .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
         .config-card { background: white; padding: 28px; border-radius: 12px; border: 1px solid var(--border-color); }
@@ -544,9 +544,7 @@
         function closeEditUserModal() { document.getElementById('editUserModal').classList.add('hidden'); document.getElementById('editUserResult').textContent = ''; }
         function closePurchaseModal() {
             document.getElementById('purchaseModal').classList.add('hidden');
-            selectedPhotos.clear();
-            document.querySelectorAll('.public-photo-card').forEach(c => c.classList.remove('selected'));
-            cancelPackageMode();
+            clearSelection();
         }
 
         function openLightbox(url) {
@@ -1120,7 +1118,7 @@
                             <h3>${p.name}</h3>
                             <div class="price">$${Number(p.price).toLocaleString('es-CO')}</div>
                             <div class="limit">Incluye ${p.photo_limit} fotos a elección</div>
-                            <button class="btn-buy-package" onclick="selectPackageMode(${p.id})"><i class="fa-solid fa-box-open"></i> Seleccionar Fotos para este Paquete</button>
+                            <div class="howto">💡 Selecciona exactamente <strong>${p.photo_limit} fotos</strong> con el círculo y este precio se aplicará automáticamente al comprar.</div>
                         </div>
                     `).join('');
                 } else { pkgGrid.innerHTML = ''; }
@@ -1147,68 +1145,80 @@
                 if (!document.getElementById('selectionCounter')) {
                     const counter = document.createElement('div');
                     counter.id = 'selectionCounter';
-                    counter.style.cssText = 'position: fixed; bottom: 100px; right: 20px; background: var(--accent); color: white; padding: 12px 20px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); z-index: 999; display: none; font-size: 14px; font-weight: 600;';
-                    counter.innerHTML = '<i class="fa-solid fa-images"></i> <span id="selectionCount">0</span> fotos seleccionadas';
+                    counter.style.cssText = 'position: fixed; bottom: 100px; right: 20px; background: var(--accent); color: white; padding: 12px 20px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); z-index: 999; display: none; font-size: 14px; font-weight: 600; max-width: 260px;';
                     document.body.appendChild(counter);
                 }
                 document.getElementById('publicView').oncontextmenu = (e) => { e.preventDefault(); return false; };
             } catch (err) { document.getElementById('pubEventTitle').textContent = 'Error de conexión'; }
         }
 
+        function calculateBestPrice() {
+            const count = selectedPhotos.size;
+            if (count === 0) return null;
+            const packages = currentPublicEvent.packages || [];
+            const individual = (parseFloat(currentPublicEvent.price_per_photo) || 0) * count;
+            const matching = packages.find(p => p.photo_limit === count);
+            if (matching) {
+                const pkgPrice = parseFloat(matching.price);
+                if (pkgPrice <= individual || individual === 0) {
+                    return { type: 'package', package: matching, amount: pkgPrice, description: `Promoción Paquete: ${matching.name} (${count} fotos)` };
+                }
+            }
+            return { type: 'single', package: null, amount: individual, description: `${count} foto(s) seleccionada(s)` };
+        }
+
+        function getPackageHint(count) {
+            const packages = currentPublicEvent.packages || [];
+            for (const p of packages) {
+                if (p.photo_limit > count) {
+                    const missing = p.photo_limit - count;
+                    return `Selecciona ${missing} foto(s) más y aplica el paquete "${p.name}" por $${Number(p.price).toLocaleString('es-CO')}`;
+                }
+            }
+            return null;
+        }
+
+        function updateSelectionCounter() {
+            const counter = document.getElementById('selectionCounter');
+            if (!counter) return;
+            const count = selectedPhotos.size;
+            if (count === 0) { counter.style.display = 'none'; return; }
+
+            const best = calculateBestPrice();
+            let html = `<i class="fa-solid fa-images"></i> ${count} foto(s) seleccionada(s)`;
+
+            if (best && best.type === 'package') {
+                html += `<div style="margin-top:6px; font-size:12px; background:rgba(16,185,129,0.25); padding:6px 8px; border-radius:6px;">🎉 Paquete aplicado: <strong>${best.package.name}</strong></div>`;
+            } else {
+                const hint = getPackageHint(count);
+                if (hint) html += `<div style="margin-top:6px; font-size:11px; opacity:0.95; background:rgba(255,255,255,0.1); padding:6px 8px; border-radius:6px;">💡 ${hint}</div>`;
+            }
+
+            html += `<div style="margin-top:6px; font-size:16px; font-weight:700;">Total: $${best.amount.toLocaleString('es-CO')}</div>`;
+            html += `<button onclick="openPurchaseModal('multiple')" style="margin-top:8px; background:var(--success); color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:13px; font-weight:600; width:100%;"><i class="fa-solid fa-cart-shopping"></i> Comprar Seleccionadas</button>`;
+            html += `<button onclick="clearSelection()" style="margin-top:4px; background:transparent; color:white; border:1px solid white; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:11px; width:100%;">Limpiar selección</button>`;
+
+            counter.innerHTML = html;
+            counter.style.display = 'block';
+        }
+
         function togglePhotoSelection(photoId) {
             if (!currentPublicEvent) return;
             const card = document.getElementById(`photoCard_${photoId}`);
             if (!card) return;
-            
             if (selectedPhotos.has(photoId)) {
                 selectedPhotos.delete(photoId);
                 card.classList.remove('selected');
             } else {
-                if (window.activePackageMode) {
-                    const pkg = currentPublicEvent.packages.find(p => p.id === window.activePackageMode);
-                    if (pkg && selectedPhotos.size >= pkg.photo_limit) {
-                        alert(`Este paquete incluye máximo ${pkg.photo_limit} fotos. Ya seleccionaste ${selectedPhotos.size}.`);
-                        return;
-                    }
-                }
                 selectedPhotos.add(photoId);
                 card.classList.add('selected');
             }
-            
-            const counter = document.getElementById('selectionCounter');
-            if (!counter) return;
-            const countSpan = document.getElementById('selectionCount');
-            if (selectedPhotos.size > 0) {
-                counter.style.display = 'block';
-                countSpan.textContent = selectedPhotos.size;
-                let actionsHtml = '';
-                if (window.activePackageMode) {
-                    const pkg = currentPublicEvent.packages.find(p => p.id === window.activePackageMode);
-                    if (pkg) {
-                        actionsHtml = `<br><button onclick="openPurchaseModal('package', ${pkg.id})" style="margin-top: 8px; background: var(--success); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; width: 100%;"><i class="fa-solid fa-check"></i> Comprar Paquete ($${Number(pkg.price).toLocaleString('es-CO')})</button><button onclick="cancelPackageMode()" style="margin-top: 4px; background: transparent; color: white; border: 1px solid white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; width: 100%;">Cancelar selección</button>`;
-                    }
-                } else {
-                    actionsHtml = `<br><button onclick="openPurchaseModal('multiple')" style="margin-top: 8px; background: var(--success); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; width: 100%;"><i class="fa-solid fa-cart-shopping"></i> Comprar Seleccionadas</button><button onclick="clearSelection()" style="margin-top: 4px; background: transparent; color: white; border: 1px solid white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; width: 100%;">Limpiar selección</button>`;
-                }
-                counter.innerHTML = `<i class="fa-solid fa-images"></i> <span id="selectionCount">${selectedPhotos.size}</span> fotos seleccionadas${actionsHtml}`;
-            } else { counter.style.display = 'none'; }
+            updateSelectionCounter();
         }
 
         function clearSelection() {
             selectedPhotos.clear();
             document.querySelectorAll('.public-photo-card').forEach(c => c.classList.remove('selected'));
-            cancelPackageMode();
-        }
-
-        function selectPackageMode(packageId) {
-            window.activePackageMode = packageId;
-            const pkg = currentPublicEvent.packages.find(p => p.id === packageId);
-            clearSelection();
-            alert(`📦 Modo Paquete activado: "${pkg.name}"\n\nPara elegir tus fotos, haz clic en el CÍRCULO BLANCO con el check que aparece en la esquina superior derecha de cada foto (máximo ${pkg.photo_limit}).\n\nLa foto se marcará en azul cuando esté seleccionada.\n\nCuando termines, presiona el botón azul flotante para comprar.`);
-        }
-
-        function cancelPackageMode() {
-            window.activePackageMode = null;
             const counter = document.getElementById('selectionCounter');
             if (counter) counter.style.display = 'none';
         }
@@ -1223,22 +1233,15 @@
             if (type === 'gallery') {
                 orderType = 'gallery'; amount = parseFloat(currentPublicEvent.price_full_gallery) || 0; description = `Galería completa: ${currentPublicEvent.title}`;
                 title.innerHTML = '<i class="fa-solid fa-images"></i> Comprar Galería Completa';
-            } else if (type === 'package') {
-                const pkg = currentPublicEvent.packages.find(p => p.id === id);
-                if (!pkg) { alert('Paquete no encontrado.'); return; }
-                if (selectedPhotos.size === 0) { alert('Primero debes seleccionar las fotos que quieres incluir en el paquete.'); return; }
-                if (selectedPhotos.size > pkg.photo_limit) {
-                    if (!confirm(`Seleccionaste ${selectedPhotos.size} fotos pero el paquete incluye solo ${pkg.photo_limit}. ¿Deseas continuar con las primeras ${pkg.photo_limit} fotos?`)) return;
-                }
-                const limitedPhotoIds = Array.from(selectedPhotos).slice(0, pkg.photo_limit);
-                orderType = 'package'; amount = parseFloat(pkg.price); description = `Paquete: ${pkg.name} (${limitedPhotoIds.length} fotos)`; packageId = pkg.id; photoIds = limitedPhotoIds;
-                title.innerHTML = '<i class="fa-solid fa-box-open"></i> Comprar Paquete';
-                clearSelection();
             } else if (type === 'multiple') {
                 photoIds = Array.from(selectedPhotos);
                 if (photoIds.length === 0) { alert('Selecciona al menos una foto haciendo clic en el círculo de cada foto.'); return; }
-                orderType = 'single'; amount = (parseFloat(currentPublicEvent.price_per_photo) || 0) * photoIds.length; description = `${photoIds.length} foto(s) seleccionada(s)`;
-                title.innerHTML = `<i class="fa-solid fa-cart-shopping"></i> Comprar ${photoIds.length} foto(s)`;
+                const best = calculateBestPrice();
+                orderType = best.type === 'package' ? 'package' : 'single';
+                amount = best.amount;
+                description = best.description;
+                packageId = best.package ? best.package.id : null;
+                title.innerHTML = best.type === 'package' ? `<i class="fa-solid fa-box-open"></i> Comprar con Paquete` : `<i class="fa-solid fa-cart-shopping"></i> Comprar ${photoIds.length} foto(s)`;
                 clearSelection();
             } else {
                 photoIds = [id]; orderType = 'single'; amount = parseFloat(currentPublicEvent.price_per_photo) || 0; description = '1 foto';
@@ -1251,7 +1254,7 @@
                 <div class="purchase-summary">
                     <div class="purchase-summary-row"><span>Evento:</span><strong>${currentPublicEvent.title}</strong></div>
                     <div class="purchase-summary-row"><span>Tipo:</span><span>${description}</span></div>
-                    ${type !== 'package' && type !== 'gallery' ? `<div class="purchase-summary-row"><span>Precio unitario:</span><span>$${Number(currentPublicEvent.price_per_photo).toLocaleString('es-CO')}</span></div>` : ''}
+                    ${orderType === 'single' ? `<div class="purchase-summary-row"><span>Precio unitario:</span><span>$${Number(currentPublicEvent.price_per_photo).toLocaleString('es-CO')}</span></div>` : ''}
                     <div class="purchase-summary-row total"><span>Total a pagar:</span><span style="color: var(--accent);">$${amount.toLocaleString('es-CO')}</span></div>
                 </div>
                 <div class="nequi-info">
