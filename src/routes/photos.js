@@ -33,11 +33,36 @@ const s3Client = new S3Client({
 
 const isValidId = (id) => /^\d+$/.test(id) && parseInt(id) > 0;
 
+// Aplica la orientación EXIF para que las fotos de celular no queden rotadas
+function applyExifOrientation(image) {
+    try {
+        const exif = image.getExif();
+        if (!exif) return;
+        const tags = exif.getImage().tags;
+        const orientation = tags && tags.Orientation ? tags.Orientation : 1;
+        switch (orientation) {
+            case 2: image.flip(true, false); break;
+            case 3: image.rotate(180); break;
+            case 4: image.flip(false, true); break;
+            case 5: image.rotate(90).flip(true, false); break;
+            case 6: image.rotate(-90); break;
+            case 7: image.rotate(-90).flip(true, false); break;
+            case 8: image.rotate(90); break;
+            default: break;
+        }
+    } catch (e) {
+        // Si la imagen no tiene EXIF o falla, continuamos sin rotar
+    }
+}
+
 // Función para agregar marca de agua
 async function addWatermark(imageBuffer) {
     try {
         const image = await Jimp.read(imageBuffer);
-        
+
+        // Corregir orientación EXIF (fotos tomadas con celular)
+        applyExifOrientation(image);
+
         // Redimensionar si es muy grande para ahorrar espacio y tiempo
         if (image.bitmap.width > 1200 || image.bitmap.height > 1200) {
             image.resize(1200, Jimp.AUTO);
