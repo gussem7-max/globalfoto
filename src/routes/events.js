@@ -5,6 +5,11 @@ const verificarToken = require('../middleware/auth');
 const archiver = require('archiver');
 const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const axios = require('axios');
+const { Resend } = require('resend'); // <-- IMPORTANTE: Agregado
+
+// Inicializar Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'notificaciones@globalfotoapp.com'; // <-- IMPORTANTE: Agregado
 
 const s3Client = new S3Client({
     region: process.env.AWS_REGION,
@@ -17,31 +22,81 @@ const s3Client = new S3Client({
 // Validar que un ID sea número entero positivo
 const isValidId = (id) => /^\d+$/.test(id) && parseInt(id) > 0;
 
-// ---------------------------------------------------------------
-// CREAR EVENTO (Protegido)
-// ---------------------------------------------------------------
+// =====================================================
+// CREAR EVENTO (CON CORREO DE CONFIRMACIÓN)
+// =====================================================
 router.post('/', verificarToken, async (req, res) => {
     try {
-        const { title, description, event_date, location } = req.body;
-        
-        if (!title || title.trim().length < 3) {
-            return res.status(400).json({ error: 'El título debe tener al menos 3 caracteres.' });
-        }
-        if (!event_date) {
-            return res.status(400).json({ error: 'La fecha del evento es obligatoria.' });
-        }
-
+        const { title, event_date, location, description } = req.body;
         const photographer_id = req.user.id;
-        const formattedDate = new Date(event_date).toISOString().split('T')[0];
 
-        const newEvent = await pool.query(
-            'INSERT INTO events (title, description, event_date, location, photographer_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [title.trim(), (description || '').trim(), formattedDate, (location || '').trim(), photographer_id]
-        );
+        if (!title) {
+            return res.status(400).json({ error: 'El título del evento es requerido.' });
+        }
+
+        const newEvent = await pool.query(`
+            INSERT INTO events (photographer_id, title, event_date, location, description)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING *
+        `, [photographer_id, title, event_date || null, location || '', description || '']);
+
+        const event = newEvent.rows[0];
+
+        // 📧 ENVIAR CORREO DE CONFIRMACIÓN AL FOTÓGRAFO
+        try {
+            const photographer = await pool.query('SELECT name, email FROM users WHERE id = $1', [photographer_id]);
+            if (photographer.rows.length > 0) {
+                const publicUrl = `${process.env.FRONTEND_URL || 'https://www.globalfotoapp.com'}/?galeria=${event.id}`;
+                
+                await resend.emails.send({
+                    from: FROM_EMAIL,
+                    to: photographer.rows[0].email,
+                    subject: `📸 Evento creado: ${event.title}`,
+                    html: `
+                        <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                            <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
+                                <h1 style="color: white; margin: 0; font-size: 28px;">📸 GlobalFoto</h1>
+                            </div>
+                            <div style="background: white; padding: 30px; border-radius: 0 0 16px 16px; border: 1px solid #e2e8f0; border-top: none;">
+                                <h2 style="color: #0f172a; margin-bottom: 16px;">¡Evento creado exitosamente!</h2>
+                                <p style="color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 20px;">
+                                    Hola ${photographer.rows[0].name},<br><br>
+                                    Tu nuevo evento ha sido registrado en la plataforma.
+                                </p>
+                                <div style="background: #f8fafc; padding: 20px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #2563eb;">
+                                    <h3 style="color: #0f172a; margin: 0 0 12px 0; font-size: 16px;">📋 Detalles del evento</h3>
+                                    <p style="color: #475569; font-size: 14px; margin: 8px 0;"><strong>Título:</strong> ${event.title}</p>
+                                    ${event.event_date ? `<p style="color: #475569; font-size: 14px; margin: 8px 0;"><strong>Fecha:</strong> ${event.event_date}</p>` : ''}
+                                    ${event.location ? `<p style="color: #475569; font-size: 14px; margin: 8px 0;"><strong>Ubicación:</strong> ${event.location}</p>` : ''}
+                                </div>
+                                <div style="background: #eff6ff; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                                    <h3 style="color: #0f172a; margin: 0 0 12px 0; font-size: 16px;">🔗 Tu enlace público</h3>
+                                    <p style="color: #475569; font-size: 13px; margin-bottom: 12px;">Comparte este enlace con tus clientes para que vean la galería:</p>
+                                    <a href="${publicUrl}" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block; word-break: break-all;">
+                                        Ver Galería Pública
+                                    </a>
+                                </div>
+                                <div style="background: #fffbeb; padding: 16px; border-radius: 10px; border-left: 4px solid #f59e0b;">
+                                    <p style="color: #92400e; font-size: 13px; margin: 0;">
+                                        <strong>💡 Siguiente paso:</strong> Sube tus fotos al evento y configura los precios para comenzar a vender.
+                                    </p>
+                                </div>
+                                <p style="color: #64748b; font-size: 13px; text-align: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+                                    GlobalFoto - Tu plataforma profesional de fotografía
+                                </p>
+                            </div>
+                        </div>
+                    `
+                });
+                console.log('✅ [EMAIL] Correo de confirmación de evento enviado a:', photographer.rows[0].email);
+            }
+        } catch (emailErr) {
+            console.error('⚠️ [EMAIL] No se pudo enviar confirmación de evento:', emailErr.message);
+        }
 
         res.status(201).json({
-            mensaje: '¡Evento creado exitosamente!',
-            event: newEvent.rows[0]
+            mensaje: 'Evento creado exitosamente.',
+            event
         });
 
     } catch (error) {
@@ -50,9 +105,9 @@ router.post('/', verificarToken, async (req, res) => {
     }
 });
 
-// ---------------------------------------------------------------
-// LISTAR EVENTOS SOLO DEL USUARIO AUTENTICADO (Protegido)
-// ---------------------------------------------------------------
+// =====================================================
+// LISTAR EVENTOS SOLO DEL USUARIO AUTENTICADO
+// =====================================================
 router.get('/', verificarToken, async (req, res) => {
     try {
         const photographer_id = req.user.id;
@@ -79,9 +134,9 @@ router.get('/', verificarToken, async (req, res) => {
     }
 });
 
-// ---------------------------------------------------------------
-// CONFIGURAR PRECIOS Y DATOS DE PAGO (Protegido + propiedad)
-// ---------------------------------------------------------------
+// =====================================================
+// CONFIGURAR PRECIOS Y DATOS DE PAGO
+// =====================================================
 router.put('/:id/pricing', verificarToken, async (req, res) => {
     try {
         const { id } = req.params;
@@ -140,9 +195,9 @@ router.put('/:id/pricing', verificarToken, async (req, res) => {
     }
 });
 
-// ---------------------------------------------------------------
-// ELIMINAR EVENTO (Protegido + propiedad)
-// ---------------------------------------------------------------
+// =====================================================
+// ELIMINAR EVENTO
+// =====================================================
 router.delete('/:id', verificarToken, async (req, res) => {
     try {
         const { id } = req.params;
@@ -161,7 +216,7 @@ router.delete('/:id', verificarToken, async (req, res) => {
             return res.status(404).json({ error: 'Evento no encontrado o sin permisos.' });
         }
 
-        const photosResult = await pool.query('SELECT * FROM photos WHERE event_id = $1', [id]);
+        const photosResult = await pool.query('SELECT filename FROM photos WHERE event_id = $1', [id]);
         
         for (const photo of photosResult.rows) {
             try {
@@ -183,7 +238,9 @@ router.delete('/:id', verificarToken, async (req, res) => {
     }
 });
 
+// =====================================================
 // GALERÍA PÚBLICA (CON PROTECCIÓN)
+// =====================================================
 router.get('/:id/public', async (req, res) => {
     try {
         const { id } = req.params;
@@ -219,9 +276,9 @@ router.get('/:id/public', async (req, res) => {
     }
 });
 
-// ---------------------------------------------------------------
+// =====================================================
 // DESCARGA ZIP PÚBLICA
-// ---------------------------------------------------------------
+// =====================================================
 router.get('/:id/download-zip', async (req, res) => {
     try {
         const { id } = req.params;
@@ -277,7 +334,9 @@ router.get('/:id/download-zip', async (req, res) => {
     }
 });
 
-// Listar fotos de un evento (Protegido + propiedad)
+// =====================================================
+// LISTAR FOTOS DE UN EVENTO (Protegido)
+// =====================================================
 router.get('/:id/photos', verificarToken, async (req, res) => {
     try {
         const { id } = req.params;
@@ -287,7 +346,6 @@ router.get('/:id/photos', verificarToken, async (req, res) => {
             return res.status(400).json({ error: 'ID de evento inválido.' });
         }
 
-        // Verificar propiedad
         const eventCheck = await pool.query(
             'SELECT id FROM events WHERE id = $1 AND photographer_id = $2',
             [id, photographer_id]
@@ -298,7 +356,7 @@ router.get('/:id/photos', verificarToken, async (req, res) => {
         }
 
         const photosResult = await pool.query(
-            'SELECT id, url, filename, created_at FROM photos WHERE event_id = $1 ORDER BY created_at DESC',
+            'SELECT id, url, filename, preview_url, created_at FROM photos WHERE event_id = $1 ORDER BY created_at DESC',
             [id]
         );
 
