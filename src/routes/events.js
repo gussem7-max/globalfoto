@@ -183,9 +183,7 @@ router.delete('/:id', verificarToken, async (req, res) => {
     }
 });
 
-// ---------------------------------------------------------------
-// GALERÍA PÚBLICA
-// ---------------------------------------------------------------
+// GALERÍA PÚBLICA (CON PROTECCIÓN)
 router.get('/:id/public', async (req, res) => {
     try {
         const { id } = req.params;
@@ -199,11 +197,21 @@ router.get('/:id/public', async (req, res) => {
             return res.status(404).json({ error: 'El evento no existe.' });
         }
 
-        const photosResult = await pool.query('SELECT * FROM photos WHERE event_id = $1 ORDER BY created_at DESC', [id]);
+        const photosResult = await pool.query(
+            'SELECT id, preview_url, created_at FROM photos WHERE event_id = $1 ORDER BY created_at DESC', 
+            [id]
+        );
+
+        // 🔒 Solo devolvemos preview_url, NUNCA la url original
+        const protectedPhotos = photosResult.rows.map(p => ({
+            id: p.id,
+            url: p.preview_url, // El frontend usará esto como "url"
+            created_at: p.created_at
+        }));
 
         res.json({
             event: eventResult.rows[0],
-            photos: photosResult.rows
+            photos: protectedPhotos
         });
     } catch (error) {
         console.error('Error al obtener la galería pública:', error);
