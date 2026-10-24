@@ -772,7 +772,13 @@
             document.querySelectorAll('.public-photo-card').forEach(c => c.classList.remove('selected'));
         }
         function openLightbox(url) {
-            document.getElementById('lightboxImg').src = url;
+            // Si la URL contiene 'original/', reemplazarla por 'preview/' y cambiar extensión a .jpg
+            let safeUrl = url;
+            if (url.includes('/original/')) {
+                safeUrl = url.replace('/original/', '/preview/').replace(/\.\w+$/, '.jpg');
+            }
+            
+            document.getElementById('lightboxImg').src = safeUrl;
             document.getElementById('lightboxModal').classList.remove('hidden');
         }
         function closeLightbox() {
