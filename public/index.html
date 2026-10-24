@@ -391,13 +391,10 @@
         </main>
     </div>
 
-    <!-- MODAL CREAR/EDITAR EVENTO -->
+    <!-- MODALES -->
     <div id="eventModal" class="modal hidden">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3 style="font-size: 18px; color: #0f172a;" id="eventModalTitle">Crear Nuevo Evento</h3>
-                <i class="fa-solid fa-xmark close-modal" onclick="closeModal()"></i>
-            </div>
+            <div class="modal-header"><h3 style="font-size: 18px; color: #0f172a;" id="eventModalTitle">Crear Nuevo Evento</h3><i class="fa-solid fa-xmark close-modal" onclick="closeModal()"></i></div>
             <form id="eventForm">
                 <input type="hidden" id="editEventId">
                 <div class="form-group"><label>Título del Evento</label><input type="text" id="title" required placeholder="Ej. Boda Sofía & Pedro"></div>
@@ -418,13 +415,9 @@
         </div>
     </div>
 
-    <!-- MODAL PAQUETE -->
     <div id="packageModal" class="modal hidden">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3 style="font-size: 18px; color: #0f172a;">Agregar Paquete</h3>
-                <i class="fa-solid fa-xmark close-modal" onclick="closePackageModal()"></i>
-            </div>
+            <div class="modal-header"><h3 style="font-size: 18px; color: #0f172a;">Agregar Paquete</h3><i class="fa-solid fa-xmark close-modal" onclick="closePackageModal()"></i></div>
             <form id="packageForm">
                 <input type="hidden" id="pkgEventId">
                 <div class="form-group"><label>Nombre del Paquete</label><input type="text" id="pkgName" placeholder="Ej: Paquete 20 fotos" required></div>
@@ -436,35 +429,23 @@
         </div>
     </div>
 
-    <!-- MODAL COMPRA -->
     <div id="purchaseModal" class="modal hidden">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3 style="font-size: 18px; color: #0f172a;" id="purchaseModalTitle">Comprar Foto</h3>
-                <i class="fa-solid fa-xmark close-modal" onclick="closePurchaseModal()"></i>
-            </div>
+            <div class="modal-header"><h3 style="font-size: 18px; color: #0f172a;" id="purchaseModalTitle">Comprar Foto</h3><i class="fa-solid fa-xmark close-modal" onclick="closePurchaseModal()"></i></div>
             <div id="purchaseModalBody"></div>
         </div>
     </div>
 
-    <!-- MODAL DETALLES PEDIDO -->
     <div id="orderModal" class="modal hidden">
         <div class="modal-content large">
-            <div class="modal-header">
-                <h3 style="font-size: 18px; color: #0f172a;">Detalles del Pedido</h3>
-                <i class="fa-solid fa-xmark close-modal" onclick="closeOrderModal()"></i>
-            </div>
+            <div class="modal-header"><h3 style="font-size: 18px; color: #0f172a;">Detalles del Pedido</h3><i class="fa-solid fa-xmark close-modal" onclick="closeOrderModal()"></i></div>
             <div id="orderModalContent"></div>
         </div>
     </div>
 
-    <!-- MODAL EDITAR USUARIO -->
     <div id="editUserModal" class="modal hidden">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3 style="font-size: 18px; color: #0f172a;">Editar Usuario</h3>
-                <i class="fa-solid fa-xmark close-modal" onclick="closeEditUserModal()"></i>
-            </div>
+            <div class="modal-header"><h3 style="font-size: 18px; color: #0f172a;">Editar Usuario</h3><i class="fa-solid fa-xmark close-modal" onclick="closeEditUserModal()"></i></div>
             <form id="editUserForm">
                 <input type="hidden" id="editUserId">
                 <div class="form-group"><label>Nombre Completo</label><input type="text" id="editUserName" required></div>
@@ -481,7 +462,6 @@
         </div>
     </div>
 
-    <!-- LIGHTBOX -->
     <div id="lightboxModal" class="modal hidden" onclick="closeLightbox()">
         <div class="lightbox-content" onclick="event.stopPropagation()">
             <img id="lightboxImg" class="lightbox-img" src="" alt="Vista previa">
@@ -512,7 +492,7 @@
             document.getElementById(`nav${section.charAt(0).toUpperCase() + section.slice(1)}`).classList.add('active');
 
             if (section === 'events') loadEvents();
-            else if (section === 'galleries') { renderGalleriesView(); }
+            else if (section === 'galleries') renderGalleriesView();
             else if (section === 'sales') loadOrders();
             else if (section === 'users') {
                 if (currentUser && currentUser.role === 'admin') loadUsers();
@@ -559,8 +539,6 @@
         }
         function closeModal() { document.getElementById('eventModal').classList.add('hidden'); }
         function closeOrderModal() { document.getElementById('orderModal').classList.add('hidden'); }
-        function closePurchaseModal() { document.getElementById('purchaseModal').classList.add('hidden'); selectedPhotos.clear(); document.querySelectorAll('.public-photo-card').forEach(c => c.classList.remove('selected')); }
-        function openPackageModal(eventId) { document.getElementById('pkgEventId').value = eventId; document.getElementById('packageForm').reset(); document.getElementById('packageResult').textContent = ''; document.getElementById('packageModal').classList.remove('hidden'); }
         function closePackageModal() { document.getElementById('packageModal').classList.add('hidden'); }
         function closeEditUserModal() { document.getElementById('editUserModal').classList.add('hidden'); document.getElementById('editUserResult').textContent = ''; }
 
@@ -572,7 +550,6 @@
         }
         function closeLightbox() { document.getElementById('lightboxModal').classList.add('hidden'); }
 
-        // LOGIN
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('loginEmail').value;
@@ -586,7 +563,6 @@
             } catch (err) { resDiv.className = 'alert alert-error'; resDiv.textContent = 'Error de conexión.'; }
         });
 
-        // REGISTER
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const name = document.getElementById('name').value;
@@ -602,7 +578,6 @@
             } catch (err) { resDiv.className = 'alert alert-error'; resDiv.textContent = 'Error de conexión.'; }
         });
 
-        // CREAR/EDITAR EVENTO
         document.getElementById('eventForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const editId = document.getElementById('editEventId').value;
@@ -629,7 +604,6 @@
             } catch (err) { resDiv.className = 'alert alert-error'; resDiv.textContent = 'Error de conexión.'; }
         });
 
-        // CREAR PAQUETE
         document.getElementById('packageForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const eventId = document.getElementById('pkgEventId').value;
@@ -650,7 +624,6 @@
             } catch (err) { resDiv.className = 'alert alert-error'; resDiv.textContent = 'Error de conexión.'; }
         });
 
-        // PERFIL
         document.getElementById('profileForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const name = document.getElementById('cfgName').value;
@@ -670,7 +643,6 @@
             } catch (err) { resDiv.className = 'alert alert-error'; resDiv.textContent = 'Error de conexión.'; }
         });
 
-        // CONTRASEÑA
         document.getElementById('passwordForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const currentPassword = document.getElementById('currentPassword').value;
@@ -685,7 +657,6 @@
             } catch (err) { resDiv.className = 'alert alert-error'; resDiv.textContent = 'Error de conexión.'; }
         });
 
-        // EDITAR USUARIO
         document.getElementById('editUserForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = document.getElementById('editUserId').value;
@@ -716,11 +687,8 @@
             const isEditing = editingPricingId === ev.id;
             const hasData = ev.price_per_photo > 0 || ev.nequi_phone;
             const salesEnabled = ev.sales_enabled;
-
-            let html = `<div class="pricing-section"><div class="pricing-header"><h4> Configuración de Ventas</h4><label class="toggle-switch"><input type="checkbox" id="salesToggle_${ev.id}" ${salesEnabled ? 'checked' : ''} onchange="toggleSales(${ev.id})"><span class="toggle-slider"></span></label></div>`;
-
+            let html = `<div class="pricing-section"><div class="pricing-header"><h4>💰 Configuración de Ventas</h4><label class="toggle-switch"><input type="checkbox" id="salesToggle_${ev.id}" ${salesEnabled ? 'checked' : ''} onchange="toggleSales(${ev.id})"><span class="toggle-slider"></span></label></div>`;
             if (!salesEnabled) { html += `<div style="font-size: 12px; color: var(--text-muted); padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px dashed var(--border-color);"><i class="fa-solid fa-lock"></i> Las ventas están desactivadas. Activa el toggle para configurar precios.</div></div>`; return html; }
-
             if (isEditing) {
                 html += `<div class="pricing-card"><div class="pricing-grid">
                     <div class="form-group"><label style="font-size: 12px;">Precio por foto (COP)</label><input type="number" id="pricePhoto_${ev.id}" value="${ev.price_per_photo || 0}" min="0" step="1000"></div>
@@ -735,7 +703,6 @@
                 </div><div id="pricingMsg_${ev.id}"></div></div></div>`;
                 return html;
             }
-
             if (hasData) {
                 const photoPrice = ev.price_per_photo ? `$${Number(ev.price_per_photo).toLocaleString('es-CO')}` : 'No definido';
                 const galleryPrice = ev.price_full_gallery ? `$${Number(ev.price_full_gallery).toLocaleString('es-CO')}` : 'No definido';
@@ -748,7 +715,6 @@
                 </div></div>`;
                 return html;
             }
-
             html += `<div class="pricing-card"><p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;"><i class="fa-solid fa-circle-info"></i> Configura tus precios y datos de pago para comenzar a vender.</p>
                 <div class="pricing-grid">
                     <div class="form-group"><label style="font-size: 12px;">Precio por foto (COP)</label><input type="number" id="pricePhoto_${ev.id}" value="0" min="0" step="1000"></div>
@@ -770,10 +736,8 @@
                 document.getElementById('statEventsCount').textContent = cachedEvents.length;
                 let totalPhotos = 0; cachedEvents.forEach(ev => { if(ev.photosCount) totalPhotos += parseInt(ev.photosCount, 10); });
                 document.getElementById('statPhotosCount').textContent = totalPhotos;
-
                 const eventList = document.getElementById('eventList');
                 if (cachedEvents.length === 0) { eventList.innerHTML = '<p style="color: var(--text-muted);">No tienes eventos registrados aún.</p>'; return; }
-
                 eventList.innerHTML = cachedEvents.map(ev => {
                     const publicUrl = `${window.location.origin}/?galeria=${ev.id}`;
                     const statusClass = `status-${ev.status || 'published'}`;
@@ -793,9 +757,7 @@
                         <div class="event-body">
                             <div class="event-desc">${ev.description || ''}</div>
                             <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">Enlace público:</div>
-                            <div style="display: flex; gap: 6px; margin-bottom: 12px;">
-                                <input type="text" readonly value="${publicUrl}" style="font-size: 11px; background: #f8fafc; padding: 6px; border: 1px solid var(--border-color); border-radius: 6px; width: 100%; color: var(--text-muted);">
-                            </div>
+                            <div style="display: flex; gap: 6px; margin-bottom: 12px;"><input type="text" readonly value="${publicUrl}" style="font-size: 11px; background: #f8fafc; padding: 6px; border: 1px solid var(--border-color); border-radius: 6px; width: 100%; color: var(--text-muted);"></div>
                             <div class="upload-box">
                                 <form onsubmit="uploadPhotos(event, ${ev.id})" style="display: flex; width: 100%; gap: 8px;">
                                     <input type="file" id="fileInput_${ev.id}" multiple accept="image/*" class="file-input" onchange="updateFileLabel(${ev.id})">
@@ -821,7 +783,6 @@
                         </div>
                     </div>`;
                 }).join('');
-
                 cachedEvents.forEach(async (ev) => {
                     const photos = await loadEventPhotos(ev.id);
                     renderPhotosPreview(ev.id, photos);
@@ -868,8 +829,7 @@
             const input = document.getElementById(`fileInput_${eventId}`);
             if (!input.files || input.files.length === 0) { alert('Por favor selecciona al menos una foto.'); return; }
             const progressDiv = document.getElementById(`uploadProgress_${eventId}`);
-            progressDiv.innerHTML = '<div class="upload-progress"><i class="fa-solid fa-spinner fa-spin"></i> Subiendo fotos... Por favor espera, esto puede tomar unos segundos.</div>';
-
+            progressDiv.innerHTML = '<div class="upload-progress"><i class="fa-solid fa-spinner fa-spin"></i> Subiendo fotos... Por favor espera.</div>';
             const formData = new FormData();
             formData.append('event_id', eventId);
             for (let i = 0; i < input.files.length; i++) formData.append('photos', input.files[i]);
@@ -1011,7 +971,6 @@
                 document.getElementById('pendingCount').textContent = pending;
                 document.getElementById('approvedCount').textContent = approved;
                 document.getElementById('totalRevenue').textContent = `$${totalRevenue.toLocaleString('es-CO')}`;
-
                 const ordersList = document.getElementById('ordersList');
                 if (cachedOrders.length === 0) { ordersList.innerHTML = '<div class="empty-state"><i class="fa-solid fa-cart-shopping"></i><p>No hay pedidos aún</p></div>'; return; }
                 ordersList.innerHTML = cachedOrders.map(order => {
@@ -1023,7 +982,7 @@
                         <div class="order-details">
                             <div class="order-header">
                                 <div><div class="order-title">Pedido #${order.id} - ${order.event_title}</div>
-                                <div class="order-info"><strong>Cliente:</strong> ${order.customer_name || order.customer_email}<br><strong>Email:</strong> ${order.customer_email}<br><strong>Tipo:</strong> ${order.order_type === 'gallery' ? 'Galería completa' : order.order_type === 'package' ? `Paquete` : `${(JSON.parse(order.photo_ids || '[]')).length} foto(s)`}<br><strong>Fecha:</strong> ${date}</div></div>
+                                <div class="order-info"><strong>Cliente:</strong> ${order.customer_name || order.customer_email}<br><strong>Email:</strong> ${order.customer_email}<br><strong>Tipo:</strong> ${order.order_type === 'gallery' ? 'Galería completa' : order.order_type === 'package' ? 'Paquete' : `${(JSON.parse(order.photo_ids || '[]')).length} foto(s)`}<br><strong>Fecha:</strong> ${date}</div></div>
                                 <span class="order-status ${statusClass}">${statusText}</span>
                             </div>
                             <div class="order-info"><strong>Monto:</strong> $${Number(order.amount).toLocaleString('es-CO')} | <strong>Tu ganancia:</strong> $${Number(order.photographer_net).toLocaleString('es-CO')}</div>
@@ -1134,7 +1093,9 @@
                     return;
                 }
                 currentPublicEvent = data.event;
+                currentPublicEvent.packages = data.packages || [];
                 document.getElementById('pubEventTitle').textContent = data.event.title;
+                
                 const pricingBar = document.getElementById('pubPricingBar');
                 if (data.event.sales_enabled && (data.event.price_per_photo > 0 || data.event.price_full_gallery > 0)) {
                     pricingBar.classList.remove('hidden');
@@ -1145,10 +1106,6 @@
                 const zipDownloadUrl = `/api/events/${eventId}/download-zip`;
                 document.getElementById('pubEventDetails').innerHTML = `<div style="margin-bottom: 16px;">📅 ${data.event.event_date ? data.event.event_date.split('T')[0] : ''} | 📍 ${data.event.location || ''}<br>${data.event.description || ''}</div>${data.photos.length > 0 && !data.event.sales_enabled ? `<a href="${zipDownloadUrl}" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px; width: auto; padding: 10px 20px; text-decoration: none; margin-top: 8px;"><i class="fa-solid fa-file-zipper"></i> Descargar Todas las Fotos (.ZIP)</a>` : ''}`;
 
-                // Guardar paquetes en el objeto del evento para que estén disponibles
-                currentPublicEvent.packages = data.packages || [];
-
-                // Render Paquetes
                 const pkgGrid = document.getElementById('pubPackagesGrid');
                 if (currentPublicEvent.packages.length > 0) {
                     pkgGrid.innerHTML = currentPublicEvent.packages.map((p, idx) => `
@@ -1156,14 +1113,11 @@
                             <h3>${p.name}</h3>
                             <div class="price">$${Number(p.price).toLocaleString('es-CO')}</div>
                             <div class="limit">Incluye ${p.photo_limit} fotos a elección</div>
-                            <button class="btn-buy-package" onclick="selectPackageMode(${p.id})">
-                                <i class="fa-solid fa-box-open"></i> Seleccionar Fotos para este Paquete
-                            </button>
+                            <button class="btn-buy-package" onclick="selectPackageMode(${p.id})"><i class="fa-solid fa-box-open"></i> Seleccionar Fotos para este Paquete</button>
                         </div>
                     `).join('');
                 } else { pkgGrid.innerHTML = ''; }
 
-                // Render Fotos (con contador de selección)
                 const grid = document.getElementById('pubPhotoGrid');
                 if (data.photos.length === 0) { grid.innerHTML = '<p style="color: #94a3b8; grid-column: 1/-1; text-align: center;">Este evento aún no tiene fotografías publicadas.</p>'; return; }
                 grid.innerHTML = data.photos.map(p => {
@@ -1180,8 +1134,7 @@
                         </div>
                     </div>`;
                 }).join('');
-
-                // Agregar contador flotante de fotos seleccionadas
+                
                 if (!document.getElementById('selectionCounter')) {
                     const counter = document.createElement('div');
                     counter.id = 'selectionCounter';
@@ -1189,8 +1142,9 @@
                     counter.innerHTML = '<i class="fa-solid fa-images"></i> <span id="selectionCount">0</span> fotos seleccionadas';
                     document.body.appendChild(counter);
                 }
-
                 document.getElementById('publicView').oncontextmenu = (e) => { e.preventDefault(); return false; };
+            } catch (err) { document.getElementById('pubEventTitle').textContent = 'Error de conexión'; }
+        }
 
         function togglePhotoSelection(photoId) {
             if (!currentPublicEvent || !currentPublicEvent.sales_enabled) return;
@@ -1199,47 +1153,30 @@
                 selectedPhotos.delete(photoId);
                 card.classList.remove('selected');
             } else {
-                // Si hay un paquete activo, validar límite
                 if (window.activePackageMode) {
                     const pkg = currentPublicEvent.packages.find(p => p.id === window.activePackageMode);
                     if (pkg && selectedPhotos.size >= pkg.photo_limit) {
-                        alert(`Este paquete incluye máximo ${pkg.photo_limit} fotos. Ya seleccionaste ${selectedPhotos.size}.`);
+                        alert(`Este paquete incluye máximo ${pkg.photo_limit} fotos.`);
                         return;
                     }
                 }
                 selectedPhotos.add(photoId);
                 card.classList.add('selected');
             }
-            
-            // Actualizar contador flotante
             const counter = document.getElementById('selectionCounter');
             const countSpan = document.getElementById('selectionCount');
             if (selectedPhotos.size > 0) {
                 counter.style.display = 'block';
                 countSpan.textContent = selectedPhotos.size;
-                
-                // Agregar botones de acción al contador
                 let actionsHtml = '';
                 if (window.activePackageMode) {
                     const pkg = currentPublicEvent.packages.find(p => p.id === window.activePackageMode);
-                    actionsHtml = `<br><button onclick="openPurchaseModal('package', ${pkg.id})" style="margin-top: 8px; background: var(--success); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; width: 100%;">
-                        <i class="fa-solid fa-check"></i> Comprar Paquete ($${Number(pkg.price).toLocaleString('es-CO')})
-                    </button>
-                    <button onclick="cancelPackageMode()" style="margin-top: 4px; background: transparent; color: white; border: 1px solid white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; width: 100%;">
-                        Cancelar selección
-                    </button>`;
+                    actionsHtml = `<br><button onclick="openPurchaseModal('package', ${pkg.id})" style="margin-top: 8px; background: var(--success); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; width: 100%;"><i class="fa-solid fa-check"></i> Comprar Paquete ($${Number(pkg.price).toLocaleString('es-CO')})</button><button onclick="cancelPackageMode()" style="margin-top: 4px; background: transparent; color: white; border: 1px solid white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; width: 100%;">Cancelar selección</button>`;
                 } else {
-                    actionsHtml = `<br><button onclick="openPurchaseModal('multiple')" style="margin-top: 8px; background: var(--success); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; width: 100%;">
-                        <i class="fa-solid fa-cart-shopping"></i> Comprar Seleccionadas
-                    </button>
-                    <button onclick="clearSelection()" style="margin-top: 4px; background: transparent; color: white; border: 1px solid white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; width: 100%;">
-                        Limpiar selección
-                    </button>`;
+                    actionsHtml = `<br><button onclick="openPurchaseModal('multiple')" style="margin-top: 8px; background: var(--success); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; width: 100%;"><i class="fa-solid fa-cart-shopping"></i> Comprar Seleccionadas</button><button onclick="clearSelection()" style="margin-top: 4px; background: transparent; color: white; border: 1px solid white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; width: 100%;">Limpiar selección</button>`;
                 }
                 counter.innerHTML = `<i class="fa-solid fa-images"></i> <span id="selectionCount">${selectedPhotos.size}</span> fotos seleccionadas${actionsHtml}`;
-            } else {
-                counter.style.display = 'none';
-            }
+            } else { counter.style.display = 'none'; }
         }
 
         function clearSelection() {
@@ -1269,52 +1206,27 @@
             let orderType = type, photoIds = [], amount = 0, description = '', packageId = null;
 
             if (type === 'gallery') {
-                orderType = 'gallery'; 
-                amount = parseFloat(currentPublicEvent.price_full_gallery) || 0; 
-                description = `Galería completa: ${currentPublicEvent.title}`;
+                orderType = 'gallery'; amount = parseFloat(currentPublicEvent.price_full_gallery) || 0; description = `Galería completa: ${currentPublicEvent.title}`;
                 title.innerHTML = '<i class="fa-solid fa-images"></i> Comprar Galería Completa';
             } else if (type === 'package') {
                 const pkg = currentPublicEvent.packages.find(p => p.id === id);
                 if (!pkg) { alert('Paquete no encontrado.'); return; }
-                
-                // Validar que haya fotos seleccionadas
-                if (selectedPhotos.size === 0) {
-                    alert('Primero debes seleccionar las fotos que quieres incluir en el paquete.');
-                    return;
-                }
-                
-                // Validar límite
+                if (selectedPhotos.size === 0) { alert('Primero debes seleccionar las fotos que quieres incluir en el paquete.'); return; }
                 if (selectedPhotos.size > pkg.photo_limit) {
-                    if (!confirm(`Seleccionaste ${selectedPhotos.size} fotos pero el paquete incluye solo ${pkg.photo_limit}. ¿Deseas continuar con las primeras ${pkg.photo_limit} fotos?`)) {
-                        return;
-                    }
+                    if (!confirm(`Seleccionaste ${selectedPhotos.size} fotos pero el paquete incluye solo ${pkg.photo_limit}. ¿Deseas continuar con las primeras ${pkg.photo_limit} fotos?`)) return;
                 }
-                
-                // Tomar solo las fotos hasta el límite del paquete
                 const limitedPhotoIds = Array.from(selectedPhotos).slice(0, pkg.photo_limit);
-                
-                orderType = 'package'; 
-                amount = parseFloat(pkg.price); 
-                description = `Paquete: ${pkg.name} (${limitedPhotoIds.length} fotos)`; 
-                packageId = pkg.id;
-                photoIds = limitedPhotoIds;
+                orderType = 'package'; amount = parseFloat(pkg.price); description = `Paquete: ${pkg.name} (${limitedPhotoIds.length} fotos)`; packageId = pkg.id; photoIds = limitedPhotoIds;
                 title.innerHTML = '<i class="fa-solid fa-box-open"></i> Comprar Paquete';
-                
-                // Limpiar selección después de abrir el modal
                 clearSelection();
             } else if (type === 'multiple') {
                 photoIds = Array.from(selectedPhotos);
                 if (photoIds.length === 0) { alert('Selecciona al menos una foto haciendo clic en ella.'); return; }
-                orderType = 'single'; 
-                amount = (parseFloat(currentPublicEvent.price_per_photo) || 0) * photoIds.length; 
-                description = `${photoIds.length} foto(s) seleccionada(s)`;
+                orderType = 'single'; amount = (parseFloat(currentPublicEvent.price_per_photo) || 0) * photoIds.length; description = `${photoIds.length} foto(s) seleccionada(s)`;
                 title.innerHTML = `<i class="fa-solid fa-cart-shopping"></i> Comprar ${photoIds.length} foto(s)`;
                 clearSelection();
             } else {
-                photoIds = [id]; 
-                orderType = 'single'; 
-                amount = parseFloat(currentPublicEvent.price_per_photo) || 0; 
-                description = '1 foto';
+                photoIds = [id]; orderType = 'single'; amount = parseFloat(currentPublicEvent.price_per_photo) || 0; description = '1 foto';
                 title.innerHTML = '<i class="fa-solid fa-cart-shopping"></i> Comprar Foto';
             }
 
@@ -1397,7 +1309,6 @@
             finally { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Pedido'; }
         }
 
-        // Limpiar contador al cerrar modal de compra
         const originalClosePurchaseModal = closePurchaseModal;
         closePurchaseModal = function() {
             originalClosePurchaseModal();
@@ -1412,10 +1323,25 @@
             if (!token) { document.getElementById('authContainer').classList.remove('hidden'); document.getElementById('dashboardContainer').classList.add('hidden'); hideLoadingOverlay(); return; }
             try {
                 const response = await fetch('/api/auth/me', { method: 'GET', headers: { 'Authorization': `Bearer ${token}` } });
-                if (response.ok) { const data = await response.json(); currentUser = data.user; document.getElementById('authContainer').classList.add('hidden'); document.getElementById('dashboardContainer').classList.remove('hidden'); showDashboard(); }
-                else { localStorage.removeItem('token'); document.getElementById('authContainer').classList.remove('hidden'); document.getElementById('dashboardContainer').classList.add('hidden'); }
-            } catch (error) { console.error('Error al verificar la sesión:', error); localStorage.removeItem('token'); document.getElementById('authContainer').classList.remove('hidden'); document.getElementById('dashboardContainer').classList.add('hidden'); }
-            finally { hideLoadingOverlay(); }
+                if (response.ok) { 
+                    const data = await response.json(); 
+                    currentUser = data.user; 
+                    document.getElementById('authContainer').classList.add('hidden'); 
+                    document.getElementById('dashboardContainer').classList.remove('hidden'); 
+                    showDashboard(); 
+                } else { 
+                    localStorage.removeItem('token'); 
+                    document.getElementById('authContainer').classList.remove('hidden'); 
+                    document.getElementById('dashboardContainer').classList.add('hidden'); 
+                }
+            } catch (error) { 
+                console.error('Error al verificar la sesión:', error); 
+                localStorage.removeItem('token'); 
+                document.getElementById('authContainer').classList.remove('hidden'); 
+                document.getElementById('dashboardContainer').classList.add('hidden'); 
+            } finally { 
+                hideLoadingOverlay(); 
+            }
         });
     </script>
 </body>
