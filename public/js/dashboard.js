@@ -184,7 +184,7 @@ async function loadEvents() {
                     </div>
                     <div class="packages-section">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <strong style="font-size: 13px;">📦 Paquetes</strong>
+                            <strong style="font-size: 13px;"> Paquetes</strong>
                             <button class="btn-primary" style="width: auto; padding: 4px 10px; font-size: 11px;" onclick="openPackageModal(${ev.id})">+ Agregar</button>
                         </div>
                         <div id="packagesList_${ev.id}">Cargando...</div>
@@ -487,16 +487,16 @@ function closeQrModal() {
 async function generateQr(url) {
     const container = document.getElementById('qrCanvasContainer');
     
-    let canvas = document.getElementById('qrCanvas');
-    if (!canvas) {
-        canvas = document.createElement('canvas');
-        canvas.id = 'qrCanvas';
-        container.innerHTML = '';
-        container.appendChild(canvas);
-    }
+    // Limpiar contenedor y crear canvas fresco
+    container.innerHTML = '';
+    const canvas = document.createElement('canvas');
+    canvas.id = 'qrCanvas';
+    canvas.width = 400;
+    canvas.height = 400;
+    container.appendChild(canvas);
     
+    // Mostrar estado de carga
     const statusMsg = document.createElement('p');
-    statusMsg.id = 'qrStatusMsg';
     statusMsg.style.cssText = 'color: var(--text-muted); margin: 10px 0;';
     statusMsg.textContent = 'Generando QR...';
     canvas.style.display = 'none';
@@ -509,21 +509,17 @@ async function generateQr(url) {
     
     try {
         if (typeof QRCode !== 'undefined') {
-            // Canvas más grande para mejor calidad
-            canvas.width = 400;
-            canvas.height = 400;
-            
             await QRCode.toCanvas(canvas, url, {
                 width: 400,
                 margin: 3,
                 color: { dark: '#0f172a', light: '#ffffff' },
-                errorCorrectionLevel: 'H' // Máxima tolerancia para logo
+                errorCorrectionLevel: 'H'
             });
-            
             canvas.style.display = 'block';
             if (statusMsg.parentNode) statusMsg.remove();
             clearTimeout(timeout);
             
+            // Integrar logo con zona muerta
             await overlayLogo(canvas);
             return;
         }
@@ -558,59 +554,12 @@ async function generateQr(url) {
         } catch (fallbackErr) {
             console.error('Error en fallback QR:', fallbackErr);
             clearTimeout(timeout);
-            statusMsg.textContent = '️ No se pudo generar el QR. Verifica tu conexión.';
+            statusMsg.textContent = '⚠️ No se pudo generar el QR. Verifica tu conexión.';
             statusMsg.style.color = 'var(--danger)';
         }
     }
 }
 
-async function overlayLogo(canvas) {
-    const logoUrl = (currentUser && currentUser.logo_url) 
-        ? currentUser.logo_url 
-        : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzI1NjNlYiIvPjx0ZXh0IHg9IjUwIiB5PSI2NSIgZm9udC1zaXplPSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC13ZWlnaHQ9ImJvbGQiPkdGPC90ZXh0Pjwvc3ZnPg==';
-    
-    const logoImg = new Image();
-    logoImg.crossOrigin = 'anonymous';
-    
-    return new Promise((resolve) => {
-        logoImg.onload = () => {
-            const ctx = canvas.getContext('2d');
-            const canvasSize = canvas.width;
-            
-            // Logo más pequeño: 12% del QR
-            const logoSize = canvasSize * 0.12;
-            
-            // Padding más grande para espacio en blanco visible
-            const padding = 12;
-            const totalSize = logoSize + (padding * 2);
-            
-            const x = (canvasSize - totalSize) / 2;
-            const y = (canvasSize - totalSize) / 2;
-            
-            // Fondo blanco grande y visible
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(x - 4, y - 4, totalSize + 8, totalSize + 8);
-            
-            // Borde gris más visible
-            ctx.strokeStyle = '#cbd5e1';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(x - 4, y - 4, totalSize + 8, totalSize + 8);
-            
-            // Dibujar logo centrado
-            ctx.drawImage(logoImg, x + padding, y + padding, logoSize, logoSize);
-            
-            console.log('✅ Logo superpuesto (12% del QR, padding 12px)');
-            resolve();
-        };
-        logoImg.onerror = () => {
-            console.warn('️ No se pudo cargar el logo');
-            resolve();
-        };
-        logoImg.src = logoUrl;
-    });
-}
-
-// Función auxiliar para superponer el logo
 async function overlayLogo(canvas) {
     const logoUrl = (currentUser && currentUser.logo_url) 
         ? currentUser.logo_url 
@@ -627,8 +576,8 @@ async function overlayLogo(canvas) {
             // Logo al 15% del canvas (60px en canvas de 400px)
             const logoSize = canvasSize * 0.15;
             
-            // Espacio de "zona muerta" más grande que el logo (para que no haya módulos cerca)
-            const deadZoneSize = logoSize * 1.5;
+            // Zona muerta: espacio sin módulos del QR (1.8x el logo)
+            const deadZoneSize = logoSize * 1.8;
             
             const x = (canvasSize - deadZoneSize) / 2;
             const y = (canvasSize - deadZoneSize) / 2;
@@ -637,7 +586,7 @@ async function overlayLogo(canvas) {
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
             
-            // PASO 1: Limpiar el centro del QR (pintar de blanco la zona muerta)
+            // PASO 1: Limpiar la zona central del QR (pintar de blanco)
             // Esto "borra" los módulos que estaban ahí
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(x, y, deadZoneSize, deadZoneSize);
