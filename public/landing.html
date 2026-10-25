@@ -673,6 +673,21 @@
         </div>
     </section>
 
+        <!-- BUSCADOR POR CÓDIGO DE EVENTO -->
+    <section id="buscar-evento" class="py-16 bg-slate-900/50 border-y border-slate-800/60">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-2xl font-bold text-white mb-3">¿Tienes un código de evento?</h2>
+            <p class="text-slate-400 text-sm mb-8">Escribe el código que te compartió tu fotógrafo para ir directo a tu galería.</p>
+            <form onsubmit="irACodigo(event)" class="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto">
+                <input id="event-code-input" type="text" placeholder="Ej: BODA-SOFIA-A3F9" class="flex-1 px-5 py-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm uppercase tracking-wide focus:outline-none focus:border-brand-500 placeholder:normal-case placeholder:text-slate-500">
+                <button type="submit" class="px-7 py-3.5 bg-gradient-to-r from-brand-600 to-brand-accent hover:opacity-95 text-white font-semibold rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-magnifying-glass"></i> Buscar galería
+                </button>
+            </form>
+            <p id="code-error" class="hidden mt-4 text-xs text-red-400 font-medium"></p>
+        </div>
+    </section>
+
     <!-- CTA FINAL -->
     <section class="py-20 relative overflow-hidden">
         <div class="absolute inset-0 bg-gradient-to-br from-brand-600/20 to-brand-accent/20"></div>
@@ -797,6 +812,27 @@
                 btn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i> Escanear y Encontrar Fotos';
             }, 2500);
         }
+
+                // ===== BUSCADOR POR CÓDIGO DE EVENTO =====
+        function irACodigo(e) {
+            e.preventDefault();
+            const code = document.getElementById('event-code-input').value.trim();
+            if (!code) return;
+            window.location.href = '/e/' + encodeURIComponent(code);
+        }
+
+        // Mostrar error si el código no existe
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('error') === 'codigo') {
+                const err = document.getElementById('code-error');
+                if (err) {
+                    err.textContent = 'No encontramos ninguna galería con ese código. Verifica que esté bien escrito.';
+                    err.classList.remove('hidden');
+                    document.getElementById('buscar-evento').scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+        });
     </script>
 </body>
 </html>

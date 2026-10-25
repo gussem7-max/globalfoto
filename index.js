@@ -38,7 +38,7 @@ const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:4000,http:
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('Bloqueado por política CORS'));
+    return callback(new Error('Bloqueado por política CORS');
   },
   credentials: true
 }));
@@ -67,8 +67,7 @@ app.use('/api/auth/register', authLimiter);
 // ========== RUTAS DE PÁGINAS ==========
 
 // Landing page (raíz)
-app.get('/', (req, res, next) => {
-  // Compatibilidad con enlaces viejos: /?galeria=X -> /g/X
+app.get('/', (req, res) => {
   if (req.query.galeria) {
     return res.redirect(301, `/g/${req.query.galeria}`);
   }
@@ -80,15 +79,31 @@ app.get('/panel', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Galería pública (ruta moderna: /g/:id)
+// Galería pública por ID
 app.get('/g/:id', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Galería pública por CÓDIGO de evento (redirige al ID)
+app.get('/e/:code', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id FROM events WHERE UPPER(event_code) = UPPER($1)',
+      [req.params.code]
+    );
+    if (result.rows.length === 0) {
+      return res.redirect(302, '/?error=codigo');
+    }
+    res.redirect(301, `/g/${result.rows[0].id}`);
+  } catch (error) {
+    console.error('Error resolviendo código de evento:', error);
+    res.redirect(302, '/?error=codigo');
+  }
 });
 
 // Archivos estáticos
 app.use(express.static('public'));
 
-// Verificación de columna en base de datos
 pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS photographer_id INTEGER;`)
   .then(() => console.log('✔ Columna photographer_id verificada/creada exitosamente.'))
   .catch(err => console.error('✖ Error al verificar columna en la base de datos:', err));
@@ -115,12 +130,10 @@ app.use('/api/admin', adminRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Manejo de rutas no encontradas
 app.use((req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada.' });
 });
 
-// Manejo de errores globales
 app.use((err, req, res, next) => {
   console.error('ERROR:', err.message);
   if (res.headersSent) return next(err);
@@ -130,12 +143,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Iniciar servidor
 const server = app.listen(PORT, () => {
   console.log(`Servidor corriendo exitosamente en el puerto ${PORT}`);
 });
 
-// Cierre elegante
 process.on('SIGTERM', () => {
   console.log('SIGTERM recibido: cerrando servidor con elegancia...');
   server.close(async () => {

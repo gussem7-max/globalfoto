@@ -144,7 +144,7 @@ async function loadEvents() {
         const eventList = document.getElementById('eventList');
         if (cachedEvents.length === 0) { eventList.innerHTML = '<p style="color: var(--text-muted);">No tienes eventos registrados aún.</p>'; return; }
         eventList.innerHTML = cachedEvents.map(ev => {
-            const publicUrl = `${window.location.origin}/?galeria=${ev.id}`;
+            const publicUrl = `${window.location.origin}${ev.event_code ? '/e/' + ev.event_code : '/g/' + ev.id}`;
             const statusClass = `status-${ev.status || 'published'}`;
             const statusText = ev.status === 'published' ? 'Publicada' : ev.status === 'draft' ? 'Borrador' : 'Archivada';
             const expiryText = ev.expires_at ? `<br><small style="color: var(--warning);">Expira: ${new Date(ev.expires_at).toLocaleString('es-CO')}</small>` : '';
@@ -162,6 +162,10 @@ async function loadEvents() {
                 </div>
                 <div class="event-body">
                     <div class="event-desc">${ev.description || ''}</div>
+                    <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 11px; font-weight: 700; color: #4f46e5; background: #eef2ff; padding: 4px 10px; border-radius: 6px; letter-spacing: 0.5px; font-family: monospace;">${ev.event_code || 'SIN-CODIGO'}</span>
+                        <button class="btn-action" onclick="copyText('${ev.event_code || ''}')" title="Copiar código del evento"><i class="fa-solid fa-copy"></i></button>
+                    </div>
                     <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">Enlace público:</div>
                     <div style="display: flex; gap: 6px; margin-bottom: 12px;">
                         <input type="text" readonly value="${publicUrl}" id="eventUrl_${ev.id}" style="font-size: 11px; background: #f8fafc; padding: 6px; border: 1px solid var(--border-color); border-radius: 6px; width: 100%; color: var(--text-muted);">
@@ -312,7 +316,7 @@ function renderGalleriesView() {
     const grid = document.getElementById('galleriesGrid');
     if (cachedEvents.length === 0) { grid.innerHTML = '<p style="color: var(--text-muted);">No hay galerías disponibles.</p>'; return; }
     grid.innerHTML = cachedEvents.map(ev => {
-        const publicUrl = `${window.location.origin}/?galeria=${ev.id}`;
+        const publicUrl = `${window.location.origin}${ev.event_code ? '/e/' + ev.event_code : '/g/' + ev.id}`;
         const statusText = ev.status === 'published' ? 'Publicada' : ev.status === 'draft' ? 'Borrador' : 'Archivada';
         return `<div class="event-card">
             <div class="event-header"><div><div class="event-title">${ev.title} <span class="event-status-badge status-${ev.status}">${statusText}</span></div><div class="event-meta"><span>${ev.event_date ? ev.event_date.split('T')[0] : ''}</span></div></div></div>
@@ -562,4 +566,18 @@ function downloadQr() {
     link.download = `globalfoto-qr-${Date.now()}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
+}
+
+async function copyText(text) {
+    if (!text) return;
+    try {
+        await navigator.clipboard.writeText(text);
+    } catch (err) {
+        const tmp = document.createElement('textarea');
+        tmp.value = text;
+        document.body.appendChild(tmp);
+        tmp.select();
+        document.execCommand('copy');
+        tmp.remove();
+    }
 }
