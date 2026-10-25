@@ -238,3 +238,96 @@ input:checked + .toggle-slider:before { transform: translateX(24px); }
     .public-photo-img { height: 250px; }
     .header h1 { font-size: 18px; }
 }
+
+/* =====================================================
+   TEMA OSCURO v2 — AUTENTICACIÓN (Fase 1)
+   ===================================================== */
+.auth-wrapper {
+    background: #020617;
+    position: relative;
+    overflow: hidden;
+}
+.auth-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 20%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px; height: 600px;
+    background: rgba(99, 102, 241, 0.15);
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+}
+.auth-wrapper::after {
+    content: '';
+    position: absolute;
+    bottom: 10%; right: 10%;
+    width: 300px; height: 300px;
+    background: rgba(168, 85, 247, 0.15);
+    border-radius: 50%;
+    filter: blur(100px);
+    pointer-events: none;
+}
+.auth-card {
+    position: relative;
+    z-index: 1;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(51, 65, 85, 0.8);
+    backdrop-filter: blur(12px);
+    border-radius: 24px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+    padding: 40px 32px;
+}
+.auth-card .brand {
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 800;
+}
+.auth-card .brand i { color: #a855f7; }
+.auth-subtitle { color: #94a3b8; }
+.tabs {
+    background: #020617;
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    padding: 4px;
+}
+.tab { color: #94a3b8; border-radius: 10px; }
+.tab.active {
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+}
+.auth-card .form-group label { color: #cbd5e1; }
+.auth-card .form-group input,
+.auth-card .form-group select {
+    background: #020617;
+    border: 1px solid #334155;
+    color: #f1f5f9;
+    border-radius: 12px;
+    padding: 12px 14px;
+}
+.auth-card .form-group input:focus,
+.auth-card .form-group select:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+.auth-card .form-group input::placeholder { color: #475569; }
+.auth-card .btn-primary {
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    border-radius: 12px;
+    padding: 13px;
+    font-size: 15px;
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
+    transition: all 0.2s;
+}
+.auth-card .btn-primary:hover { opacity: 0.92; transform: translateY(-1px); }
+.auth-card .alert-success {
+    background: rgba(16, 185, 129, 0.15);
+    color: #6ee7b7;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.auth-card .alert-error {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
