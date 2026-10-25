@@ -569,24 +569,46 @@ async function generateQr(url) {
 
 // Función auxiliar para superponer el logo
 async function overlayLogo(canvas) {
-    const logoUrl = (currentUser && currentUser.logo_url) || 'https://globalfotoapp.com/logo.png';
+    const logoUrl = (currentUser && currentUser.logo_url) 
+        ? currentUser.logo_url 
+        : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzI1NjNlYiIvPjx0ZXh0IHg9IjUwIiB5PSI2NSIgZm9udC1zaXplPSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC13ZWlnaHQ9ImJvbGQiPkdGPC90ZXh0Pjwvc3ZnPg==';
+    
     const logoImg = new Image();
     logoImg.crossOrigin = 'anonymous';
     
     return new Promise((resolve) => {
         logoImg.onload = () => {
             const ctx = canvas.getContext('2d');
-            const logoSize = canvas.width * 0.22;
-            const x = (canvas.width - logoSize) / 2;
-            const y = (canvas.height - logoSize) / 2;
+            const canvasSize = canvas.width;
+            
+            // Tamaño del logo: 15% del QR (más pequeño = más profesional)
+            const logoSize = canvasSize * 0.15;
+            
+            // Espacio en blanco alrededor del logo (padding)
+            const padding = 8;
+            const totalSize = logoSize + (padding * 2);
+            
+            const x = (canvasSize - totalSize) / 2;
+            const y = (canvasSize - totalSize) / 2;
+            
+            // Fondo blanco más grande (para que el QR siga siendo legible)
             ctx.fillStyle = '#ffffff';
-            ctx.fillRect(x - 4, y - 4, logoSize + 8, logoSize + 8);
-            ctx.drawImage(logoImg, x, y, logoSize, logoSize);
+            ctx.fillRect(x - 2, y - 2, totalSize + 4, totalSize + 4);
+            
+            // Borde sutil gris claro
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x - 2, y - 2, totalSize + 4, totalSize + 4);
+            
+            // Dibujar logo centrado dentro del padding
+            ctx.drawImage(logoImg, x + padding, y + padding, logoSize, logoSize);
+            
+            console.log('✅ Logo superpuesto en el QR (tamaño: 15%, con padding)');
             resolve();
         };
         logoImg.onerror = () => {
-            console.warn('No se pudo cargar el logo');
-            resolve(); // continuar sin logo
+            console.warn('⚠️ No se pudo cargar el logo');
+            resolve();
         };
         logoImg.src = logoUrl;
     });
