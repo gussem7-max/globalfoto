@@ -1,5 +1,5 @@
 // =====================================================
-// AUTENTICACIÓN: LOGIN, REGISTRO, PERFIL, CONTRASEÑA
+// AUTENTICACIÓN: LOGIN, REGISTRO, PERFIL, CONTRASEÑA, LOGO
 // =====================================================
 
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -61,24 +61,6 @@ document.getElementById('passwordForm').addEventListener('submit', async (e) => 
     } catch (err) { resDiv.className = 'alert alert-error'; resDiv.textContent = 'Error de conexión.'; }
 });
 
-// Cargar logo del usuario al iniciar sesión
-async function loadUserLogo() {
-    if (!currentUser) return;
-    try {
-        const res = await fetch('/api/auth/me', { headers: authHeaders() });
-        if (res.ok) {
-            const data = await res.json();
-            currentUser = data.user;
-            if (currentUser.logo_url) {
-                const avatar = document.getElementById('userAvatar');
-                if (avatar) {
-                    avatar.innerHTML = `<img src="${currentUser.logo_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
-                }
-            }
-        }
-    } catch (err) { console.error('Error cargando logo:', err); }
-}
-
 async function uploadLogo(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -107,4 +89,26 @@ async function uploadLogo(e) {
     } catch (err) {
         resultDiv.innerHTML = '<div class="alert alert-error">Error de conexión.</div>';
     }
+}
+
+async function loadUserLogo() {
+    if (!currentUser) return;
+    try {
+        const res = await fetch('/api/auth/me', { headers: authHeaders() });
+        if (res.ok) {
+            const data = await res.json();
+            currentUser = data.user;
+            if (currentUser.logo_url) {
+                const avatar = document.getElementById('userAvatar');
+                if (avatar) {
+                    avatar.innerHTML = `<img src="${currentUser.logo_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+                }
+                const preview = document.getElementById('currentLogo');
+                if (preview) {
+                    preview.src = currentUser.logo_url;
+                    preview.style.display = 'block';
+                }
+            }
+        }
+    } catch (err) { console.error('Error cargando logo:', err); }
 }
