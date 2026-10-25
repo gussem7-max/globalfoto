@@ -184,7 +184,7 @@ async function loadEvents() {
                     </div>
                     <div class="packages-section">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <strong style="font-size: 13px;"> Paquetes</strong>
+                            <strong style="font-size: 13px;">📦 Paquetes</strong>
                             <button class="btn-primary" style="width: auto; padding: 4px 10px; font-size: 11px;" onclick="openPackageModal(${ev.id})">+ Agregar</button>
                         </div>
                         <div id="packagesList_${ev.id}">Cargando...</div>
@@ -503,7 +503,7 @@ async function generateQr(url) {
     container.appendChild(statusMsg);
     
     const timeout = setTimeout(() => {
-        statusMsg.textContent = '️ El QR tardó demasiado. Intenta de nuevo.';
+        statusMsg.textContent = '⚠️ El QR tardó demasiado. Intenta de nuevo.';
         statusMsg.style.color = 'var(--danger)';
     }, 10000);
     
@@ -518,10 +518,7 @@ async function generateQr(url) {
             canvas.style.display = 'block';
             if (statusMsg.parentNode) statusMsg.remove();
             clearTimeout(timeout);
-            
-            // Logo desactivado temporalmente
-            // await overlayLogo(canvas);
-            return;
+            return; // QR generado limpio, sin logo
         }
         
         throw new Error('QRCode no disponible');
@@ -550,7 +547,6 @@ async function generateQr(url) {
             canvas.style.display = 'block';
             if (statusMsg.parentNode) statusMsg.remove();
             clearTimeout(timeout);
-            await overlayLogo(canvas);
         } catch (fallbackErr) {
             console.error('Error en fallback QR:', fallbackErr);
             clearTimeout(timeout);
@@ -558,62 +554,6 @@ async function generateQr(url) {
             statusMsg.style.color = 'var(--danger)';
         }
     }
-}
-
-async function overlayLogo(canvas) {
-    const logoUrl = (currentUser && currentUser.logo_url) 
-        ? currentUser.logo_url 
-        : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzI1NjNlYiIvPjx0ZXh0IHg9IjUwIiB5PSI2NSIgZm9udC1zaXplPSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC13ZWlnaHQ9ImJvbGQiPkdGPC90ZXh0Pjwvc3ZnPg==';
-    
-    return new Promise((resolve) => {
-        const logoImg = new Image();
-        logoImg.crossOrigin = 'anonymous';
-        
-        logoImg.onload = () => {
-            const ctx = canvas.getContext('2d');
-            const canvasSize = canvas.width;
-            
-            // Logo al 15% del canvas (60px en canvas de 400px)
-            const logoSize = canvasSize * 0.15;
-            
-            // Zona muerta: espacio sin módulos del QR (1.8x el logo)
-            const deadZoneSize = logoSize * 1.8;
-            
-            const x = (canvasSize - deadZoneSize) / 2;
-            const y = (canvasSize - deadZoneSize) / 2;
-            
-            // Alta calidad de renderizado
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            
-            // PASO 1: Limpiar la zona central del QR (pintar de blanco)
-            // Esto "borra" los módulos que estaban ahí
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(x, y, deadZoneSize, deadZoneSize);
-            
-            // PASO 2: Dibujar el logo centrado en la zona limpia
-            // SIN fondo blanco adicional, porque el QR ya es blanco ahí
-            const logoX = (canvasSize - logoSize) / 2;
-            const logoY = (canvasSize - logoSize) / 2;
-            ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
-            
-            console.log('✅ Logo integrado en QR profesional:', {
-                originalSize: `${logoImg.width}x${logoImg.height}`,
-                logoSize: `${logoSize}x${logoSize}`,
-                deadZoneSize: `${deadZoneSize}x${deadZoneSize}`,
-                url: logoUrl
-            });
-            resolve();
-        };
-        
-        logoImg.onerror = () => {
-            console.error('❌ Error cargando logo:', logoUrl);
-            resolve();
-        };
-        
-        const urlWithCache = `${logoUrl}${logoUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
-        logoImg.src = urlWithCache;
-    });
 }
 
 function downloadQr() {
