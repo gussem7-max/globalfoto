@@ -485,12 +485,35 @@ function closeQrModal() {
 }
 
 async function generateQr(url) {
-    const canvas = document.getElementById('qrCanvas');
     const container = document.getElementById('qrCanvasContainer');
-    container.innerHTML = '<p style="color: var(--text-muted);">Generando QR...</p>';
+    
+    // Asegurar que exista un canvas (reconstruir si fue destruido)
+    let canvas = document.getElementById('qrCanvas');
+    if (!canvas) {
+        canvas = document.createElement('canvas');
+        canvas.id = 'qrCanvas';
+        canvas.width = 280;
+        canvas.height = 280;
+        container.innerHTML = '';
+        container.appendChild(canvas);
+    }
+    
+    // Mostrar estado de carga SIN destruir el canvas
+    const statusMsg = document.createElement('p');
+    statusMsg.id = 'qrStatusMsg';
+    statusMsg.style.cssText = 'color: var(--text-muted); margin: 10px 0;';
+    statusMsg.textContent = 'Generando QR...';
+    canvas.style.display = 'none';
+    container.appendChild(statusMsg);
+    
+    // Timeout de seguridad: si tarda más de 10s, mostrar error
+    const timeout = setTimeout(() => {
+        statusMsg.textContent = '⚠️ El QR tardó demasiado. Intenta de nuevo.';
+        statusMsg.style.color = 'var(--danger)';
+    }, 10000);
     
     try {
-        // MÉTODO 1: Usar librería QRCode si está disponible
+        // MÉTODO 1: Librería QRCode local
         if (typeof QRCode !== 'undefined') {
             await QRCode.toCanvas(canvas, url, {
                 width: 280,
@@ -498,65 +521,75 @@ async function generateQr(url) {
                 color: { dark: '#0f172a', light: '#ffffff' },
                 errorCorrectionLevel: 'H'
             });
+            canvas.style.display = 'block';
+            if (statusMsg.parentNode) statusMsg.remove();
+            clearTimeout(timeout);
             
             // Superponer logo
-            const logoUrl = currentUser.logo_url || 'https://globalfotoapp.com/logo.png';
-            const logoImg = new Image();
-            logoImg.crossOrigin = 'anonymous';
-            logoImg.onload = () => {
-                const ctx = canvas.getContext('2d');
-                const logoSize = canvas.width * 0.22;
-                const x = (canvas.width - logoSize) / 2;
-                const y = (canvas.height - logoSize) / 2;
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(x - 4, y - 4, logoSize + 8, logoSize + 8);
-                ctx.drawImage(logoImg, x, y, logoSize, logoSize);
-            };
-            logoImg.onerror = () => { console.warn('No se pudo cargar el logo para el QR'); };
-            logoImg.src = logoUrl;
+            await overlayLogo(canvas);
             return;
         }
         
-        // MÉTODO 2: Fallback - usar API pública de QR
-        throw new Error('QRCode no disponible, usando fallback');
+        throw new Error('QRCode no disponible');
     } catch (err) {
-        console.warn('Usando API pública para QR:', err.message);
+        console.warn('Librería QR falló, usando API pública:', err.message);
+        
+        // MÉTODO 2: API pública
         try {
             const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=10&color=0f172a&bgcolor=ffffff&ecc=H&data=${encodeURIComponent(url)}`;
             const img = new Image();
             img.crossOrigin = 'anonymous';
-            img.onload = () => {
-                canvas.width = 280;
-                canvas.height = 280;
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, 280, 280);
-                ctx.drawImage(img, 0, 0, 280, 280);
-                
-                // Superponer logo
-                const logoUrl = currentUser.logo_url || 'https://globalfotoapp.com/logo.png';
-                const logoImg = new Image();
-                logoImg.crossOrigin = 'anonymous';
-                logoImg.onload = () => {
-                    const logoSize = 280 * 0.22;
-                    const x = (280 - logoSize) / 2;
-                    const y = (280 - logoSize) / 2;
+            
+            await new Promise((resolve, reject) => {
+                img.onload = () => {
+                    canvas.width = 280;
+                    canvas.height = 280;
+                    const ctx = canvas.getContext('2d');
                     ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(x - 4, y - 4, logoSize + 8, logoSize + 8);
-                    ctx.drawImage(logoImg, x, y, logoSize, logoSize);
+                    ctx.fillRect(0, 0, 280, 280);
+                    ctx.drawImage(img, 0, 0, 280, 280);
+                    resolve();
                 };
-                logoImg.onerror = () => { console.warn('No se pudo cargar el logo'); };
-                logoImg.src = logoUrl;
-            };
-            img.onerror = () => {
-                container.innerHTML = '<p style="color: var(--danger);">No se pudo generar el QR. Verifica tu conexión.</p>';
-            };
-            img.src = qrApiUrl;
+                img.onerror = () => reject(new Error('No se pudo cargar la imagen QR'));
+                img.src = qrApiUrl;
+            });
+            
+            canvas.style.display = 'block';
+            if (statusMsg.parentNode) statusMsg.remove();
+            clearTimeout(timeout);
+            await overlayLogo(canvas);
         } catch (fallbackErr) {
             console.error('Error en fallback QR:', fallbackErr);
-            container.innerHTML = '<p style="color: var(--danger);">Error al generar el QR.</p>';
+            clearTimeout(timeout);
+            statusMsg.textContent = '⚠️ No se pudo generar el QR. Verifica tu conexión.';
+            statusMsg.style.color = 'var(--danger)';
         }
     }
+}
+
+// Función auxiliar para superponer el logo
+async function overlayLogo(canvas) {
+    const logoUrl = (currentUser && currentUser.logo_url) || 'https://globalfotoapp.com/logo.png';
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'anonymous';
+    
+    return new Promise((resolve) => {
+        logoImg.onload = () => {
+            const ctx = canvas.getContext('2d');
+            const logoSize = canvas.width * 0.22;
+            const x = (canvas.width - logoSize) / 2;
+            const y = (canvas.height - logoSize) / 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(x - 4, y - 4, logoSize + 8, logoSize + 8);
+            ctx.drawImage(logoImg, x, y, logoSize, logoSize);
+            resolve();
+        };
+        logoImg.onerror = () => {
+            console.warn('No se pudo cargar el logo');
+            resolve(); // continuar sin logo
+        };
+        logoImg.src = logoUrl;
+    });
 }
 
 function downloadQr() {
