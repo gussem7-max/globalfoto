@@ -24,9 +24,22 @@
             <div id="selfieGate" class="hidden" style="max-width: 420px; margin: 0 auto 30px; background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 24px; text-align: center;">
                 <h2 style="color: white; font-size: 20px; margin-bottom: 8px;">🤳 Verificación de identidad</h2>
                 <p style="color: #94a3b8; font-size: 13px; margin-bottom: 16px;">Esta galería protege tu privacidad: solo verás las fotos donde apareces. Tómate una selfie para filtrarlas.</p>
-                <video id="selfieVideo" autoplay playsinline muted class="hidden" style="width: 100%; border-radius: 12px; background: #0f172a;"></video>
-                <canvas id="selfieCanvas" style="display: none;"></canvas>
-                <img id="selfiePreview" class="hidden" alt="Tu selfie" style="width: 100%; border-radius: 12px; margin-bottom: 12px;">
+                
+                <!-- Contenedor de cámara con guía ovalada -->
+                <div id="selfieCameraContainer" style="position: relative; width: 280px; height: 280px; margin: 0 auto 16px; display: none;">
+                    <video id="selfieVideo" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;"></video>
+                    <canvas id="selfieCanvas" style="display: none;"></canvas>
+                    
+                    <!-- Overlay con óvalo guía -->
+                    <div id="selfieOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
+                        <div style="position: absolute; top: 10%; left: 10%; width: 80%; height: 80%; border: 3px solid rgba(255,255,255,0.8); border-radius: 50%; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);"></div>
+                        <p style="position: absolute; bottom: 5%; left: 50%; transform: translateX(-50%); color: white; font-size: 12px; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.8); margin: 0;">Coloca tu rostro aquí</p>
+                    </div>
+                </div>
+                
+                <!-- Preview de selfie tomada -->
+                <img id="selfiePreview" class="hidden" alt="Tu selfie" style="width: 200px; height: 200px; border-radius: 50%; object-fit: cover; margin: 0 auto 12px; display: block; border: 4px solid var(--accent);">
+                
                 <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
                     <button id="btnStartCamera" class="btn-primary">Encender cámara</button>
                     <button id="btnCapture" class="btn-success hidden">Tomar selfie</button>

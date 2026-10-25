@@ -1,6 +1,6 @@
 // =====================================================
 // VERIFICACIÓN POR SELFIE (face-api.js)
-// Todo el procesamiento ocurre EN EL DISPOSITIVO del cliente.
+// Cámara ovalada con guía visual
 // =====================================================
 
 let pendingGalleryPhotos = [];
@@ -8,7 +8,7 @@ let selfieStream = null;
 let selfieDescriptor = null;
 
 const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';
-const MATCH_THRESHOLD = 0.65; // más permisivo (encuentra más, pero puede haber falsos positivos)
+const MATCH_THRESHOLD = 0.6;
 const SELFIE_MAX_DIM = 640;
 
 function el(id) { return document.getElementById(id); }
@@ -32,15 +32,16 @@ async function loadFaceModels() {
 
 async function startCamera() {
     const video = el('selfieVideo');
+    const container = el('selfieCameraContainer');
     try {
         setStatus('Solicitando permiso de cámara...');
         selfieStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
         video.srcObject = selfieStream;
         await video.play();
-        video.classList.remove('hidden');
+        container.style.display = 'block';
         el('btnStartCamera').classList.add('hidden');
         el('btnCapture').classList.remove('hidden');
-        setStatus('Centra tu rostro y toma la selfie.');
+        setStatus('Centra tu rostro en el óvalo y toma la selfie.');
     } catch (err) {
         console.error('Error de cámara:', err);
         setStatus('No pudimos acceder a la cámara. Usa la opción de subir una foto.');
@@ -65,7 +66,7 @@ function showSelfieReady() {
     const preview = el('selfiePreview');
     preview.src = el('selfieCanvas').toDataURL('image/jpeg', 0.9);
     preview.classList.remove('hidden');
-    el('selfieVideo').classList.add('hidden');
+    el('selfieCameraContainer').style.display = 'none';
     el('btnStartCamera').classList.add('hidden');
     el('btnCapture').classList.add('hidden');
     el('btnRetake').classList.remove('hidden');
@@ -198,7 +199,7 @@ async function verifySelfie() {
             revealGallery(matched);
         } catch (r) {
             console.error('Error al mostrar galería:', r);
-            setStatus('⚠️ Error al mostrar tus fotos. Detalle: ' + (r.message || r));
+            setStatus('️ Error al mostrar tus fotos. Detalle: ' + (r.message || r));
             btn.disabled = false;
             return;
         }
