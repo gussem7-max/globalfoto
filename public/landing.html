@@ -153,7 +153,6 @@
             box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
         }
         
-        /* Badge flotante de coincidencia */
         .match-badge {
             position: absolute;
             bottom: 12px;
@@ -169,6 +168,7 @@
             color: white;
             z-index: 10;
             animation: pulse 2s infinite;
+            white-space: nowrap;
         }
         @keyframes pulse {
             0%, 100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.4); }
@@ -182,6 +182,7 @@
             border: 1px solid rgba(99, 102, 241, 0.2);
             border-radius: 50px;
             padding: 4px;
+            display: inline-flex;
         }
         .plan-toggle button {
             position: relative;
@@ -211,7 +212,6 @@
             transform: translateX(100%);
         }
         
-        /* Card de plan destacado */
         .plan-card {
             position: relative;
             background: rgba(15, 23, 42, 0.6);
@@ -297,7 +297,6 @@
 
     <!-- HERO SECTION CON FOTOS ANIMADAS -->
     <section id="inicio" class="relative pt-32 pb-20 md:pt-44 md:pb-32 overflow-hidden">
-        <!-- Luces de fondo -->
         <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-brand-600/20 rounded-full blur-[120px] pointer-events-none"></div>
         <div class="absolute top-1/3 right-10 w-[300px] h-[300px] bg-brand-accent/20 rounded-full blur-[100px] pointer-events-none"></div>
         <div class="absolute bottom-10 left-10 w-[250px] h-[250px] bg-blue-500/10 rounded-full blur-[80px] pointer-events-none"></div>
@@ -305,7 +304,6 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div class="grid lg:grid-cols-12 gap-12 items-center">
                 
-                <!-- Columna Texto -->
                 <div class="lg:col-span-7 text-center lg:text-left">
                     <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-semibold mb-6">
                         <span class="flex h-2 w-2 rounded-full bg-brand-500 animate-ping"></span>
@@ -338,7 +336,6 @@
                     </div>
                 </div>
 
-                <!-- Columna de Fotos Animadas -->
                 <div class="lg:col-span-5 relative h-[500px] hidden lg:block">
                     <div class="hero-photo photo-1">
                         <img src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=400&q=80" alt="Boda">
@@ -353,7 +350,6 @@
                         <img src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=400&q=80" alt="Celebración">
                     </div>
                     
-                    <!-- Foto central con scanner -->
                     <div class="hero-photo photo-center">
                         <img src="https://images.unsplash.com/photo-1524638431109-93d95c968f03?auto=format&fit=crop&w=600&q=80" alt="Selfie match">
                         <div class="scanner-overlay">
@@ -374,49 +370,64 @@
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-12">
                 <h2 class="text-3xl font-bold text-white mb-3">Prueba la Búsqueda Biométrica</h2>
-                <p class="text-slate-400 text-sm max-w-lg mx-auto">Sube una fotografía de tu rostro para simular la búsqueda automática en nuestras galerías inteligentes.</p>
+                <p class="text-slate-400 text-sm max-w-lg mx-auto">Mira cómo nuestro motor escanea un rostro y encuentra sus fotos. Sube tu propia foto o usa la de ejemplo.</p>
             </div>
 
             <div class="bg-slate-950 p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-xl max-w-3xl mx-auto">
                 <div class="grid md:grid-cols-2 gap-8 items-center">
                     
+                    <!-- Zona de escaneo con foto de ejemplo -->
                     <div>
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">1. Tu Fotografía / Selfie</label>
-                        <div id="drop-zone" class="relative h-60 border-2 border-dashed border-slate-700 hover:border-brand-500 rounded-xl flex flex-col items-center justify-center p-4 text-center cursor-pointer transition-colors bg-slate-900/40">
-                            <div id="scanner-line" class="hidden absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">1. Rostro a buscar</label>
+                        <div id="drop-zone" class="relative h-72 border-2 border-dashed border-slate-700 hover:border-brand-500 rounded-xl overflow-hidden cursor-pointer transition-colors bg-slate-900/40">
+                            
+                            <!-- Foto de ejemplo precargada (una de las del hero) -->
+                            <img id="demo-photo" src="https://images.unsplash.com/photo-1524638431109-93d95c968f03?auto=format&fit=crop&w=600&q=80" alt="Foto de ejemplo" class="absolute inset-0 w-full h-full object-cover">
+                            
+                            <!-- Etiqueta de foto de ejemplo -->
+                            <span id="demo-photo-tag" class="absolute top-3 left-3 z-10 px-2.5 py-1 bg-slate-950/80 backdrop-blur-sm border border-slate-700 rounded-full text-[10px] font-semibold text-slate-300">
+                                <i class="fa-solid fa-image mr-1 text-brand-400"></i> Foto de ejemplo
+                            </span>
+                            
+                            <!-- Scanner Effect Overlay -->
+                            <div id="scanner-line" class="hidden absolute inset-0 rounded-xl overflow-hidden pointer-events-none z-20">
                                 <div class="w-full h-12 scan-animation border-b-2 border-brand-accent"></div>
                             </div>
 
-                            <div id="upload-prompt" class="space-y-2">
-                                <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center mx-auto text-brand-400 text-xl">
-                                    <i class="fa-solid fa-cloud-arrow-up"></i>
-                                </div>
-                                <p class="text-xs text-slate-300 font-medium">Arrastra tu foto aquí o <span class="text-brand-400 underline">examina</span></p>
-                                <p class="text-[10px] text-slate-500">Formatos soportados: JPG, PNG (Máx 5MB)</p>
+                            <!-- Prompt de subida (tarjeta semitransparente abajo) -->
+                            <div id="upload-prompt" class="absolute bottom-3 left-3 right-3 z-10 bg-slate-950/80 backdrop-blur-sm border border-slate-700/60 rounded-lg p-3 text-center space-y-1">
+                                <p class="text-xs text-slate-200 font-medium"><i class="fa-solid fa-cloud-arrow-up text-brand-400 mr-1"></i> Arrastra tu foto o <span class="text-brand-400 underline">examina</span></p>
+                                <p class="text-[10px] text-slate-500">JPG, PNG (Máx 5MB) — o escanea la de ejemplo</p>
                             </div>
 
-                            <img id="selfie-preview" src="" class="hidden w-full h-full object-cover rounded-lg">
+                            <!-- Preview de imagen subida -->
+                            <img id="selfie-preview" src="" class="hidden absolute inset-0 w-full h-full object-cover z-10">
                             <input type="file" id="selfie-input" accept="image/*" class="hidden">
                         </div>
                     </div>
 
+                    <!-- Panel de acción y resultados -->
                     <div class="space-y-5">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">2. Código del Evento</label>
-                            <input type="text" id="event-code" placeholder="Ej: BODA-2026-001" class="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-brand-500">
+                            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">2. Escanear</label>
+                            <button id="btn-search" onclick="simulateSearch()" class="w-full py-3.5 bg-gradient-to-r from-brand-600 to-brand-accent hover:opacity-95 text-white font-semibold rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-magnifying-glass-chart"></i> Escanear y Encontrar Fotos
+                            </button>
                         </div>
-
-                        <button id="btn-search" onclick="simulateSearch()" class="w-full py-3.5 bg-gradient-to-r from-brand-600 to-brand-accent hover:opacity-95 text-white font-semibold rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-magnifying-glass-chart"></i> Escanear y Encontrar Fotos
-                        </button>
 
                         <div id="demo-results" class="hidden p-4 rounded-xl bg-brand-500/10 border border-brand-500/20 text-xs text-slate-300">
                             <div class="flex items-center gap-2 font-semibold text-brand-300 mb-1">
                                 <i class="fa-solid fa-circle-check"></i> ¡Búsqueda completada!
                             </div>
-                            Encontramos <span class="text-white font-bold">8 fotografías</span> tuyas con un promedio del 97% de precisión.
+                            Encontramos <span class="text-white font-bold">8 fotografías</span> con este rostro, con un promedio del 97% de precisión.
+                        </div>
+
+                        <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-[11px] text-slate-500 leading-relaxed">
+                            <i class="fa-solid fa-circle-info text-brand-400 mr-1"></i>
+                            Esto es una demostración visual. En una galería real, tus clientes solo necesitan su selfie: el análisis ocurre en su propio dispositivo, sin subir nada a servidores.
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
@@ -540,7 +551,6 @@
                 <h2 class="text-3xl font-extrabold text-white mb-4">Planes para cada tipo de fotógrafo</h2>
                 <p class="text-slate-400 text-sm">Empieza gratis. Escala cuando crezcas. Sin permanencia.</p>
                 
-                <!-- Toggle Mensual / Anual -->
                 <div class="mt-8 flex items-center justify-center">
                     <div id="plan-toggle" class="plan-toggle">
                         <div class="plan-toggle-slider"></div>
@@ -552,7 +562,6 @@
                 </div>
             </div>
 
-            <!-- Nota de comisión -->
             <div class="max-w-3xl mx-auto mb-10 p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
                 <p class="text-sm text-slate-300">
                     <i class="fa-solid fa-circle-info text-brand-400 mr-2"></i>
@@ -560,7 +569,6 @@
                 </p>
             </div>
 
-            <!-- Grid de planes -->
             <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                 
                 <!-- PLAN GRATIS -->
@@ -693,9 +701,7 @@
 
     <script>
         // Toggle de planes Mensual/Anual
-        let currentBilling = 'monthly';
         function setBilling(type) {
-            currentBilling = type;
             const toggle = document.getElementById('plan-toggle');
             const btnMonthly = document.getElementById('btn-monthly');
             const btnAnnual = document.getElementById('btn-annual');
@@ -710,7 +716,6 @@
                 btnAnnual.classList.remove('active');
             }
             
-            // Actualizar precios
             document.querySelectorAll('.plan-price').forEach(el => {
                 const price = el.dataset[type];
                 if (price) el.textContent = `$${price}`;
@@ -723,11 +728,13 @@
             });
         }
 
-        // Demo de búsqueda por selfie
+        // ===== DEMO DE BÚSQUEDA POR SELFIE =====
         const dropZone = document.getElementById('drop-zone');
         const selfieInput = document.getElementById('selfie-input');
         const selfiePreview = document.getElementById('selfie-preview');
         const uploadPrompt = document.getElementById('upload-prompt');
+        const demoPhoto = document.getElementById('demo-photo');
+        const demoPhotoTag = document.getElementById('demo-photo-tag');
 
         dropZone.addEventListener('click', () => selfieInput.click());
 
@@ -739,6 +746,8 @@
                     selfiePreview.src = event.target.result;
                     selfiePreview.classList.remove('hidden');
                     uploadPrompt.classList.add('hidden');
+                    demoPhoto.classList.add('hidden');
+                    demoPhotoTag.classList.add('hidden');
                 };
                 reader.readAsDataURL(file);
             }
@@ -747,11 +756,18 @@
         function simulateSearch() {
             const scanner = document.getElementById('scanner-line');
             const results = document.getElementById('demo-results');
-            scanner.classList.remove('hidden');
+            const btn = document.getElementById('btn-search');
+            
             results.classList.add('hidden');
+            scanner.classList.remove('hidden');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Analizando rostro...';
+            
             setTimeout(() => {
                 scanner.classList.add('hidden');
                 results.classList.remove('hidden');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i> Escanear y Encontrar Fotos';
             }, 2500);
         }
     </script>
