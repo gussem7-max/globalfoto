@@ -147,8 +147,8 @@ async function loadEvents() {
             const publicUrl = `${window.location.origin}/?galeria=${ev.id}`;
             const statusClass = `status-${ev.status || 'published'}`;
             const statusText = ev.status === 'published' ? 'Publicada' : ev.status === 'draft' ? 'Borrador' : 'Archivada';
-            const selfieBadge = ev.selfie_required ? ' <span class="event-status-badge" style="background:#ede9fe;color:#6d28d9;">🤳 Selfie</span>' : '';
             const expiryText = ev.expires_at ? `<br><small style="color: var(--warning);">Expira: ${new Date(ev.expires_at).toLocaleString('es-CO')}</small>` : '';
+            const selfieBadge = ev.selfie_required ? ' <span class="event-status-badge" style="background:#ede9fe;color:#6d28d9;">🤳 Selfie</span>' : '';
             return `<div class="event-card">
                 <div class="event-header">
                     <div>
@@ -233,7 +233,6 @@ function updateFileLabel(eventId) {
     else label.textContent = 'Seleccionar fotos';
 }
 
-// Convierte la foto a una versión ya orientada (aplica EXIF en el navegador)
 async function normalizeImageFile(file) {
     try {
         const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
@@ -273,19 +272,17 @@ async function uploadPhotos(e, eventId) {
             delete cachedPhotos[eventId];
             setTimeout(() => { progressDiv.innerHTML = ''; loadEvents(); }, 2000);
         } else {
-            // Si hay error REAL, mostrarlo pero no limpiar el input
             progressDiv.innerHTML = `<div class="upload-progress error"><i class="fa-solid fa-xmark"></i> Error: ${data.error || 'Desconocido'}</div>`;
         }
     } catch (err) {
-        // Error de red real
         progressDiv.innerHTML = '<div class="upload-progress error"><i class="fa-solid fa-xmark"></i> Error de conexión. Verifica tu internet.</div>';
     } finally {
-        // Limpiar el input SOLO si todo salió bien (evita duplicados por re-upload)
         if (progressDiv.querySelector('.success')) {
             input.value = '';
         }
     }
 }
+
 async function deleteEvent(id) {
     if (!confirm('¿Estás seguro de eliminar este evento y todas sus fotos?')) return;
     try {
@@ -456,7 +453,7 @@ async function rejectOrder(orderId) {
     } catch (err) { alert('Error de conexión.'); }
 }
 
-// ---------- COPIAR ENLACE ----------
+// ---------- COPIAR ENLACE Y QR ----------
 async function copyEventUrl(eventId) {
     const input = document.getElementById(`eventUrl_${eventId}`);
     if (!input) return;
@@ -469,14 +466,12 @@ async function copyEventUrl(eventId) {
             setTimeout(() => { btn.innerHTML = original; }, 1500);
         }
     } catch (err) {
-        // Fallback para navegadores antiguos
         input.select();
         document.execCommand('copy');
         alert('Enlace copiado: ' + input.value);
     }
 }
 
-// ---------- MODAL QR ----------
 let currentQrUrl = '';
 
 function openQrModal(eventId, url) {
@@ -495,39 +490,72 @@ async function generateQr(url) {
     container.innerHTML = '<p style="color: var(--text-muted);">Generando QR...</p>';
     
     try {
-        // Generar QR base
-        await QRCode.toCanvas(canvas, url, {
-            width: 280,
-            margin: 2,
-            color: { dark: '#0f172a', light: '#ffffff' },
-            errorCorrectionLevel: 'H' // Alta corrección (permite logo encima)
-        });
-
-        // Superponer logo del fotógrafo (o de GlobalFoto)
-        const logoUrl = currentUser.logo_url || 'https://globalfotoapp.com/logo.png';
-        const logoImg = new Image();
-        logoImg.crossOrigin = 'anonymous';
-        logoImg.onload = () => {
-            const ctx = canvas.getContext('2d');
-            const logoSize = canvas.width * 0.22; // 22% del QR (seguro con error correction H)
-            const x = (canvas.width - logoSize) / 2;
-            const y = (canvas.height - logoSize) / 2;
+        // MÉTODO 1: Usar librería QRCode si está disponible
+        if (typeof QRCode !== 'undefined') {
+            await QRCode.toCanvas(canvas, url, {
+                width: 280,
+                margin: 2,
+                color: { dark: '#0f172a', light: '#ffffff' },
+                errorCorrectionLevel: 'H'
+            });
             
-            // Fondo blanco detrás del logo para que el QR siga siendo legible
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(x - 4, y - 4, logoSize + 8, logoSize + 8);
-            
-            // Dibujar logo
-            ctx.drawImage(logoImg, x, y, logoSize, logoSize);
-        };
-        logoImg.onerror = () => {
-            // Si el logo no carga, dejar el QR sin logo
-            console.warn('No se pudo cargar el logo para el QR');
-        };
-        logoImg.src = logoUrl;
+            // Superponer logo
+            const logoUrl = currentUser.logo_url || 'https://globalfotoapp.com/logo.png';
+            const logoImg = new Image();
+            logoImg.crossOrigin = 'anonymous';
+            logoImg.onload = () => {
+                const ctx = canvas.getContext('2d');
+                const logoSize = canvas.width * 0.22;
+                const x = (canvas.width - logoSize) / 2;
+                const y = (canvas.height - logoSize) / 2;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(x - 4, y - 4, logoSize + 8, logoSize + 8);
+                ctx.drawImage(logoImg, x, y, logoSize, logoSize);
+            };
+            logoImg.onerror = () => { console.warn('No se pudo cargar el logo para el QR'); };
+            logoImg.src = logoUrl;
+            return;
+        }
+        
+        // MÉTODO 2: Fallback - usar API pública de QR
+        throw new Error('QRCode no disponible, usando fallback');
     } catch (err) {
-        console.error('Error generando QR:', err);
-        container.innerHTML = '<p style="color: var(--danger);">Error al generar el QR.</p>';
+        console.warn('Usando API pública para QR:', err.message);
+        try {
+            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=10&color=0f172a&bgcolor=ffffff&ecc=H&data=${encodeURIComponent(url)}`;
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                canvas.width = 280;
+                canvas.height = 280;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, 280, 280);
+                ctx.drawImage(img, 0, 0, 280, 280);
+                
+                // Superponer logo
+                const logoUrl = currentUser.logo_url || 'https://globalfotoapp.com/logo.png';
+                const logoImg = new Image();
+                logoImg.crossOrigin = 'anonymous';
+                logoImg.onload = () => {
+                    const logoSize = 280 * 0.22;
+                    const x = (280 - logoSize) / 2;
+                    const y = (280 - logoSize) / 2;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(x - 4, y - 4, logoSize + 8, logoSize + 8);
+                    ctx.drawImage(logoImg, x, y, logoSize, logoSize);
+                };
+                logoImg.onerror = () => { console.warn('No se pudo cargar el logo'); };
+                logoImg.src = logoUrl;
+            };
+            img.onerror = () => {
+                container.innerHTML = '<p style="color: var(--danger);">No se pudo generar el QR. Verifica tu conexión.</p>';
+            };
+            img.src = qrApiUrl;
+        } catch (fallbackErr) {
+            console.error('Error en fallback QR:', fallbackErr);
+            container.innerHTML = '<p style="color: var(--danger);">Error al generar el QR.</p>';
+        }
     }
 }
 
