@@ -19,15 +19,15 @@ function showSection(section) {
     if (targetSec) targetSec.classList.remove('hidden');
     if (targetNav) targetNav.classList.add('active');
 
-    if (section === 'events') loadEvents();
-    else if (section === 'galleries') renderGalleriesView();
-    else if (section === 'sales') loadOrders();
+    if (section === 'events' && typeof loadEvents === 'function') loadEvents();
+    else if (section === 'galleries' && typeof renderGalleriesView === 'function') renderGalleriesView();
+    else if (section === 'sales' && typeof loadOrders === 'function') loadOrders();
     else if (section === 'admin') {
-        if (currentUser && currentUser.role === 'admin') loadAdmin();
+        if (currentUser && currentUser.role === 'admin' && typeof loadAdmin === 'function') loadAdmin();
         else { alert('No tienes permisos.'); showSection('events'); }
     }
     else if (section === 'users') {
-        if (currentUser && currentUser.role === 'admin') loadUsers();
+        if (currentUser && currentUser.role === 'admin' && typeof loadUsers === 'function') loadUsers();
         else { alert('No tienes permisos.'); showSection('events'); }
     }
     else if (section === 'settings') {
@@ -130,6 +130,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     else if (urlParams.get('galeria')) galeriaId = urlParams.get('galeria');
 
     if (galeriaId) { 
+        console.log('Cargando galería pública:', galeriaId);
         if (typeof loadPublicGallery === 'function') {
             try {
                 await loadPublicGallery(galeriaId);
@@ -144,6 +145,8 @@ window.addEventListener('DOMContentLoaded', async () => {
                     </div>`;
                 }
             }
+        } else {
+            console.error('loadPublicGallery no está definido');
         }
         hideLoadingOverlay();
         return; 
