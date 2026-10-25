@@ -617,7 +617,6 @@ async function overlayLogo(canvas) {
         : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzI1NjNlYiIvPjx0ZXh0IHg9IjUwIiB5PSI2NSIgZm9udC1zaXplPSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC13ZWlnaHQ9ImJvbGQiPkdGPC90ZXh0Pjwvc3ZnPg==';
     
     return new Promise((resolve) => {
-        // Crear imagen con cache busting para forzar recarga
         const logoImg = new Image();
         logoImg.crossOrigin = 'anonymous';
         
@@ -625,45 +624,46 @@ async function overlayLogo(canvas) {
             const ctx = canvas.getContext('2d');
             const canvasSize = canvas.width;
             
-            // Logo al 12% del canvas (48px en canvas de 400px)
-            const logoSize = canvasSize * 0.12;
-            const padding = 12;
+            // Logo al 10% del canvas (40px en canvas de 400px)
+            const logoSize = canvasSize * 0.10;
+            
+            // Padding generoso: 20px de espacio blanco alrededor
+            const padding = 20;
             const totalSize = logoSize + (padding * 2);
             
             const x = (canvasSize - totalSize) / 2;
             const y = (canvasSize - totalSize) / 2;
             
-            // Mejorar calidad de renderizado
+            // Alta calidad de renderizado
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
             
-            // Fondo blanco
+            // Fondo blanco GRANDE y visible
             ctx.fillStyle = '#ffffff';
-            ctx.fillRect(x - 4, y - 4, totalSize + 8, totalSize + 8);
+            ctx.fillRect(x - 6, y - 6, totalSize + 12, totalSize + 12);
             
-            // Borde gris
-            ctx.strokeStyle = '#cbd5e1';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(x - 4, y - 4, totalSize + 8, totalSize + 8);
+            // Borde gris sutil pero visible
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x - 6, y - 6, totalSize + 12, totalSize + 12);
             
-            // Dibujar logo con alta calidad
+            // Dibujar logo centrado en el padding
             ctx.drawImage(logoImg, x + padding, y + padding, logoSize, logoSize);
             
-            console.log('✅ Logo renderizado:', {
+            console.log('✅ Logo renderizado con espacio profesional:', {
                 originalSize: `${logoImg.width}x${logoImg.height}`,
-                renderedSize: `${logoSize}x${logoSize}`,
-                url: logoUrl
+                logoSize: `${logoSize}x${logoSize}`,
+                padding: `${padding}px`,
+                totalWhiteSpace: `${totalSize + 12}px`
             });
             resolve();
         };
         
         logoImg.onerror = () => {
             console.error('❌ Error cargando logo:', logoUrl);
-            console.warn('⚠️ No se pudo cargar el logo');
             resolve();
         };
         
-        // Agregar timestamp para forzar recarga y evitar caché
         const urlWithCache = `${logoUrl}${logoUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
         logoImg.src = urlWithCache;
     });
