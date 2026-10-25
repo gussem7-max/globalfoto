@@ -2,77 +2,74 @@
 // GALERÍA PÚBLICA: VISUALIZACIÓN, SELECCIÓN Y COMPRA
 // =====================================================
 
-let currentEvent = null;
-let currentPhotos = [];
-let selectedPhotos = new Set();
-let purchaseType = null;
-let currentReceiptFile = null;
+let pubCurrentEvent = null;
+let pubCurrentPhotos = [];
+let pubSelectedPhotos = new Set();
+let pubPurchaseType = null;
+let pubCurrentReceiptFile = null;
 
 async function loadPublicGallery(eventId) {
     try {
         const res = await fetch(`/api/events/${eventId}/public`);
         if (!res.ok) throw new Error('Evento no encontrado');
         const data = await res.json();
-        currentEvent = data.event;
-        currentPhotos = data.photos || [];
+        pubCurrentEvent = data.event;
+        pubCurrentPhotos = data.photos || [];
 
-        document.getElementById('pubEventTitle').textContent = currentEvent.title;
-        const details = [];
-        if (currentEvent.event_date) details.push(new Date(currentEvent.event_date).toLocaleDateString('es-CO'));
-        if (currentEvent.location) details.push(currentEvent.location);
-        if (currentEvent.description) details.push(currentEvent.description);
-        document.getElementById('pubEventDetails').textContent = details.join(' • ');
+        const titleEl = document.getElementById('pubEventTitle');
+        const detailsEl = document.getElementById('pubEventDetails');
+        if (titleEl) titleEl.textContent = pubCurrentEvent.title;
+        if (detailsEl) {
+            const details = [];
+            if (pubCurrentEvent.event_date) details.push(new Date(pubCurrentEvent.event_date).toLocaleDateString('es-CO'));
+            if (pubCurrentEvent.location) details.push(pubCurrentEvent.location);
+            if (pubCurrentEvent.description) details.push(pubCurrentEvent.description);
+            detailsEl.textContent = details.join(' • ');
+        }
 
-        if (currentEvent.status !== 'published') {
-            document.getElementById('pubPhotoGrid').innerHTML = `
-                <div class="gallery-closed" style="grid-column: 1/-1;">
-                    <i class="fa-solid fa-lock"></i>
-                    <h3 style="color: white; margin-bottom: 8px;">Galería no disponible</h3>
-                    <p style="color: var(--text-muted);">Esta galería está ${currentEvent.status === 'draft' ? 'en borrador' : 'archivada'}.</p>
-                </div>`;
+        if (pubCurrentEvent.status !== 'published') {
+            const grid = document.getElementById('pubPhotoGrid');
+            if (grid) grid.innerHTML = `<div class="gallery-closed" style="grid-column: 1/-1;"><i class="fa-solid fa-lock"></i><h3 style="color: white; margin-bottom: 8px;">Galería no disponible</h3><p style="color: var(--text-muted);">Esta galería está ${pubCurrentEvent.status === 'draft' ? 'en borrador' : 'archivada'}.</p></div>`;
             return;
         }
 
-        if (currentEvent.expires_at && new Date(currentEvent.expires_at) < new Date()) {
-            document.getElementById('pubPhotoGrid').innerHTML = `
-                <div class="gallery-closed" style="grid-column: 1/-1;">
-                    <i class="fa-solid fa-clock"></i>
-                    <h3 style="color: white; margin-bottom: 8px;">Galería expirada</h3>
-                    <p style="color: var(--text-muted);">Esta galería expiró el ${new Date(currentEvent.expires_at).toLocaleString('es-CO')}.</p>
-                </div>`;
+        if (pubCurrentEvent.expires_at && new Date(pubCurrentEvent.expires_at) < new Date()) {
+            const grid = document.getElementById('pubPhotoGrid');
+            if (grid) grid.innerHTML = `<div class="gallery-closed" style="grid-column: 1/-1;"><i class="fa-solid fa-clock"></i><h3 style="color: white; margin-bottom: 8px;">Galería expirada</h3><p style="color: var(--text-muted);">Esta galería expiró el ${new Date(pubCurrentEvent.expires_at).toLocaleString('es-CO')}.</p></div>`;
             return;
         }
 
-        if (currentEvent.selfie_required) {
-            document.getElementById('selfieGate').classList.remove('hidden');
-            document.getElementById('pubPhotoGrid').innerHTML = '';
-            document.getElementById('pubPackagesGrid').innerHTML = '';
-            document.getElementById('pubPricingBar').classList.add('hidden');
+        if (pubCurrentEvent.selfie_required) {
+            const gate = document.getElementById('selfieGate');
+            if (gate) gate.classList.remove('hidden');
+            const grid = document.getElementById('pubPhotoGrid');
+            if (grid) grid.innerHTML = '';
+            const pkg = document.getElementById('pubPackagesGrid');
+            if (pkg) pkg.innerHTML = '';
+            const bar = document.getElementById('pubPricingBar');
+            if (bar) bar.classList.add('hidden');
             return;
         }
 
-        renderGallery(currentPhotos);
+        renderGallery(pubCurrentPhotos);
         renderPackages();
         renderPricingBar();
     } catch (err) {
         console.error('Error al cargar galería:', err);
-        document.getElementById('pubPhotoGrid').innerHTML = `
-            <div class="gallery-closed" style="grid-column: 1/-1;">
-                <i class="fa-solid fa-circle-exclamation"></i>
-                <h3 style="color: white; margin-bottom: 8px;">Error al cargar</h3>
-                <p style="color: var(--text-muted);">No se pudo cargar la galería. Verifica el enlace.</p>
-            </div>`;
+        const grid = document.getElementById('pubPhotoGrid');
+        if (grid) grid.innerHTML = `<div class="gallery-closed" style="grid-column: 1/-1;"><i class="fa-solid fa-circle-exclamation"></i><h3 style="color: white; margin-bottom: 8px;">Error al cargar</h3><p style="color: var(--text-muted);">${err.message}</p></div>`;
     }
 }
 
 function renderGallery(photos) {
     const grid = document.getElementById('pubPhotoGrid');
+    if (!grid) return;
     if (photos.length === 0) {
         grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);"><i class="fa-solid fa-images" style="font-size: 48px; opacity: 0.3; margin-bottom: 16px; display: block;"></i>Aún no hay fotos en esta galería.</div>';
         return;
     }
     grid.innerHTML = photos.map(p => {
-        const isSelected = selectedPhotos.has(p.id);
+        const isSelected = pubSelectedPhotos.has(p.id);
         return `<div class="public-photo-card ${isSelected ? 'selected' : ''}" id="photoCard_${p.id}">
             <div class="public-photo-wrapper" onclick="openLightbox('${p.preview_url || p.url}')">
                 <img src="${p.preview_url || p.url}" class="public-photo-img" alt="Foto">
@@ -82,7 +79,7 @@ function renderGallery(photos) {
                 </div>
             </div>
             <div class="public-photo-footer">
-                <span class="photo-price-tag">${currentEvent.price_per_photo ? formatMoney(currentEvent.price_per_photo) : 'Consultar'}</span>
+                <span class="photo-price-tag">${pubCurrentEvent.price_per_photo ? formatMoney(pubCurrentEvent.price_per_photo) : 'Consultar'}</span>
                 <button class="btn-buy-photo" onclick="openPurchaseModal('photo', ${p.id})">
                     <i class="fa-solid fa-cart-shopping"></i> Comprar
                 </button>
@@ -93,8 +90,9 @@ function renderGallery(photos) {
 
 function renderPackages() {
     const grid = document.getElementById('pubPackagesGrid');
-    if (!currentEvent.packages || currentEvent.packages.length === 0) { grid.innerHTML = ''; return; }
-    grid.innerHTML = currentEvent.packages.map(p => `
+    if (!grid) return;
+    if (!pubCurrentEvent.packages || pubCurrentEvent.packages.length === 0) { grid.innerHTML = ''; return; }
+    grid.innerHTML = pubCurrentEvent.packages.map(p => `
         <div class="package-card ${p.featured ? 'featured' : ''}">
             <h3>${p.name}</h3>
             <div class="price">${formatMoney(p.price)}</div>
@@ -109,25 +107,28 @@ function renderPackages() {
 
 function renderPricingBar() {
     const bar = document.getElementById('pubPricingBar');
-    if (!currentEvent.price_per_photo && !currentEvent.price_full_gallery) { bar.classList.add('hidden'); return; }
+    if (!bar) return;
+    if (!pubCurrentEvent.price_per_photo && !pubCurrentEvent.price_full_gallery) { bar.classList.add('hidden'); return; }
     bar.classList.remove('hidden');
-    document.getElementById('pubPricePhoto').textContent = currentEvent.price_per_photo ? formatMoney(currentEvent.price_per_photo) : '—';
-    document.getElementById('pubPriceGallery').textContent = currentEvent.price_full_gallery ? formatMoney(currentEvent.price_full_gallery) : '—';
+    const pp = document.getElementById('pubPricePhoto');
+    const pg = document.getElementById('pubPriceGallery');
+    if (pp) pp.textContent = pubCurrentEvent.price_per_photo ? formatMoney(pubCurrentEvent.price_per_photo) : '—';
+    if (pg) pg.textContent = pubCurrentEvent.price_full_gallery ? formatMoney(pubCurrentEvent.price_full_gallery) : '—';
 }
 
 function togglePhotoSelection(photoId) {
-    if (selectedPhotos.has(photoId)) selectedPhotos.delete(photoId);
-    else selectedPhotos.add(photoId);
+    if (pubSelectedPhotos.has(photoId)) pubSelectedPhotos.delete(photoId);
+    else pubSelectedPhotos.add(photoId);
     const card = document.getElementById(`photoCard_${photoId}`);
     if (card) {
         const check = card.querySelector('.photo-select-check i');
         card.classList.toggle('selected');
-        check.className = `fa-solid ${selectedPhotos.has(photoId) ? 'fa-check' : 'fa-plus'}`;
+        if (check) check.className = `fa-solid ${pubSelectedPhotos.has(photoId) ? 'fa-check' : 'fa-plus'}`;
     }
 }
 
 function clearSelection() {
-    selectedPhotos.clear();
+    pubSelectedPhotos.clear();
     document.querySelectorAll('.public-photo-card.selected').forEach(c => {
         c.classList.remove('selected');
         const check = c.querySelector('.photo-select-check i');
@@ -136,68 +137,52 @@ function clearSelection() {
 }
 
 function revealGallery(photos) {
-    currentPhotos = photos;
-    document.getElementById('selfieGate').classList.add('hidden');
+    pubCurrentPhotos = photos;
+    const gate = document.getElementById('selfieGate');
+    if (gate) gate.classList.add('hidden');
     renderGallery(photos);
     renderPackages();
     renderPricingBar();
 }
 
 async function openPurchaseModal(type, photoId = null, packageId = null) {
-    purchaseType = type;
+    pubPurchaseType = type;
     const modal = document.getElementById('purchaseModal');
     const body = document.getElementById('purchaseModalBody');
     const title = document.getElementById('purchaseModalTitle');
+    if (!modal || !body || !title) return;
 
     let summaryHtml = '';
     let total = 0;
 
     if (type === 'photo' && photoId) {
-        const photo = currentPhotos.find(p => p.id === photoId);
+        const photo = pubCurrentPhotos.find(p => p.id === photoId);
         if (!photo) return;
         title.textContent = 'Comprar Foto';
-        total = currentEvent.price_per_photo || 0;
-        summaryHtml = `
-            <div class="purchase-summary">
-                <div class="purchase-summary-row"><span>Foto individual</span><span>${formatMoney(total)}</span></div>
-                <div class="purchase-summary-row total"><span>Total</span><span>${formatMoney(total)}</span></div>
-            </div>`;
+        total = pubCurrentEvent.price_per_photo || 0;
+        summaryHtml = `<div class="purchase-summary"><div class="purchase-summary-row"><span>Foto individual</span><span>${formatMoney(total)}</span></div><div class="purchase-summary-row total"><span>Total</span><span>${formatMoney(total)}</span></div></div>`;
     } else if (type === 'gallery') {
         title.textContent = 'Comprar Galería Completa';
-        total = currentEvent.price_full_gallery || 0;
-        summaryHtml = `
-            <div class="purchase-summary">
-                <div class="purchase-summary-row"><span>Galería completa (${currentPhotos.length} fotos)</span><span>${formatMoney(total)}</span></div>
-                <div class="purchase-summary-row total"><span>Total</span><span>${formatMoney(total)}</span></div>
-            </div>`;
+        total = pubCurrentEvent.price_full_gallery || 0;
+        summaryHtml = `<div class="purchase-summary"><div class="purchase-summary-row"><span>Galería completa (${pubCurrentPhotos.length} fotos)</span><span>${formatMoney(total)}</span></div><div class="purchase-summary-row total"><span>Total</span><span>${formatMoney(total)}</span></div></div>`;
     } else if (type === 'package' && packageId) {
-        const pkg = currentEvent.packages.find(p => p.id === packageId);
+        const pkg = pubCurrentEvent.packages.find(p => p.id === packageId);
         if (!pkg) return;
         title.textContent = `Paquete: ${pkg.name}`;
         total = pkg.price;
-        summaryHtml = `
-            <div class="purchase-summary">
-                <div class="purchase-summary-row"><span>${pkg.name} (${pkg.photo_limit} fotos)</span><span>${formatMoney(total)}</span></div>
-                <div class="purchase-summary-row total"><span>Total</span><span>${formatMoney(total)}</span></div>
-            </div>`;
+        summaryHtml = `<div class="purchase-summary"><div class="purchase-summary-row"><span>${pkg.name} (${pkg.photo_limit} fotos)</span><span>${formatMoney(total)}</span></div><div class="purchase-summary-row total"><span>Total</span><span>${formatMoney(total)}</span></div></div>`;
     }
 
     body.innerHTML = `
         ${summaryHtml}
         <div class="nequi-info">
             <h4><i class="fa-solid fa-mobile-screen"></i> Datos para pagar por Nequi</h4>
-            <p><strong>Número:</strong> ${currentEvent.nequi_phone || 'No configurado'}</p>
-            <p><strong>Titular:</strong> ${currentEvent.nequi_name || '—'}</p>
+            <p><strong>Número:</strong> ${pubCurrentEvent.nequi_phone || 'No configurado'}</p>
+            <p><strong>Titular:</strong> ${pubCurrentEvent.nequi_name || '—'}</p>
             <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">Haz la transferencia y sube el comprobante abajo.</p>
         </div>
-        <div class="form-group">
-            <label>Tu nombre</label>
-            <input type="text" id="purchaseName" placeholder="Tu nombre completo" required>
-        </div>
-        <div class="form-group">
-            <label>Tu correo electrónico</label>
-            <input type="email" id="purchaseEmail" placeholder="tu@email.com" required>
-        </div>
+        <div class="form-group"><label>Tu nombre</label><input type="text" id="purchaseName" placeholder="Tu nombre completo" required></div>
+        <div class="form-group"><label>Tu correo electrónico</label><input type="email" id="purchaseEmail" placeholder="tu@email.com" required></div>
         <div class="form-group">
             <label>Comprobante de pago</label>
             <div class="receipt-upload" onclick="document.getElementById('receiptInput').click()">
@@ -216,18 +201,18 @@ async function openPurchaseModal(type, photoId = null, packageId = null) {
 }
 
 function closePurchaseModal() {
-    document.getElementById('purchaseModal').classList.add('hidden');
+    const m = document.getElementById('purchaseModal');
+    if (m) m.classList.add('hidden');
     clearSelection();
-    currentReceiptFile = null;
+    pubCurrentReceiptFile = null;
 }
 
 function onReceiptChosen(e) {
     const file = e.target.files[0];
     if (!file) return;
-    currentReceiptFile = file;
+    pubCurrentReceiptFile = file;
     const preview = document.getElementById('receiptPreview');
-    preview.src = URL.createObjectURL(file);
-    preview.classList.remove('hidden');
+    if (preview) { preview.src = URL.createObjectURL(file); preview.classList.remove('hidden'); }
 }
 
 async function submitPurchase(photoId, packageId) {
@@ -236,29 +221,21 @@ async function submitPurchase(photoId, packageId) {
     const resultDiv = document.getElementById('purchaseResult');
     const btn = document.getElementById('purchaseSubmitBtn');
 
-    if (!name || !email) {
-        resultDiv.className = 'alert alert-error';
-        resultDiv.textContent = 'Completa tu nombre y correo.';
-        return;
-    }
-    if (!currentReceiptFile) {
-        resultDiv.className = 'alert alert-error';
-        resultDiv.textContent = 'Sube el comprobante de pago.';
-        return;
-    }
+    if (!name || !email) { resultDiv.className = 'alert alert-error'; resultDiv.textContent = 'Completa tu nombre y correo.'; return; }
+    if (!pubCurrentReceiptFile) { resultDiv.className = 'alert alert-error'; resultDiv.textContent = 'Sube el comprobante de pago.'; return; }
 
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
 
     const formData = new FormData();
-    formData.append('event_id', currentEvent.id);
+    formData.append('event_id', pubCurrentEvent.id);
     formData.append('customer_name', name);
     formData.append('customer_email', email);
-    formData.append('order_type', purchaseType);
-    formData.append('amount', currentEvent[purchaseType === 'gallery' ? 'price_full_gallery' : 'price_per_photo'] || 0);
+    formData.append('order_type', pubPurchaseType);
+    formData.append('amount', pubCurrentEvent[pubPurchaseType === 'gallery' ? 'price_full_gallery' : 'price_per_photo'] || 0);
     if (photoId) formData.append('photo_ids', JSON.stringify([photoId]));
     if (packageId) formData.append('package_id', packageId);
-    formData.append('receipt', currentReceiptFile);
+    formData.append('receipt', pubCurrentReceiptFile);
 
     try {
         const res = await fetch('/api/orders', { method: 'POST', headers: authHeaders(), body: formData });
