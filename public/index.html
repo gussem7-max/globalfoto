@@ -166,11 +166,7 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Nombre</th>
-                                <th>Correo</th>
-                                <th>Rol</th>
-                                <th>Fecha de Registro</th>
-                                <th>Acciones</th>
+                                <th>Nombre</th><th>Correo</th><th>Rol</th><th>Fecha de Registro</th><th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody"></tbody>
@@ -242,12 +238,23 @@
                          Requerir selfie de verificación
                     </label>
                     <small style="color: var(--text-muted); display: block; margin-top: 4px;">
-                        Actívalo en graduaciones o eventos donde debas garantizar que cada persona solo vea y compre sus propias fotos. El cliente deberá tomarse una selfie para filtrar la galería.
+                        Actívalo en graduaciones o eventos donde debas garantizar que cada persona solo vea y compre sus propias fotos.
                     </small>
                 </div>
                 <button type="submit" class="btn-primary" id="eventSubmitBtn">Guardar Evento</button>
             </form>
             <div id="resultadoEvento"></div>
+        </div>
+    </div>
+
+    <!-- MODAL DE GESTIÓN DE EVENTO -->
+    <div id="manageEventModal" class="modal hidden">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3 class="modal-title" id="manageEventTitle">Gestionar Evento</h3>
+                <i class="fa-solid fa-xmark close-modal" onclick="closeManageModal()"></i>
+            </div>
+            <div id="manageEventBody"></div>
         </div>
     </div>
 
