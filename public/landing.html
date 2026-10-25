@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlobalFoto - Plataforma de Fotografía con IA y Reconocimiento Facial</title>
+    <meta name="description" content="Crea galerías privadas con marca de agua, vende tus fotos con reconocimiento facial y protege tu trabajo. Prueba gratis 14 días.">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f3ff',
+                            100: '#e0e7ff',
+                            300: '#a5b4fc',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#0f172a',
+                            accent: '#a855f7'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-text {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .scan-animation {
+            background: linear-gradient(to bottom, transparent, rgba(168, 85, 247, 0.4), transparent);
+            animation: scan 2s infinite ease-in-out;
+        }
+        @keyframes scan {
+            0% { top: 0%; }
+            50% { top: 85%; }
+            100% { top: 0%; }
+        }
+        
+        /* ===== ANIMACIONES DEL HERO ===== */
+        @keyframes floatInLeft {
+            0% { opacity: 0; transform: translateX(-150px) translateY(30px) rotate(-8deg); }
+            100% { opacity: 1; transform: translateX(0) translateY(0) rotate(-6deg); }
+        }
+        @keyframes floatInRight {
+            0% { opacity: 0; transform: translateX(150px) translateY(30px) rotate(8deg); }
+            100% { opacity: 1; transform: translateX(0) translateY(0) rotate(6deg); }
+        }
+        @keyframes floatInBottom {
+            0% { opacity: 0; transform: translateY(150px) scale(0.8); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes floatInTop {
+            0% { opacity: 0; transform: translateY(-100px) scale(0.8); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes floatY {
+            0%, 100% { transform: translateY(0) rotate(var(--rot, 0deg)); }
+            50% { transform: translateY(-15px) rotate(var(--rot, 0deg)); }
+        }
+        @keyframes floatYInverse {
+            0%, 100% { transform: translateY(0) rotate(var(--rot, 0deg)); }
+            50% { transform: translateY(15px) rotate(var(--rot, 0deg)); }
+        }
+        
+        .hero-photo {
+            position: absolute;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+        .hero-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .photo-1 {
+            width: 180px; height: 230px;
+            top: 10%; left: 5%;
+            --rot: -8deg;
+            animation: floatInLeft 1.2s ease-out forwards, floatY 4s ease-in-out 1.2s infinite;
+            opacity: 0;
+            z-index: 2;
+        }
+        .photo-2 {
+            width: 200px; height: 260px;
+            top: 5%; right: 8%;
+            --rot: 6deg;
+            animation: floatInRight 1.2s 0.2s ease-out forwards, floatYInverse 5s ease-in-out 1.4s infinite;
+            opacity: 0;
+            z-index: 2;
+        }
+        .photo-3 {
+            width: 220px; height: 280px;
+            bottom: 8%; left: 15%;
+            --rot: -4deg;
+            animation: floatInBottom 1.2s 0.4s ease-out forwards, floatY 4.5s ease-in-out 1.6s infinite;
+            opacity: 0;
+            z-index: 3;
+        }
+        .photo-4 {
+            width: 190px; height: 240px;
+            bottom: 5%; right: 10%;
+            --rot: 5deg;
+            animation: floatInRight 1.2s 0.6s ease-out forwards, floatYInverse 4s ease-in-out 1.8s infinite;
+            opacity: 0;
+            z-index: 3;
+        }
+        .photo-center {
+            width: 280px; height: 350px;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 4;
+            animation: floatInTop 1.4s 0.3s ease-out forwards;
+            opacity: 0;
+            border: 3px solid rgba(168, 85, 247, 0.5);
+        }
+        .photo-center::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1));
+        }
+        .scanner-overlay {
+            position: absolute;
+            inset: 0;
+            border-radius: 14px;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 5;
+        }
+        .scanner-line-inner {
+            position: absolute;
+            left: 0; right: 0;
+            height: 30px;
+            background: linear-gradient(to bottom, transparent, rgba(168, 85, 247, 0.6), transparent);
+            animation: scan 2.5s infinite ease-in-out;
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+        }
+        
+        /* Badge flotante de coincidencia */
+        .match-badge {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(168, 85, 247, 0.5);
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 11px;
+            font-weight: 700;
+            color: white;
+            z-index: 10;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(168, 85, 247, 0); }
+        }
+        
+        /* Toggle de planes */
+        .plan-toggle {
+            position: relative;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 50px;
+            padding: 4px;
+        }
+        .plan-toggle button {
+            position: relative;
+            z-index: 2;
+            padding: 10px 28px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #94a3b8;
+            transition: color 0.3s;
+        }
+        .plan-toggle button.active {
+            color: white;
+        }
+        .plan-toggle-slider {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            height: calc(100% - 8px);
+            width: calc(50% - 4px);
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            border-radius: 50px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1;
+        }
+        .plan-toggle.annual .plan-toggle-slider {
+            transform: translateX(100%);
+        }
+        
+        /* Card de plan destacado */
+        .plan-card {
+            position: relative;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 24px;
+            padding: 32px 24px;
+            transition: all 0.3s;
+        }
+        .plan-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+        .plan-card.featured {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.1));
+            border: 2px solid rgba(168, 85, 247, 0.5);
+            box-shadow: 0 20px 60px rgba(168, 85, 247, 0.2);
+            transform: scale(1.05);
+        }
+        .plan-card.featured:hover {
+            transform: scale(1.05) translateY(-4px);
+        }
+        .featured-badge {
+            position: absolute;
+            top: -14px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 6px 16px;
+            border-radius: 50px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        
+        @media (max-width: 1024px) {
+            .photo-1 { width: 120px; height: 150px; }
+            .photo-2 { width: 140px; height: 180px; }
+            .photo-3 { width: 150px; height: 190px; }
+            .photo-4 { width: 130px; height: 160px; }
+            .photo-center { width: 200px; height: 250px; }
+        }
+        @media (max-width: 640px) {
+            .photo-1, .photo-2, .photo-3, .photo-4 { display: none; }
+            .photo-center { width: 260px; height: 320px; }
+            .plan-card.featured { transform: scale(1); }
+            .plan-card.featured:hover { transform: translateY(-4px); }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased selection:bg-brand-500 selection:text-white">
+
+    <!-- NAV BAR -->
+    <nav class="fixed top-0 left-0 w-full z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/80 transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-3 group">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-brand-accent flex items-center justify-center shadow-lg shadow-brand-500/20 group-hover:scale-105 transition-transform">
+                    <i class="fa-solid fa-camera-retro text-white text-xl"></i>
+                </div>
+                <span class="text-2xl font-extrabold tracking-tight text-white">Global<span class="gradient-text">Foto</span></span>
+            </a>
+
+            <div class="hidden md:flex items-center gap-8 font-medium text-slate-300 text-sm">
+                <a href="#inicio" class="hover:text-white transition-colors">Inicio</a>
+                <a href="#caracteristicas" class="hover:text-white transition-colors">Características</a>
+                <a href="#demo-selfie" class="hover:text-white transition-colors">Búsqueda IA</a>
+                <a href="#como-funciona" class="hover:text-white transition-colors">Cómo Funciona</a>
+                <a href="#precios" class="hover:text-white transition-colors">Planes</a>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <a href="/panel" class="px-4 py-2.5 text-sm font-semibold text-slate-200 hover:text-white hover:bg-slate-800/60 rounded-lg transition-all">
+                    Iniciar Sesión
+                </a>
+                <a href="/panel?tab=register" class="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-brand-accent hover:opacity-95 rounded-lg shadow-md shadow-brand-500/25 hover:shadow-brand-500/40 transition-all hover:-translate-y-0.5">
+                    Crear Cuenta
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION CON FOTOS ANIMADAS -->
+    <section id="inicio" class="relative pt-32 pb-20 md:pt-44 md:pb-32 overflow-hidden">
+        <!-- Luces de fondo -->
+        <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-brand-600/20 rounded-full blur-[120px] pointer-events-none"></div>
+        <div class="absolute top-1/3 right-10 w-[300px] h-[300px] bg-brand-accent/20 rounded-full blur-[100px] pointer-events-none"></div>
+        <div class="absolute bottom-10 left-10 w-[250px] h-[250px] bg-blue-500/10 rounded-full blur-[80px] pointer-events-none"></div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="grid lg:grid-cols-12 gap-12 items-center">
+                
+                <!-- Columna Texto -->
+                <div class="lg:col-span-7 text-center lg:text-left">
+                    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-semibold mb-6">
+                        <span class="flex h-2 w-2 rounded-full bg-brand-500 animate-ping"></span>
+                        Reconocimiento Facial de Alta Precisión
+                    </div>
+
+                    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.15] mb-6">
+                        Tus recuerdos de eventos a un solo clic con <span class="gradient-text">Inteligencia Artificial</span>
+                    </h1>
+
+                    <p class="text-lg text-slate-400 mb-8 max-w-2xl mx-auto lg:mx-0 font-normal leading-relaxed">
+                        Encuentra tus fotografías al instante entre miles de capturas utilizando tu selfie. Galerías privadas en alta resolución organizadas para fotógrafos profesionales y sus invitados.
+                    </p>
+
+                    <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+                        <a href="#demo-selfie" class="w-full sm:w-auto px-7 py-3.5 text-base font-semibold text-white bg-gradient-to-r from-brand-600 to-brand-accent hover:opacity-95 rounded-xl shadow-lg shadow-brand-500/30 flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5">
+                            <i class="fa-solid fa-face-smile"></i>
+                            Probar Búsqueda por Selfie
+                        </a>
+                        <a href="/panel?tab=register" class="w-full sm:w-auto px-7 py-3.5 text-base font-semibold text-slate-300 hover:text-white bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl flex items-center justify-center gap-2 transition-all">
+                            <i class="fa-solid fa-camera"></i>
+                            Soy Fotógrafo
+                        </a>
+                    </div>
+
+                    <div class="mt-10 pt-8 border-t border-slate-900 flex items-center justify-center lg:justify-start gap-8 text-slate-500 text-xs font-medium flex-wrap">
+                        <div class="flex items-center gap-2"><i class="fa-solid fa-bolt text-brand-500"></i> Almacenamiento AWS S3</div>
+                        <div class="flex items-center gap-2"><i class="fa-solid fa-shield-halved text-brand-accent"></i> Encriptación JWT</div>
+                        <div class="flex items-center gap-2"><i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> IA Biométrica</div>
+                    </div>
+                </div>
+
+                <!-- Columna de Fotos Animadas -->
+                <div class="lg:col-span-5 relative h-[500px] hidden lg:block">
+                    <div class="hero-photo photo-1">
+                        <img src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=400&q=80" alt="Boda">
+                    </div>
+                    <div class="hero-photo photo-2">
+                        <img src="https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=400&q=80" alt="Evento">
+                    </div>
+                    <div class="hero-photo photo-3">
+                        <img src="https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?auto=format&fit=crop&w=400&q=80" alt="Fiesta">
+                    </div>
+                    <div class="hero-photo photo-4">
+                        <img src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=400&q=80" alt="Celebración">
+                    </div>
+                    
+                    <!-- Foto central con scanner -->
+                    <div class="hero-photo photo-center">
+                        <img src="https://images.unsplash.com/photo-1524638431109-93d95c968f03?auto=format&fit=crop&w=600&q=80" alt="Selfie match">
+                        <div class="scanner-overlay">
+                            <div class="scanner-line-inner"></div>
+                        </div>
+                        <div class="match-badge">
+                            <i class="fa-solid fa-face-smile-beam mr-1"></i> Coincidencia 98%
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- DEMO INTERACTIVA DE BÚSQUEDA POR SELFIE -->
+    <section id="demo-selfie" class="py-20 bg-slate-900/50 border-y border-slate-800/60 relative">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-white mb-3">Prueba la Búsqueda Biométrica</h2>
+                <p class="text-slate-400 text-sm max-w-lg mx-auto">Sube una fotografía de tu rostro para simular la búsqueda automática en nuestras galerías inteligentes.</p>
+            </div>
+
+            <div class="bg-slate-950 p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-xl max-w-3xl mx-auto">
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">1. Tu Fotografía / Selfie</label>
+                        <div id="drop-zone" class="relative h-60 border-2 border-dashed border-slate-700 hover:border-brand-500 rounded-xl flex flex-col items-center justify-center p-4 text-center cursor-pointer transition-colors bg-slate-900/40">
+                            <div id="scanner-line" class="hidden absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+                                <div class="w-full h-12 scan-animation border-b-2 border-brand-accent"></div>
+                            </div>
+
+                            <div id="upload-prompt" class="space-y-2">
+                                <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center mx-auto text-brand-400 text-xl">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                                </div>
+                                <p class="text-xs text-slate-300 font-medium">Arrastra tu foto aquí o <span class="text-brand-400 underline">examina</span></p>
+                                <p class="text-[10px] text-slate-500">Formatos soportados: JPG, PNG (Máx 5MB)</p>
+                            </div>
+
+                            <img id="selfie-preview" src="" class="hidden w-full h-full object-cover rounded-lg">
+                            <input type="file" id="selfie-input" accept="image/*" class="hidden">
+                        </div>
+                    </div>
+
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">2. Código del Evento</label>
+                            <input type="text" id="event-code" placeholder="Ej: BODA-2026-001" class="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-brand-500">
+                        </div>
+
+                        <button id="btn-search" onclick="simulateSearch()" class="w-full py-3.5 bg-gradient-to-r from-brand-600 to-brand-accent hover:opacity-95 text-white font-semibold rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-magnifying-glass-chart"></i> Escanear y Encontrar Fotos
+                        </button>
+
+                        <div id="demo-results" class="hidden p-4 rounded-xl bg-brand-500/10 border border-brand-500/20 text-xs text-slate-300">
+                            <div class="flex items-center gap-2 font-semibold text-brand-300 mb-1">
+                                <i class="fa-solid fa-circle-check"></i> ¡Búsqueda completada!
+                            </div>
+                            Encontramos <span class="text-white font-bold">8 fotografías</span> tuyas con un promedio del 97% de precisión.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CARACTERÍSTICAS -->
+    <section id="caracteristicas" class="py-24">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-2xl mx-auto mb-16">
+                <h2 class="text-3xl font-extrabold text-white mb-4">Todo lo que necesitas para gestionar eventos fotográficos</h2>
+                <p class="text-slate-400 text-sm">Diseñado para simplificar el trabajo del fotógrafo y ofrecer una experiencia rápida a los clientes.</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="bg-slate-900/40 p-6 rounded-2xl border border-slate-800/80 hover:border-brand-500/50 transition-all hover:-translate-y-1">
+                    <div class="w-12 h-12 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-400 text-xl mb-5">
+                        <i class="fa-solid fa-id-card-clip"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">Reconocimiento Facial</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Algoritmos de biometría para identificar a invitados de forma individual en cuestión de segundos.</p>
+                </div>
+
+                <div class="bg-slate-900/40 p-6 rounded-2xl border border-slate-800/80 hover:border-brand-500/50 transition-all hover:-translate-y-1">
+                    <div class="w-12 h-12 rounded-xl bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center text-brand-accent text-xl mb-5">
+                        <i class="fa-solid fa-server"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">AWS S3 Ultra Rápido</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Almacenamiento en la nube de alta velocidad para cargar y renderizar fotos pesadas sin demoras.</p>
+                </div>
+
+                <div class="bg-slate-900/40 p-6 rounded-2xl border border-slate-800/80 hover:border-brand-500/50 transition-all hover:-translate-y-1">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-xl mb-5">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">Galerías Privadas</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Protección de álbumes mediante contraseñas, PIN de acceso o validación por token seguro JWT.</p>
+                </div>
+
+                <div class="bg-slate-900/40 p-6 rounded-2xl border border-slate-800/80 hover:border-brand-500/50 transition-all hover:-translate-y-1">
+                    <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-xl mb-5">
+                        <i class="fa-solid fa-file-arrow-down"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">Descargas en HD</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Permite descargas directas en resolución original o comprimidas para redes sociales.</p>
+                </div>
+
+                <div class="bg-slate-900/40 p-6 rounded-2xl border border-slate-800/80 hover:border-brand-500/50 transition-all hover:-translate-y-1">
+                    <div class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 text-xl mb-5">
+                        <i class="fa-solid fa-qrcode"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">QR Personalizados</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Genera códigos QR con tu logo para compartir galerías con estilo profesional.</p>
+                </div>
+
+                <div class="bg-slate-900/40 p-6 rounded-2xl border border-slate-800/80 hover:border-brand-500/50 transition-all hover:-translate-y-1">
+                    <div class="w-12 h-12 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400 text-xl mb-5">
+                        <i class="fa-solid fa-droplet"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">Marca de Agua Automática</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Protege tu trabajo aplicando marca de agua automáticamente al subir cada foto.</p>
+                </div>
+
+                <div class="bg-slate-900/40 p-6 rounded-2xl border border-slate-800/80 hover:border-brand-500/50 transition-all hover:-translate-y-1">
+                    <div class="w-12 h-12 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400 text-xl mb-5">
+                        <i class="fa-solid fa-tags"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">Paquetes y Precios</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Define paquetes promocionales por cantidad de fotos o venta de galería completa.</p>
+                </div>
+
+                <div class="bg-slate-900/40 p-6 rounded-2xl border border-slate-800/80 hover:border-brand-500/50 transition-all hover:-translate-y-1">
+                    <div class="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 text-xl mb-5">
+                        <i class="fa-solid fa-envelope-circle-check"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">Correos Automáticos</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Notificaciones automáticas a clientes al aprobar pedidos con enlaces de descarga.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CÓMO FUNCIONA -->
+    <section id="como-funciona" class="py-20 bg-slate-900/30 border-t border-slate-800/60">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-extrabold text-white mb-3">¿Cómo funciona GlobalFoto?</h2>
+                <p class="text-slate-400 text-sm">Tres sencillos pasos para encontrar tus fotos de manera instantánea.</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8 relative">
+                <div class="text-center p-6">
+                    <div class="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-2xl font-black text-brand-400 mx-auto mb-4 shadow-lg">1</div>
+                    <h3 class="text-lg font-bold text-white mb-2">Selecciona tu Evento</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Ingresa mediante el enlace directo enviado por tu fotógrafo o escanea el código QR del evento.</p>
+                </div>
+
+                <div class="text-center p-6">
+                    <div class="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-2xl font-black text-brand-accent mx-auto mb-4 shadow-lg">2</div>
+                    <h3 class="text-lg font-bold text-white mb-2">Escanea tu Selfie</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Tómate una selfie. Nuestro motor analiza tus rasgos para buscar coincidencias en la galería.</p>
+                </div>
+
+                <div class="text-center p-6">
+                    <div class="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-2xl font-black text-emerald-400 mx-auto mb-4 shadow-lg">3</div>
+                    <h3 class="text-lg font-bold text-white mb-2">Descarga tus Fotos</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Visualiza únicamente tus apariciones en el evento y descárgalas en la máxima resolución.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PLANES DE PRECIOS -->
+    <section id="precios" class="py-24 relative overflow-hidden">
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-brand-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+        
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center max-w-2xl mx-auto mb-12">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-semibold mb-4">
+                    <i class="fa-solid fa-gift"></i> 14 días gratis en todos los planes
+                </div>
+                <h2 class="text-3xl font-extrabold text-white mb-4">Planes para cada tipo de fotógrafo</h2>
+                <p class="text-slate-400 text-sm">Empieza gratis. Escala cuando crezcas. Sin permanencia.</p>
+                
+                <!-- Toggle Mensual / Anual -->
+                <div class="mt-8 flex items-center justify-center">
+                    <div id="plan-toggle" class="plan-toggle">
+                        <div class="plan-toggle-slider"></div>
+                        <button id="btn-monthly" class="active" onclick="setBilling('monthly')">Mensual</button>
+                        <button id="btn-annual" onclick="setBilling('annual')">
+                            Anual <span class="text-[10px] ml-1 px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-full font-bold">-17%</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nota de comisión -->
+            <div class="max-w-3xl mx-auto mb-10 p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
+                <p class="text-sm text-slate-300">
+                    <i class="fa-solid fa-circle-info text-brand-400 mr-2"></i>
+                    Comisión del <strong class="text-white">10% por venta</strong> en todos los planes. El resto va directo a ti.
+                </p>
+            </div>
+
+            <!-- Grid de planes -->
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                
+                <!-- PLAN GRATIS -->
+                <div class="plan-card">
+                    <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Prueba Gratis</h3>
+                    <div class="mb-6">
+                        <span class="text-4xl font-extrabold text-white">$0</span>
+                        <span class="text-slate-500 text-sm">/ 14 días</span>
+                    </div>
+                    <p class="text-slate-400 text-xs mb-6">Explora GlobalFoto sin compromiso durante dos semanas.</p>
+                    <ul class="space-y-3 mb-8 text-sm">
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> 1 evento activo</li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> Hasta 100 fotos</li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> Marca de agua automática</li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> Enlace público de galería</li>
+                        <li class="flex items-start gap-2 text-slate-500"><i class="fa-solid fa-xmark text-slate-600 mt-1"></i> <span class="line-through">Verificación por selfie</span></li>
+                        <li class="flex items-start gap-2 text-slate-500"><i class="fa-solid fa-xmark text-slate-600 mt-1"></i> <span class="line-through">QR con logo</span></li>
+                        <li class="flex items-start gap-2 text-slate-500"><i class="fa-solid fa-xmark text-slate-600 mt-1"></i> <span class="line-through">Galerías con expiración</span></li>
+                    </ul>
+                    <a href="/panel?tab=register&plan=free" class="block w-full py-3 text-center bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl text-sm transition-all">
+                        Comenzar gratis
+                    </a>
+                </div>
+
+                <!-- PLAN BÁSICO -->
+                <div class="plan-card">
+                    <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Básico</h3>
+                    <div class="mb-6">
+                        <span class="text-4xl font-extrabold text-white plan-price" data-monthly="29.900" data-annual="299.000">$29.900</span>
+                        <span class="text-slate-500 text-sm plan-period">/ mes</span>
+                        <div class="plan-annual-note hidden text-xs text-emerald-400 mt-1"><i class="fa-solid fa-tag"></i> Ahorra 2 meses/año</div>
+                    </div>
+                    <p class="text-slate-400 text-xs mb-6">Para fotógrafos que están empezando a crecer.</p>
+                    <ul class="space-y-3 mb-8 text-sm">
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> 5 eventos activos</li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> Hasta 1.500 fotos</li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> Marca de agua automática</li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> <strong class="text-white">Verificación por selfie</strong></li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> Galerías con expiración</li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> Paquetes de fotos</li>
+                        <li class="flex items-start gap-2 text-slate-500"><i class="fa-solid fa-xmark text-slate-600 mt-1"></i> <span class="line-through">QR con logo</span></li>
+                        <li class="flex items-start gap-2 text-slate-500"><i class="fa-solid fa-xmark text-slate-600 mt-1"></i> <span class="line-through">Usuarios adicionales</span></li>
+                    </ul>
+                    <a href="/panel?tab=register&plan=basic" class="block w-full py-3 text-center bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl text-sm transition-all">
+                        Empezar 14 días gratis
+                    </a>
+                </div>
+
+                <!-- PLAN PRO (DESTACADO) -->
+                <div class="plan-card featured">
+                    <div class="featured-badge"><i class="fa-solid fa-star mr-1"></i> Más popular</div>
+                    <h3 class="text-sm font-bold gradient-text uppercase tracking-wider mb-2 mt-2">Pro</h3>
+                    <div class="mb-6">
+                        <span class="text-4xl font-extrabold text-white plan-price" data-monthly="59.900" data-annual="599.000">$59.900</span>
+                        <span class="text-slate-500 text-sm plan-period">/ mes</span>
+                        <div class="plan-annual-note hidden text-xs text-emerald-400 mt-1"><i class="fa-solid fa-tag"></i> Ahorra 2 meses/año</div>
+                    </div>
+                    <p class="text-slate-400 text-xs mb-6">El plan ideal para fotógrafos profesionales activos.</p>
+                    <ul class="space-y-3 mb-8 text-sm">
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> <strong class="text-white">Eventos ilimitados</strong></li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> Hasta 10.000 fotos</li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> Marca de agua automática</li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> <strong class="text-white">Verificación por selfie</strong></li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> <strong class="text-white">QR con tu logo</strong></li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> Galerías con expiración</li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> 2 usuarios del equipo</li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> Soporte prioritario</li>
+                    </ul>
+                    <a href="/panel?tab=register&plan=pro" class="block w-full py-3 text-center bg-gradient-to-r from-brand-600 to-brand-accent hover:opacity-95 text-white font-semibold rounded-xl text-sm transition-all shadow-lg shadow-brand-500/30">
+                        Empezar 14 días gratis
+                    </a>
+                </div>
+
+                <!-- PLAN ESTUDIO -->
+                <div class="plan-card">
+                    <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Estudio</h3>
+                    <div class="mb-6">
+                        <span class="text-4xl font-extrabold text-white plan-price" data-monthly="99.900" data-annual="999.000">$99.900</span>
+                        <span class="text-slate-500 text-sm plan-period">/ mes</span>
+                        <div class="plan-annual-note hidden text-xs text-emerald-400 mt-1"><i class="fa-solid fa-tag"></i> Ahorra 2 meses/año</div>
+                    </div>
+                    <p class="text-slate-400 text-xs mb-6">Para agencias y estudios con múltiples fotógrafos.</p>
+                    <ul class="space-y-3 mb-8 text-sm">
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> <strong class="text-white">Eventos ilimitados</strong></li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> <strong class="text-white">Fotos ilimitadas</strong></li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> Marca de agua automática</li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> <strong class="text-white">Verificación por selfie</strong></li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> <strong class="text-white">QR con tu logo</strong></li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> Galerías con expiración</li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> <strong class="text-white">5 usuarios del equipo</strong></li>
+                        <li class="flex items-start gap-2 text-slate-300"><i class="fa-solid fa-check text-emerald-400 mt-1"></i> <strong class="text-white">Soporte dedicado 24/7</strong></li>
+                    </ul>
+                    <a href="/panel?tab=register&plan=studio" class="block w-full py-3 text-center bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl text-sm transition-all">
+                        Empezar 14 días gratis
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA FINAL -->
+    <section class="py-20 relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-brand-600/20 to-brand-accent/20"></div>
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+            <h2 class="text-3xl md:text-4xl font-extrabold text-white mb-4">¿Listo para llevar tu negocio al siguiente nivel?</h2>
+            <p class="text-slate-300 text-lg mb-8">Únete a GlobalFoto hoy. 14 días gratis, sin tarjeta de crédito.</p>
+            <a href="/panel?tab=register" class="inline-block px-8 py-4 bg-gradient-to-r from-brand-600 to-brand-accent hover:opacity-95 text-white font-bold text-base rounded-xl shadow-lg shadow-brand-500/30 transition-all hover:-translate-y-0.5">
+                Crear mi cuenta gratis <i class="fa-solid fa-arrow-right ml-2"></i>
+            </a>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="bg-slate-950 border-t border-slate-900 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center text-white text-sm font-bold">
+                    <i class="fa-solid fa-camera"></i>
+                </div>
+                <span class="text-lg font-bold text-white">GlobalFoto</span>
+            </div>
+            <p class="text-slate-500 text-xs">© 2026 GlobalFoto. Todos los derechos reservados.</p>
+            <div class="flex items-center gap-6 text-slate-400 text-xs">
+                <a href="#" class="hover:text-white transition-colors">Términos de Servicio</a>
+                <a href="#" class="hover:text-white transition-colors">Privacidad</a>
+                <a href="#" class="hover:text-white transition-colors">Contacto</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Toggle de planes Mensual/Anual
+        let currentBilling = 'monthly';
+        function setBilling(type) {
+            currentBilling = type;
+            const toggle = document.getElementById('plan-toggle');
+            const btnMonthly = document.getElementById('btn-monthly');
+            const btnAnnual = document.getElementById('btn-annual');
+            
+            if (type === 'annual') {
+                toggle.classList.add('annual');
+                btnMonthly.classList.remove('active');
+                btnAnnual.classList.add('active');
+            } else {
+                toggle.classList.remove('annual');
+                btnMonthly.classList.add('active');
+                btnAnnual.classList.remove('active');
+            }
+            
+            // Actualizar precios
+            document.querySelectorAll('.plan-price').forEach(el => {
+                const price = el.dataset[type];
+                if (price) el.textContent = `$${price}`;
+            });
+            document.querySelectorAll('.plan-period').forEach(el => {
+                el.textContent = type === 'annual' ? '/ año' : '/ mes';
+            });
+            document.querySelectorAll('.plan-annual-note').forEach(el => {
+                el.classList.toggle('hidden', type !== 'annual');
+            });
+        }
+
+        // Demo de búsqueda por selfie
+        const dropZone = document.getElementById('drop-zone');
+        const selfieInput = document.getElementById('selfie-input');
+        const selfiePreview = document.getElementById('selfie-preview');
+        const uploadPrompt = document.getElementById('upload-prompt');
+
+        dropZone.addEventListener('click', () => selfieInput.click());
+
+        selfieInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    selfiePreview.src = event.target.result;
+                    selfiePreview.classList.remove('hidden');
+                    uploadPrompt.classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function simulateSearch() {
+            const scanner = document.getElementById('scanner-line');
+            const results = document.getElementById('demo-results');
+            scanner.classList.remove('hidden');
+            results.classList.add('hidden');
+            setTimeout(() => {
+                scanner.classList.add('hidden');
+                results.classList.remove('hidden');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
