@@ -22,60 +22,54 @@
                 <p id="pubEventDetails"></p>
             </div>
             
-            <!-- GATE DE SELFIE - LAYOUT REORGANIZADO -->
+            <!-- GATE DE SELFIE - OVERLAY SOLO EN LA CÁMARA -->
             <div id="selfieGate" class="hidden" style="max-width: 420px; margin: 0 auto 30px; background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px 24px; text-align: center;">
                 <h2 style="color: white; font-size: 22px; margin-bottom: 8px;">🤳 Verificación de identidad</h2>
                 <p style="color: #94a3b8; font-size: 14px; margin-bottom: 24px; line-height: 1.5;">Esta galería protege tu privacidad: solo verás las fotos donde apareces. Tómate una selfie para filtrarlas.</p>
                 
-                <!-- Contenedor de cámara con óvalo guía -->
+                <!-- Contenedor de cámara CON overlay oscuro SOLO aquí -->
                 <div id="selfieCameraContainer" style="position: relative; width: 240px; height: 320px; margin: 0 auto 16px; display: none;">
                     <video id="selfieVideo" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;"></video>
                     <canvas id="selfieCanvas" style="display: none;"></canvas>
                     
-                    <!-- Overlay con óvalo guía (borde brillante) -->
-                    <div id="selfieOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
-                        <div style="position: absolute; top: 5%; left: 5%; width: 90%; height: 90%; border: 3px solid rgba(255,255,255,0.95); border-radius: 50%; box-shadow: 0 0 0 9999px rgba(0,0,0,0.6);"></div>
+                    <!-- Overlay oscuro SOLO dentro de la cámara -->
+                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
+                        <div style="position: absolute; top: 5%; left: 5%; width: 90%; height: 90%; border: 3px solid rgba(255,255,255,0.95); border-radius: 50%; box-shadow: 0 0 0 9999px rgba(0,0,0,0.7);"></div>
                     </div>
                 </div>
                 
-                <!-- Texto guía DEBAJO del óvalo -->
+                <!-- Texto guía (FUERA del overlay, se ve claro) -->
                 <p id="selfieGuideText" class="hidden" style="color: white; font-size: 14px; font-weight: 600; margin: 12px 0 20px 0; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">👤 Coloca tu rostro dentro del óvalo</p>
                 
                 <!-- Preview de selfie tomada -->
                 <img id="selfiePreview" class="hidden" alt="Tu selfie" style="width: 200px; height: 200px; border-radius: 50%; object-fit: cover; margin: 0 auto 16px; display: none; border: 4px solid var(--accent);">
                 
-                <!-- Botones organizados -->
+                <!-- Botones (FUERA del overlay, se ven claros) -->
                 <div id="selfieButtonsContainer" style="display: flex; flex-direction: column; gap: 12px; align-items: center; margin-top: 8px;">
                     
-                    <!-- Botón Encender cámara -->
                     <button id="btnStartCamera" class="btn-primary" style="width: 100%; max-width: 280px; padding: 14px 24px; font-size: 15px; font-weight: 600;">
                         <i class="fa-solid fa-video"></i> Encender cámara
                     </button>
                     
-                    <!-- Botón Tomar selfie (GRANDE Y VISIBLE) -->
                     <button id="btnCapture" class="hidden" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 18px 40px; border-radius: 50px; font-size: 18px; font-weight: 700; border: 3px solid white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0 auto; box-shadow: 0 6px 20px rgba(16,185,129,0.5); transition: all 0.2s; min-width: 240px;">
                         <i class="fa-solid fa-camera" style="font-size: 22px;"></i>
                         Tomar selfie
                     </button>
                     
-                    <!-- Botón Repetir selfie -->
                     <button id="btnRetake" class="hidden" style="background: white; color: var(--accent); padding: 14px 28px; border-radius: 50px; font-size: 15px; font-weight: 600; border: 2px solid var(--accent); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
                         <i class="fa-solid fa-rotate-left"></i> Repetir selfie
                     </button>
                     
-                    <!-- Botón Verificar -->
                     <button id="btnVerify" class="hidden btn-primary" style="width: 100%; max-width: 280px; padding: 14px 24px; font-size: 15px; font-weight: 600;">
                         <i class="fa-solid fa-check-circle"></i> Verificar y ver mis fotos
                     </button>
                     
-                    <!-- Fallback: subir foto -->
                     <label id="selfieFileFallback" class="hidden" style="font-size: 13px; color: #94a3b8; cursor: pointer; text-decoration: underline; margin-top: 8px;">
                         O sube una foto tuya
                         <input type="file" id="selfieFileFallbackInput" accept="image/*" capture="user" style="display: none;">
                     </label>
                 </div>
                 
-                <!-- Estados y progreso -->
                 <div id="selfieStatus" style="color: #94a3b8; font-size: 13px; margin-top: 16px; min-height: 20px;"></div>
                 <div id="selfieProgress" style="color: #60a5fa; font-size: 14px; font-weight: 600; margin-top: 8px; min-height: 20px;"></div>
                 
