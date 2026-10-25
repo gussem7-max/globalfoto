@@ -130,43 +130,19 @@
             opacity: 0;
             border: 3px solid rgba(168, 85, 247, 0.5);
         }
-        .photo-center::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1));
-        }
-        .scanner-overlay {
-            position: absolute;
-            inset: 0;
-            border-radius: 14px;
-            overflow: hidden;
-            pointer-events: none;
-            z-index: 5;
-        }
-        .scanner-line-inner {
-            position: absolute;
-            left: 0; right: 0;
-            height: 30px;
-            background: linear-gradient(to bottom, transparent, rgba(168, 85, 247, 0.6), transparent);
-            animation: scan 2.5s infinite ease-in-out;
-            box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
-        }
         
+        /* Badge de coincidencia (usado en la demo) */
         .match-badge {
             position: absolute;
-            bottom: 12px;
-            left: 50%;
-            transform: translateX(-50%);
             background: rgba(15, 23, 42, 0.9);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(168, 85, 247, 0.5);
-            padding: 4px 12px;
+            padding: 5px 14px;
             border-radius: 50px;
             font-size: 11px;
             font-weight: 700;
             color: white;
-            z-index: 10;
+            z-index: 30;
             animation: pulse 2s infinite;
             white-space: nowrap;
         }
@@ -269,6 +245,7 @@
     <!-- NAV BAR -->
     <nav class="fixed top-0 left-0 w-full z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/80 transition-all duration-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <!-- Logo -->
             <a href="/" class="flex items-center gap-3 group">
                 <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-brand-accent flex items-center justify-center shadow-lg shadow-brand-500/20 group-hover:scale-105 transition-transform">
                     <i class="fa-solid fa-camera-retro text-white text-xl"></i>
@@ -276,6 +253,7 @@
                 <span class="text-2xl font-extrabold tracking-tight text-white">Global<span class="gradient-text">Foto</span></span>
             </a>
 
+            <!-- Links de Navegación (solo escritorio) -->
             <div class="hidden md:flex items-center gap-8 font-medium text-slate-300 text-sm">
                 <a href="#inicio" class="hover:text-white transition-colors">Inicio</a>
                 <a href="#caracteristicas" class="hover:text-white transition-colors">Características</a>
@@ -284,7 +262,8 @@
                 <a href="#precios" class="hover:text-white transition-colors">Planes</a>
             </div>
 
-            <div class="flex items-center gap-3">
+            <!-- Botones CTA (solo escritorio) -->
+            <div class="hidden md:flex items-center gap-3">
                 <a href="/panel" class="px-4 py-2.5 text-sm font-semibold text-slate-200 hover:text-white hover:bg-slate-800/60 rounded-lg transition-all">
                     Iniciar Sesión
                 </a>
@@ -292,10 +271,45 @@
                     Crear Cuenta
                 </a>
             </div>
+
+            <!-- Botón hamburguesa (solo móvil) -->
+            <button id="menu-btn" onclick="toggleMenu()" class="md:hidden w-11 h-11 flex items-center justify-center rounded-xl bg-slate-800/70 border border-slate-700 text-slate-200 hover:text-white hover:bg-slate-700 transition-all" aria-label="Abrir menú">
+                <i id="menu-icon" class="fa-solid fa-bars text-lg"></i>
+            </button>
+        </div>
+
+        <!-- MENÚ MÓVIL DESPLEGABLE -->
+        <div id="mobile-menu" class="hidden md:hidden bg-slate-950/95 backdrop-blur-md border-t border-slate-800">
+            <div class="px-4 py-6 space-y-1">
+                <a href="#inicio" onclick="closeMenu()" class="block py-3 px-4 rounded-lg text-slate-200 font-medium hover:bg-slate-800/60 hover:text-white transition-all">
+                    <i class="fa-solid fa-house w-6 text-brand-400"></i> Inicio
+                </a>
+                <a href="#caracteristicas" onclick="closeMenu()" class="block py-3 px-4 rounded-lg text-slate-200 font-medium hover:bg-slate-800/60 hover:text-white transition-all">
+                    <i class="fa-solid fa-star w-6 text-brand-400"></i> Características
+                </a>
+                <a href="#demo-selfie" onclick="closeMenu()" class="block py-3 px-4 rounded-lg text-slate-200 font-medium hover:bg-slate-800/60 hover:text-white transition-all">
+                    <i class="fa-solid fa-face-smile w-6 text-brand-400"></i> Búsqueda IA
+                </a>
+                <a href="#como-funciona" onclick="closeMenu()" class="block py-3 px-4 rounded-lg text-slate-200 font-medium hover:bg-slate-800/60 hover:text-white transition-all">
+                    <i class="fa-solid fa-list-ol w-6 text-brand-400"></i> Cómo Funciona
+                </a>
+                <a href="#precios" onclick="closeMenu()" class="block py-3 px-4 rounded-lg text-slate-200 font-medium hover:bg-slate-800/60 hover:text-white transition-all">
+                    <i class="fa-solid fa-tags w-6 text-brand-400"></i> Planes
+                </a>
+                
+                <div class="pt-4 mt-4 border-t border-slate-800 space-y-3">
+                    <a href="/panel" class="block w-full py-3 text-center text-sm font-semibold text-slate-200 bg-slate-800/70 border border-slate-700 hover:bg-slate-700 rounded-xl transition-all">
+                        Iniciar Sesión
+                    </a>
+                    <a href="/panel?tab=register" class="block w-full py-3 text-center text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-brand-accent hover:opacity-95 rounded-xl shadow-md shadow-brand-500/25 transition-all">
+                        Crear Cuenta
+                    </a>
+                </div>
+            </div>
         </div>
     </nav>
 
-    <!-- HERO SECTION CON FOTOS ANIMADAS -->
+    <!-- HERO SECTION CON FOTOS ANIMADAS (SIN ESCÁNER) -->
     <section id="inicio" class="relative pt-32 pb-20 md:pt-44 md:pb-32 overflow-hidden">
         <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-brand-600/20 rounded-full blur-[120px] pointer-events-none"></div>
         <div class="absolute top-1/3 right-10 w-[300px] h-[300px] bg-brand-accent/20 rounded-full blur-[100px] pointer-events-none"></div>
@@ -336,6 +350,7 @@
                     </div>
                 </div>
 
+                <!-- Fotos flotantes LIMPIAS (sin escáner ni badge) -->
                 <div class="lg:col-span-5 relative h-[500px] hidden lg:block">
                     <div class="hero-photo photo-1">
                         <img src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=400&q=80" alt="Boda">
@@ -351,13 +366,7 @@
                     </div>
                     
                     <div class="hero-photo photo-center">
-                        <img src="https://images.unsplash.com/photo-1524638431109-93d95c968f03?auto=format&fit=crop&w=600&q=80" alt="Selfie match">
-                        <div class="scanner-overlay">
-                            <div class="scanner-line-inner"></div>
-                        </div>
-                        <div class="match-badge">
-                            <i class="fa-solid fa-face-smile-beam mr-1"></i> Coincidencia 98%
-                        </div>
+                        <img src="https://images.unsplash.com/photo-1524638431109-93d95c968f03?auto=format&fit=crop&w=600&q=80" alt="Retrato">
                     </div>
                 </div>
 
@@ -365,7 +374,7 @@
         </div>
     </section>
 
-    <!-- DEMO INTERACTIVA DE BÚSQUEDA POR SELFIE -->
+    <!-- DEMO INTERACTIVA CON ESCÁNER PERMANENTE -->
     <section id="demo-selfie" class="py-20 bg-slate-900/50 border-y border-slate-800/60 relative">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-12">
@@ -376,25 +385,30 @@
             <div class="bg-slate-950 p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-xl max-w-3xl mx-auto">
                 <div class="grid md:grid-cols-2 gap-8 items-center">
                     
-                    <!-- Zona de escaneo con foto de ejemplo -->
+                    <!-- Zona de escaneo con foto y escáner permanente -->
                     <div>
                         <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">1. Rostro a buscar</label>
                         <div id="drop-zone" class="relative h-72 border-2 border-dashed border-slate-700 hover:border-brand-500 rounded-xl overflow-hidden cursor-pointer transition-colors bg-slate-900/40">
                             
-                            <!-- Foto de ejemplo precargada (una de las del hero) -->
+                            <!-- Foto de ejemplo precargada -->
                             <img id="demo-photo" src="https://images.unsplash.com/photo-1524638431109-93d95c968f03?auto=format&fit=crop&w=600&q=80" alt="Foto de ejemplo" class="absolute inset-0 w-full h-full object-cover">
                             
                             <!-- Etiqueta de foto de ejemplo -->
                             <span id="demo-photo-tag" class="absolute top-3 left-3 z-10 px-2.5 py-1 bg-slate-950/80 backdrop-blur-sm border border-slate-700 rounded-full text-[10px] font-semibold text-slate-300">
                                 <i class="fa-solid fa-image mr-1 text-brand-400"></i> Foto de ejemplo
                             </span>
+
+                            <!-- Badge de coincidencia (aparece al escanear) -->
+                            <div id="demo-match-badge" class="match-badge hidden" style="top: 12px; bottom: auto; left: auto; right: 12px;">
+                                <i class="fa-solid fa-face-smile-beam mr-1"></i> Coincidencia 97%
+                            </div>
                             
-                            <!-- Scanner Effect Overlay -->
-                            <div id="scanner-line" class="hidden absolute inset-0 rounded-xl overflow-hidden pointer-events-none z-20">
+                            <!-- ESCÁNER PERMANENTE -->
+                            <div id="scanner-line" class="absolute inset-0 rounded-xl overflow-hidden pointer-events-none z-20">
                                 <div class="w-full h-12 scan-animation border-b-2 border-brand-accent"></div>
                             </div>
 
-                            <!-- Prompt de subida (tarjeta semitransparente abajo) -->
+                            <!-- Prompt de subida -->
                             <div id="upload-prompt" class="absolute bottom-3 left-3 right-3 z-10 bg-slate-950/80 backdrop-blur-sm border border-slate-700/60 rounded-lg p-3 text-center space-y-1">
                                 <p class="text-xs text-slate-200 font-medium"><i class="fa-solid fa-cloud-arrow-up text-brand-400 mr-1"></i> Arrastra tu foto o <span class="text-brand-400 underline">examina</span></p>
                                 <p class="text-[10px] text-slate-500">JPG, PNG (Máx 5MB) — o escanea la de ejemplo</p>
@@ -700,6 +714,28 @@
     </footer>
 
     <script>
+        // ===== MENÚ MÓVIL =====
+        function toggleMenu() {
+            const menu = document.getElementById('mobile-menu');
+            const icon = document.getElementById('menu-icon');
+            const isOpen = !menu.classList.contains('hidden');
+            if (isOpen) {
+                menu.classList.add('hidden');
+                icon.classList.add('fa-bars');
+                icon.classList.remove('fa-xmark');
+            } else {
+                menu.classList.remove('hidden');
+                icon.classList.remove('fa-bars');
+                icon.classList.add('fa-xmark');
+            }
+        }
+        function closeMenu() {
+            document.getElementById('mobile-menu').classList.add('hidden');
+            const icon = document.getElementById('menu-icon');
+            icon.classList.add('fa-bars');
+            icon.classList.remove('fa-xmark');
+        }
+
         // Toggle de planes Mensual/Anual
         function setBilling(type) {
             const toggle = document.getElementById('plan-toggle');
@@ -735,6 +771,7 @@
         const uploadPrompt = document.getElementById('upload-prompt');
         const demoPhoto = document.getElementById('demo-photo');
         const demoPhotoTag = document.getElementById('demo-photo-tag');
+        const demoMatchBadge = document.getElementById('demo-match-badge');
 
         dropZone.addEventListener('click', () => selfieInput.click());
 
@@ -748,24 +785,24 @@
                     uploadPrompt.classList.add('hidden');
                     demoPhoto.classList.add('hidden');
                     demoPhotoTag.classList.add('hidden');
+                    demoMatchBadge.classList.add('hidden');
                 };
                 reader.readAsDataURL(file);
             }
         });
 
         function simulateSearch() {
-            const scanner = document.getElementById('scanner-line');
             const results = document.getElementById('demo-results');
             const btn = document.getElementById('btn-search');
             
             results.classList.add('hidden');
-            scanner.classList.remove('hidden');
+            demoMatchBadge.classList.add('hidden');
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Analizando rostro...';
             
             setTimeout(() => {
-                scanner.classList.add('hidden');
                 results.classList.remove('hidden');
+                demoMatchBadge.classList.remove('hidden');
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i> Escanear y Encontrar Fotos';
             }, 2500);
