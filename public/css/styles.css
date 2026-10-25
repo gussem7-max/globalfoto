@@ -308,3 +308,9 @@ input:checked + .toggle-slider:before { transform: translateX(24px); }
 .manage-label { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
 .manage-url { font-size: 11px; padding: 8px; width: 100%; color: var(--text-muted); background: var(--bg-input); border: 1px solid var(--border-strong); border-radius: 8px; }
 #eventModal, #packageModal, #orderModal, #qrModal, #editUserModal { z-index: 1100; }
+
+/* ===== AJUSTES FINOS GALERÍA PÚBLICA ===== */
+.public-wrapper a { color: #a5b4fc; }
+.public-wrapper a:hover { color: white; }
+#pubEventTitle { color: white; }
+#pubEventDetails { color: var(--text-muted); }

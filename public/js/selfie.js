@@ -12,13 +12,14 @@ const MATCH_THRESHOLD = 0.6;
 const SELFIE_MAX_DIM = 640;
 
 function el(id) { return document.getElementById(id); }
-function setStatus(text) { el('selfieStatus').textContent = text; }
-function setProgress(text) { el('selfieProgress').textContent = text; }
+function setStatus(text) { const e = el('selfieStatus'); if (e) e.textContent = text; }
+function setProgress(text) { const e = el('selfieProgress'); if (e) e.textContent = text; }
 
-function showSelfieGate() { el('selfieGate').classList.remove('hidden'); }
+function showSelfieGate() { const e = el('selfieGate'); if (e) e.classList.remove('hidden'); }
 
 function hideSelfieGate() {
-    el('selfieGate').classList.add('hidden');
+    const e = el('selfieGate');
+    if (e) e.classList.add('hidden');
     stopCamera();
 }
 
@@ -39,15 +40,15 @@ async function startCamera() {
         selfieStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
         video.srcObject = selfieStream;
         await video.play();
-        container.style.display = 'block';
-        guideText.classList.remove('hidden');
-        el('btnStartCamera').classList.add('hidden');
-        el('btnCapture').classList.remove('hidden');
+        if (container) container.style.display = 'block';
+        if (guideText) guideText.classList.remove('hidden');
+        const btn = el('btnStartCamera'); if (btn) btn.classList.add('hidden');
+        const cap = el('btnCapture'); if (cap) cap.classList.remove('hidden');
         setStatus('Centra tu rostro en el óvalo y toma la selfie.');
     } catch (err) {
         console.error('Error de cámara:', err);
         setStatus('No pudimos acceder a la cámara. Usa la opción de subir una foto.');
-        el('selfieFileFallback').classList.remove('hidden');
+        const fb = el('selfieFileFallback'); if (fb) fb.classList.remove('hidden');
     }
 }
 
@@ -68,18 +69,20 @@ function showSelfieReady() {
     const preview = el('selfiePreview');
     const container = el('selfieCameraContainer');
     const guideText = el('selfieGuideText');
-    
-    preview.src = el('selfieCanvas').toDataURL('image/jpeg', 0.9);
-    preview.classList.remove('hidden');
-    preview.style.display = 'block';
-    container.style.display = 'none';
-    guideText.classList.add('hidden');
-    
-    el('btnStartCamera').classList.add('hidden');
-    el('btnCapture').classList.add('hidden');
-    el('btnRetake').classList.remove('hidden');
-    el('btnVerify').classList.remove('hidden');
-    el('btnVerify').disabled = false;
+
+    if (preview) {
+        preview.src = el('selfieCanvas').toDataURL('image/jpeg', 0.9);
+        preview.classList.remove('hidden');
+        preview.style.display = 'block';
+    }
+    if (container) container.style.display = 'none';
+    if (guideText) guideText.classList.add('hidden');
+
+    const btnStart = el('btnStartCamera'); if (btnStart) btnStart.classList.add('hidden');
+    const btnCap = el('btnCapture'); if (btnCap) btnCap.classList.add('hidden');
+    const btnRet = el('btnRetake'); if (btnRet) btnRet.classList.remove('hidden');
+    const btnVer = el('btnVerify');
+    if (btnVer) { btnVer.classList.remove('hidden'); btnVer.disabled = false; }
     setStatus('Selfie lista. Presiona "Verificar y ver mis fotos".');
 }
 
@@ -91,11 +94,11 @@ function captureSelfie() {
 }
 
 function retakeSelfie() {
-    el('selfiePreview').classList.add('hidden');
-    el('selfiePreview').style.display = 'none';
-    el('btnVerify').classList.add('hidden');
-    el('btnRetake').classList.add('hidden');
-    el('btnCapture').classList.remove('hidden');
+    const preview = el('selfiePreview');
+    if (preview) { preview.classList.add('hidden'); preview.style.display = 'none'; }
+    const btnVer = el('btnVerify'); if (btnVer) btnVer.classList.add('hidden');
+    const btnRet = el('btnRetake'); if (btnRet) btnRet.classList.add('hidden');
+    const btnCap = el('btnCapture'); if (btnCap) btnCap.classList.remove('hidden');
     setStatus('');
     setProgress('');
     startCamera();
@@ -129,11 +132,11 @@ async function verifySelfie() {
     const btn = el('btnVerify');
     setStatus('Preparando verificación...');
     setProgress('');
-    btn.disabled = true;
+    if (btn) btn.disabled = true;
     try {
         if (typeof faceapi === 'undefined') {
-            setStatus('⚠️ El motor de reconocimiento (face-api) no se cargó. Revisa tu conexión o la configuración de seguridad (CSP) del servidor.');
-            btn.disabled = false;
+            setStatus('⚠️ El motor de reconocimiento (face-api) no se cargó. Revisa tu conexión.');
+            if (btn) btn.disabled = false;
             return;
         }
 
@@ -142,8 +145,8 @@ async function verifySelfie() {
             await loadFaceModels();
         } catch (m) {
             console.error('Error cargando modelos:', m);
-            setStatus('⚠️ No se pudieron descargar los modelos de reconocimiento. Detalle: ' + (m.message || m));
-            btn.disabled = false;
+            setStatus('️ No se pudieron descargar los modelos. Detalle: ' + (m.message || m));
+            if (btn) btn.disabled = false;
             return;
         }
 
@@ -153,17 +156,17 @@ async function verifySelfie() {
         } catch (d) {
             console.error('Error procesando selfie:', d);
             setStatus('⚠️ Error al procesar tu selfie. Detalle: ' + (d.message || d));
-            btn.disabled = false;
+            if (btn) btn.disabled = false;
             return;
         }
         if (!selfieDets || selfieDets.length === 0) {
             setStatus('No se detectó un rostro en tu selfie. Intenta con mejor iluminación, mirando de frente y sin taparte la cara.');
-            btn.disabled = false;
+            if (btn) btn.disabled = false;
             return;
         }
         selfieDescriptor = selfieDets[0].descriptor;
 
-        const total = pendingGalleryPhotos.length;
+        const total = currentPhotos.length;
         const matched = [];
         let failed = 0;
         let totalFaces = 0;
@@ -171,7 +174,7 @@ async function verifySelfie() {
 
         for (let i = 0; i < total; i++) {
             setProgress(`Analizando foto ${i + 1} de ${total}...`);
-            const p = pendingGalleryPhotos[i];
+            const p = currentPhotos[i];
             try {
                 const img = await faceapi.fetchImage(p.url);
                 const dets = await detectFaces(img);
@@ -191,15 +194,15 @@ async function verifySelfie() {
         setProgress('');
 
         if (total > 0 && failed === total) {
-            setStatus('⚠️ No se pudieron descargar las fotos de la galería para analizarlas. Esto suele deberse a que falta configurar CORS en el bucket de S3.');
-            btn.disabled = false;
+            setStatus('⚠️ No se pudieron descargar las fotos para analizarlas. Esto suele deberse a CORS en el bucket de S3.');
+            if (btn) btn.disabled = false;
             return;
         }
 
         if (matched.length === 0) {
             const distText = bestDistance === Infinity ? 'n/a' : bestDistance.toFixed(2);
-            setStatus(`No encontramos fotos tuyas en esta galería. [Diagnóstico: rostros detectados=${totalFaces}, mejor distancia=${distText}, umbral=${MATCH_THRESHOLD}] Si crees que es un error, intenta con otra selfie o contacta al fotógrafo.`);
-            btn.disabled = false;
+            setStatus(`No encontramos fotos tuyas en esta galería. [Diagnóstico: rostros=${totalFaces}, mejor distancia=${distText}, umbral=${MATCH_THRESHOLD}] Si crees que es un error, intenta con otra selfie o contacta al fotógrafo.`);
+            if (btn) btn.disabled = false;
             return;
         }
 
@@ -208,15 +211,15 @@ async function verifySelfie() {
             revealGallery(matched);
         } catch (r) {
             console.error('Error al mostrar galería:', r);
-            setStatus('⚠️ Error al mostrar tus fotos. Detalle: ' + (r.message || r));
-            btn.disabled = false;
+            setStatus('️ Error al mostrar tus fotos. Detalle: ' + (r.message || r));
+            if (btn) btn.disabled = false;
             return;
         }
     } catch (err) {
         console.error('Error general de verificación:', err);
         setProgress('');
         setStatus('⚠️ Ocurrió un error durante la verificación. Detalle: ' + (err && err.message ? err.message : err));
-        btn.disabled = false;
+        if (btn) btn.disabled = false;
     }
 }
 
