@@ -616,44 +616,56 @@ async function overlayLogo(canvas) {
         ? currentUser.logo_url 
         : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzI1NjNlYiIvPjx0ZXh0IHg9IjUwIiB5PSI2NSIgZm9udC1zaXplPSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC13ZWlnaHQ9ImJvbGQiPkdGPC90ZXh0Pjwvc3ZnPg==';
     
-    const logoImg = new Image();
-    logoImg.crossOrigin = 'anonymous';
-    
     return new Promise((resolve) => {
+        // Crear imagen con cache busting para forzar recarga
+        const logoImg = new Image();
+        logoImg.crossOrigin = 'anonymous';
+        
         logoImg.onload = () => {
             const ctx = canvas.getContext('2d');
             const canvasSize = canvas.width;
             
-            // Tamaño del logo: 15% del QR (más pequeño = más profesional)
-            const logoSize = canvasSize * 0.15;
-            
-            // Espacio en blanco alrededor del logo (padding)
-            const padding = 8;
+            // Logo al 12% del canvas (48px en canvas de 400px)
+            const logoSize = canvasSize * 0.12;
+            const padding = 12;
             const totalSize = logoSize + (padding * 2);
             
             const x = (canvasSize - totalSize) / 2;
             const y = (canvasSize - totalSize) / 2;
             
-            // Fondo blanco más grande (para que el QR siga siendo legible)
+            // Mejorar calidad de renderizado
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            
+            // Fondo blanco
             ctx.fillStyle = '#ffffff';
-            ctx.fillRect(x - 2, y - 2, totalSize + 4, totalSize + 4);
+            ctx.fillRect(x - 4, y - 4, totalSize + 8, totalSize + 8);
             
-            // Borde sutil gris claro
-            ctx.strokeStyle = '#e2e8f0';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x - 2, y - 2, totalSize + 4, totalSize + 4);
+            // Borde gris
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x - 4, y - 4, totalSize + 8, totalSize + 8);
             
-            // Dibujar logo centrado dentro del padding
+            // Dibujar logo con alta calidad
             ctx.drawImage(logoImg, x + padding, y + padding, logoSize, logoSize);
             
-            console.log('✅ Logo superpuesto en el QR (tamaño: 15%, con padding)');
+            console.log('✅ Logo renderizado:', {
+                originalSize: `${logoImg.width}x${logoImg.height}`,
+                renderedSize: `${logoSize}x${logoSize}`,
+                url: logoUrl
+            });
             resolve();
         };
+        
         logoImg.onerror = () => {
+            console.error('❌ Error cargando logo:', logoUrl);
             console.warn('⚠️ No se pudo cargar el logo');
             resolve();
         };
-        logoImg.src = logoUrl;
+        
+        // Agregar timestamp para forzar recarga y evitar caché
+        const urlWithCache = `${logoUrl}${logoUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
+        logoImg.src = urlWithCache;
     });
 }
 
