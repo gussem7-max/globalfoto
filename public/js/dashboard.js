@@ -161,12 +161,15 @@ async function loadEvents() {
                         </div>
                     </div>
                     <div class="event-actions" onclick="event.stopPropagation()">
-                        <button class="btn-action" onclick="openModal(${ev.id})" title="Editar datos"><i class="fa-solid fa-pen"></i></button>
-                        <button class="btn-action" onclick="deleteEvent(${ev.id})" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
-                        <button class="btn-chevron" id="eventChevron_${ev.id}" onclick="toggleEventCard(${ev.id})" title="Expandir / Colapsar"><i class="fa-solid fa-chevron-down"></i></button>
+                        <button class="btn-action" onclick="toggleEventCard(${ev.id})" title="Gestionar evento"><i class="fa-solid fa-pen"></i></button>
                     </div>
                 </div>
+                <div class="event-thumbs" id="eventThumbs_${ev.id}"></div>
                 <div class="event-body collapsed" id="eventBody_${ev.id}">
+                    <div class="event-manage-actions">
+                        <button class="btn-secondary" onclick="openModal(${ev.id})"><i class="fa-solid fa-pen"></i> Editar datos</button>
+                        <button class="btn-danger" onclick="deleteEvent(${ev.id})"><i class="fa-solid fa-trash"></i> Eliminar evento</button>
+                    </div>
                     <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 8px;">
                         <span style="font-size: 11px; font-weight: 700; color: #818cf8; background: rgba(99,102,241,0.12); padding: 4px 10px; border-radius: 6px; letter-spacing: 0.5px; font-family: monospace;">${ev.event_code || 'SIN-CODIGO'}</span>
                         <button class="btn-action" onclick="copyText('${ev.event_code || ''}')" title="Copiar código del evento"><i class="fa-solid fa-copy"></i></button>
@@ -210,20 +213,39 @@ async function loadEvents() {
     } catch (err) { console.error('Error al cargar eventos:', err); }
 }
 
-// Expandir / colapsar tarjeta de evento
+// Acordeón exclusivo: solo una tarjeta abierta a la vez
 function toggleEventCard(eventId) {
-    const body = document.getElementById(`eventBody_${eventId}`);
-    const chev = document.getElementById(`eventChevron_${eventId}`);
-    if (!body) return;
-    const isCollapsed = body.classList.toggle('collapsed');
-    if (chev) chev.classList.toggle('open', !isCollapsed);
+    const target = document.getElementById(`eventBody_${eventId}`);
+    if (!target) return;
+    const willOpen = target.classList.contains('collapsed');
+    document.querySelectorAll('.event-body').forEach(b => b.classList.add('collapsed'));
+    if (willOpen) target.classList.remove('collapsed');
 }
 
 function renderPhotosPreview(eventId, photos) {
     const grid = document.getElementById(`photosGrid_${eventId}`);
     const countLabel = document.getElementById(`photosCount_${eventId}`);
     const summary = document.getElementById(`eventSummary_${eventId}`);
+    const thumbsRow = document.getElementById(`eventThumbs_${eventId}`);
+
     if (summary) summary.textContent = `${photos.length} foto${photos.length !== 1 ? 's' : ''}`;
+
+    // Fila compacta siempre visible (tarjeta cerrada)
+    if (thumbsRow) {
+        if (photos.length === 0) {
+            thumbsRow.innerHTML = '<span class="thumb-empty">Sin fotos aún</span>';
+        } else {
+            const maxRow = 5;
+            const shown = photos.slice(0, maxRow).map(p =>
+                `<img src="${p.preview_url || p.url}" onclick="openLightbox('${p.preview_url || p.url}')" title="Ver foto">`
+            ).join('');
+            const remaining = photos.length - maxRow;
+            const more = remaining > 0 ? `<div class="thumb-more">+${remaining}</div>` : '';
+            thumbsRow.innerHTML = shown + more;
+        }
+    }
+
+    // Grid completa dentro del cuerpo expandido
     if (!grid) return;
     if (photos.length === 0) { grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 12px; font-size: 12px; color: var(--text-muted);">Sin fotos aún. ¡Sube la primera!</div>'; if (countLabel) countLabel.textContent = '0 fotos'; return; }
     const maxThumbs = 4;
