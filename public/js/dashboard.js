@@ -268,8 +268,19 @@ async function uploadPhotos(e, eventId) {
             progressDiv.innerHTML = `<div class="upload-progress success"><i class="fa-solid fa-check"></i> ${data.mensaje || 'Fotos subidas exitosamente'}</div>`;
             delete cachedPhotos[eventId];
             setTimeout(() => { progressDiv.innerHTML = ''; loadEvents(); }, 2000);
-        } else { progressDiv.innerHTML = `<div class="upload-progress error"><i class="fa-solid fa-xmark"></i> Error: ${data.error || 'Desconocido'}</div>`; }
-    } catch (err) { progressDiv.innerHTML = '<div class="upload-progress error"><i class="fa-solid fa-xmark"></i> Error de conexión.</div>'; }
+        } else {
+            // Si hay error REAL, mostrarlo pero no limpiar el input
+            progressDiv.innerHTML = `<div class="upload-progress error"><i class="fa-solid fa-xmark"></i> Error: ${data.error || 'Desconocido'}</div>`;
+        }
+    } catch (err) {
+        // Error de red real
+        progressDiv.innerHTML = '<div class="upload-progress error"><i class="fa-solid fa-xmark"></i> Error de conexión. Verifica tu internet.</div>';
+    } finally {
+        // Limpiar el input SOLO si todo salió bien (evita duplicados por re-upload)
+        if (progressDiv.querySelector('.success')) {
+            input.value = '';
+        }
+    }
 }
 async function deleteEvent(id) {
     if (!confirm('¿Estás seguro de eliminar este evento y todas sus fotos?')) return;
