@@ -33,12 +33,14 @@ async function loadFaceModels() {
 async function startCamera() {
     const video = el('selfieVideo');
     const container = el('selfieCameraContainer');
+    const guideText = el('selfieGuideText');
     try {
         setStatus('Solicitando permiso de cámara...');
         selfieStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
         video.srcObject = selfieStream;
         await video.play();
         container.style.display = 'block';
+        guideText.classList.remove('hidden');
         el('btnStartCamera').classList.add('hidden');
         el('btnCapture').classList.remove('hidden');
         setStatus('Centra tu rostro en el óvalo y toma la selfie.');
@@ -64,9 +66,15 @@ function drawResizedToCanvas(source, sourceWidth, sourceHeight) {
 
 function showSelfieReady() {
     const preview = el('selfiePreview');
+    const container = el('selfieCameraContainer');
+    const guideText = el('selfieGuideText');
+    
     preview.src = el('selfieCanvas').toDataURL('image/jpeg', 0.9);
     preview.classList.remove('hidden');
-    el('selfieCameraContainer').style.display = 'none';
+    preview.style.display = 'block';
+    container.style.display = 'none';
+    guideText.classList.add('hidden');
+    
     el('btnStartCamera').classList.add('hidden');
     el('btnCapture').classList.add('hidden');
     el('btnRetake').classList.remove('hidden');
@@ -84,6 +92,7 @@ function captureSelfie() {
 
 function retakeSelfie() {
     el('selfiePreview').classList.add('hidden');
+    el('selfiePreview').style.display = 'none';
     el('btnVerify').classList.add('hidden');
     el('btnRetake').classList.add('hidden');
     el('btnCapture').classList.remove('hidden');
@@ -199,7 +208,7 @@ async function verifySelfie() {
             revealGallery(matched);
         } catch (r) {
             console.error('Error al mostrar galería:', r);
-            setStatus('️ Error al mostrar tus fotos. Detalle: ' + (r.message || r));
+            setStatus('⚠️ Error al mostrar tus fotos. Detalle: ' + (r.message || r));
             btn.disabled = false;
             return;
         }
