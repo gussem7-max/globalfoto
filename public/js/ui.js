@@ -4,16 +4,23 @@
 
 function hideLoadingOverlay() {
     const overlay = document.getElementById('loadingOverlay');
-    if (overlay) { overlay.classList.add('hidden'); setTimeout(() => overlay.remove(), 300); }
+    if (overlay) { 
+        overlay.classList.add('hidden'); 
+        setTimeout(() => overlay.remove(), 300); 
+    }
 }
 
 function showSection(section) {
     ['events', 'galleries', 'sales', 'users', 'settings', 'admin'].forEach(s => {
-        document.getElementById(`section${s.charAt(0).toUpperCase() + s.slice(1)}`).classList.add('hidden');
-        document.getElementById(`nav${s.charAt(0).toUpperCase() + s.slice(1)}`).classList.remove('active');
+        const sec = document.getElementById(`section${s.charAt(0).toUpperCase() + s.slice(1)}`);
+        const nav = document.getElementById(`nav${s.charAt(0).toUpperCase() + s.slice(1)}`);
+        if (sec) sec.classList.add('hidden');
+        if (nav) nav.classList.remove('active');
     });
-    document.getElementById(`section${section.charAt(0).toUpperCase() + section.slice(1)}`).classList.remove('hidden');
-    document.getElementById(`nav${section.charAt(0).toUpperCase() + section.slice(1)}`).classList.add('active');
+    const targetSec = document.getElementById(`section${section.charAt(0).toUpperCase() + section.slice(1)}`);
+    const targetNav = document.getElementById(`nav${section.charAt(0).toUpperCase() + section.slice(1)}`);
+    if (targetSec) targetSec.classList.remove('hidden');
+    if (targetNav) targetNav.classList.add('active');
 
     if (section === 'events') loadEvents();
     else if (section === 'galleries') renderGalleriesView();
@@ -35,14 +42,26 @@ function showSection(section) {
 }
 
 function switchTab(tab) {
-    document.getElementById('registerSection').classList.toggle('hidden', tab !== 'register');
-    document.getElementById('loginSection').classList.toggle('hidden', tab !== 'login');
-    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (tab === 'login' && i === 0) || (tab === 'register' && i === 1)));
+    const reg = document.getElementById('registerSection');
+    const log = document.getElementById('loginSection');
+    if (reg) reg.classList.toggle('hidden', tab !== 'register');
+    if (log) log.classList.toggle('hidden', tab !== 'login');
+    document.querySelectorAll('.tab').forEach((t, i) => {
+        t.classList.toggle('active', (tab === 'login' && i === 0) || (tab === 'register' && i === 1));
+    });
 }
 
 function closeOrderModal() { document.getElementById('orderModal').classList.add('hidden'); }
 function closePackageModal() { document.getElementById('packageModal').classList.add('hidden'); }
-function closeEditUserModal() { document.getElementById('editUserModal').classList.add('hidden'); document.getElementById('editUserResult').textContent = ''; }
+function closeManageModal() { 
+    document.getElementById('manageEventModal').classList.add('hidden'); 
+    managingEventId = null; 
+}
+function closeEditUserModal() { 
+    document.getElementById('editUserModal').classList.add('hidden'); 
+    const r = document.getElementById('editUserResult');
+    if (r) r.textContent = ''; 
+}
 
 function closePurchaseModal() {
     document.getElementById('purchaseModal').classList.add('hidden');
@@ -52,30 +71,45 @@ function closePurchaseModal() {
 function openLightbox(url) {
     let safeUrl = url;
     if (url && url.includes('/original/')) safeUrl = url.replace('/original/', '/preview/').replace(/\.\w+$/, '.jpg');
-    document.getElementById('lightboxImg').src = safeUrl;
-    document.getElementById('lightboxModal').classList.remove('hidden');
+    const img = document.getElementById('lightboxImg');
+    if (img) img.src = safeUrl;
+    const modal = document.getElementById('lightboxModal');
+    if (modal) modal.classList.remove('hidden');
 }
-function closeLightbox() { document.getElementById('lightboxModal').classList.add('hidden'); }
+function closeLightbox() { 
+    const modal = document.getElementById('lightboxModal');
+    if (modal) modal.classList.add('hidden'); 
+}
 
 function showDashboard() {
-    document.getElementById('authContainer').classList.add('hidden');
-    document.getElementById('dashboardContainer').classList.remove('hidden');
-    document.getElementById('userName').textContent = currentUser.name;
-    document.getElementById('userAvatar').textContent = currentUser.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-    document.getElementById('userRole').textContent = currentUser.role === 'admin' ? 'Administrador' : 'Fotógrafo';
-    document.getElementById('welcomeTitle').textContent = `¡Hola de nuevo, ${currentUser.name}!`;
+    const auth = document.getElementById('authContainer');
+    const dash = document.getElementById('dashboardContainer');
+    if (auth) auth.classList.add('hidden');
+    if (dash) dash.classList.remove('hidden');
+    
+    const nameEl = document.getElementById('userName');
+    const avatarEl = document.getElementById('userAvatar');
+    const roleEl = document.getElementById('userRole');
+    const welcomeEl = document.getElementById('welcomeTitle');
+    
+    if (nameEl) nameEl.textContent = currentUser.name;
+    if (avatarEl) avatarEl.textContent = currentUser.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    if (roleEl) roleEl.textContent = currentUser.role === 'admin' ? 'Administrador' : 'Fotógrafo';
+    if (welcomeEl) welcomeEl.textContent = `¡Hola de nuevo, ${currentUser.name}!`;
+    
+    const navUsers = document.getElementById('navUsers');
+    const navAdmin = document.getElementById('navAdmin');
     if (currentUser.role === 'admin') {
-        document.getElementById('navUsers').classList.remove('hidden');
-        document.getElementById('navAdmin').classList.remove('hidden');
+        if (navUsers) navUsers.classList.remove('hidden');
+        if (navAdmin) navAdmin.classList.remove('hidden');
     } else {
-        document.getElementById('navUsers').classList.add('hidden');
-        document.getElementById('navAdmin').classList.add('hidden');
+        if (navUsers) navUsers.classList.add('hidden');
+        if (navAdmin) navAdmin.classList.add('hidden');
     }
     loadEvents();
     loadPendingOrdersCount();
     loadUserLogo();
     
-    // Mostrar plan seleccionado si viene de la landing
     const selectedPlan = localStorage.getItem('selected_plan');
     if (selectedPlan) {
         showPlanNotification(selectedPlan);
@@ -114,7 +148,6 @@ function logout() {
     window.location.href = '/'; 
 }
 
-// Estilos para la animación de notificación
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideIn {
@@ -129,33 +162,45 @@ window.addEventListener('DOMContentLoaded', async () => {
     const pathname = window.location.pathname;
     const urlParams = new URLSearchParams(window.location.search);
 
-    // Detectar galería pública: /g/ID o ?galeria=ID (compatibilidad)
+    // Detectar galería pública: /g/ID o ?galeria=ID
     let galeriaId = null;
     const galleryMatch = pathname.match(/^\/g\/(\d+)/);
     if (galleryMatch) galeriaId = galleryMatch[1];
     else if (urlParams.get('galeria')) galeriaId = urlParams.get('galeria');
 
     if (galeriaId) { 
-        await loadPublicGallery(galeriaId); 
-        hideLoadingOverlay(); 
+        console.log('Cargando galería pública:', galeriaId);
+        try {
+            await loadPublicGallery(galeriaId);
+        } catch (err) {
+            console.error('Error cargando galería:', err);
+            const grid = document.getElementById('pubPhotoGrid');
+            if (grid) {
+                grid.innerHTML = `
+                    <div class="gallery-closed" style="grid-column: 1/-1;">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <h3 style="color: white; margin-bottom: 8px;">Error al cargar</h3>
+                        <p style="color: var(--text-muted);">${err.message || 'Error desconocido'}</p>
+                    </div>`;
+            }
+        } finally {
+            hideLoadingOverlay();
+        }
         return; 
     }
 
-    // Detectar tab de registro desde landing: /panel?tab=register&plan=pro
+    // Detectar tab de registro
     const requestedTab = urlParams.get('tab');
-    if (requestedTab === 'register') {
-        switchTab('register');
-    }
+    if (requestedTab === 'register') switchTab('register');
     
-    // Guardar plan seleccionado para mostrarlo después del login/registro
     const plan = urlParams.get('plan');
-    if (plan) {
-        localStorage.setItem('selected_plan', plan);
-    }
+    if (plan) localStorage.setItem('selected_plan', plan);
 
     if (!token) {
-        document.getElementById('authContainer').classList.remove('hidden');
-        document.getElementById('dashboardContainer').classList.add('hidden');
+        const auth = document.getElementById('authContainer');
+        const dash = document.getElementById('dashboardContainer');
+        if (auth) auth.classList.remove('hidden');
+        if (dash) dash.classList.add('hidden');
         hideLoadingOverlay();
         return;
     }
@@ -165,19 +210,21 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (response.ok) {
             const data = await response.json();
             currentUser = data.user;
-            document.getElementById('authContainer').classList.add('hidden');
-            document.getElementById('dashboardContainer').classList.remove('hidden');
             showDashboard();
         } else {
             localStorage.removeItem('token');
-            document.getElementById('authContainer').classList.remove('hidden');
-            document.getElementById('dashboardContainer').classList.add('hidden');
+            const auth = document.getElementById('authContainer');
+            const dash = document.getElementById('dashboardContainer');
+            if (auth) auth.classList.remove('hidden');
+            if (dash) dash.classList.add('hidden');
         }
     } catch (error) {
         console.error('Error al verificar la sesión:', error);
         localStorage.removeItem('token');
-        document.getElementById('authContainer').classList.remove('hidden');
-        document.getElementById('dashboardContainer').classList.add('hidden');
+        const auth = document.getElementById('authContainer');
+        const dash = document.getElementById('dashboardContainer');
+        if (auth) auth.classList.remove('hidden');
+        if (dash) dash.classList.add('hidden');
     } finally {
         hideLoadingOverlay();
     }
