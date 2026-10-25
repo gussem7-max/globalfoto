@@ -198,8 +198,7 @@ router.put('/logo', verificarToken, uploadLogo.single('logo'), async (req, res) 
             Bucket: process.env.AWS_BUCKET_NAME,
             Key: key,
             Body: file.buffer,
-            ContentType: file.mimetype,
-            ACL: 'public-read'
+            ContentType: file.mimetype
         }));
         const logoUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 
