@@ -94,7 +94,6 @@
             object-fit: cover;
         }
         
-        /* Collage de 4 fotos (sin foto central) */
         .photo-1 {
             width: 210px; height: 270px;
             top: 0%; left: 10%;
@@ -128,7 +127,6 @@
             z-index: 2;
         }
         
-        /* Badge de coincidencia (usado en la demo) */
         .match-badge {
             position: absolute;
             background: rgba(15, 23, 42, 0.9);
@@ -258,6 +256,23 @@
 
             <!-- Botones CTA (solo escritorio) -->
             <div class="hidden md:flex items-center gap-3">
+                <!-- Lupita con dropdown de búsqueda -->
+                <div class="relative">
+                    <button onclick="toggleSearch()" aria-label="Buscar evento" class="w-10 h-10 flex items-center justify-center rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+                    <div id="search-dropdown" class="hidden absolute right-0 mt-2 w-72 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl shadow-black/50 p-4">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Código del evento</label>
+                        <form onsubmit="irACodigo(event)" class="space-y-2">
+                            <input id="event-code-input" type="text" placeholder="Ej: BODA-SOFIA-A3F9" class="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-lg text-white text-sm uppercase tracking-wide focus:outline-none focus:border-brand-500 placeholder:normal-case placeholder:text-slate-500">
+                            <button type="submit" class="w-full py-2.5 bg-gradient-to-r from-brand-600 to-brand-accent hover:opacity-95 text-white font-semibold rounded-lg text-sm transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-magnifying-glass"></i> Buscar galería
+                            </button>
+                        </form>
+                        <p id="code-error" class="hidden mt-2 text-[11px] text-red-400 font-medium"></p>
+                    </div>
+                </div>
+
                 <a href="/panel" class="px-4 py-2.5 text-sm font-semibold text-slate-200 hover:text-white hover:bg-slate-800/60 rounded-lg transition-all">
                     Iniciar Sesión
                 </a>
@@ -291,6 +306,19 @@
                     <i class="fa-solid fa-tags w-6 text-brand-400"></i> Planes
                 </a>
                 
+                <!-- Buscador de código en móvil -->
+                <div class="pt-4 mt-2 border-t border-slate-800">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-4">
+                        <i class="fa-solid fa-magnifying-glass mr-1 text-brand-400"></i> ¿Tienes un código de evento?
+                    </label>
+                    <form onsubmit="irACodigo(event)" class="px-4 flex gap-2">
+                        <input type="text" placeholder="Ej: BODA-SOFIA-A3F9" class="flex-1 px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm uppercase tracking-wide focus:outline-none focus:border-brand-500 placeholder:normal-case placeholder:text-slate-500">
+                        <button type="submit" class="px-4 py-2.5 bg-gradient-to-r from-brand-600 to-brand-accent rounded-lg text-white text-sm font-semibold" aria-label="Buscar galería">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </button>
+                    </form>
+                </div>
+
                 <div class="pt-4 mt-4 border-t border-slate-800 space-y-3">
                     <a href="/panel" class="block w-full py-3 text-center text-sm font-semibold text-slate-200 bg-slate-800/70 border border-slate-700 hover:bg-slate-700 rounded-xl transition-all">
                         Iniciar Sesión
@@ -344,7 +372,7 @@
                     </div>
                 </div>
 
-                <!-- Collage de 4 fotos flotantes (SIN foto central) -->
+                <!-- Collage de 4 fotos flotantes -->
                 <div class="lg:col-span-5 relative h-[500px] hidden lg:block">
                     <div class="hero-photo photo-1">
                         <img src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=400&q=80" alt="Boda">
@@ -375,42 +403,34 @@
             <div class="bg-slate-950 p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-xl max-w-3xl mx-auto">
                 <div class="grid md:grid-cols-2 gap-8 items-center">
                     
-                    <!-- Zona de escaneo con foto y escáner permanente -->
                     <div>
                         <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">1. Rostro a buscar</label>
                         <div id="drop-zone" class="relative h-72 border-2 border-dashed border-slate-700 hover:border-brand-500 rounded-xl overflow-hidden cursor-pointer transition-colors bg-slate-900/40">
                             
-                            <!-- Foto de ejemplo precargada -->
                             <img id="demo-photo" src="https://images.unsplash.com/photo-1524638431109-93d95c968f03?auto=format&fit=crop&w=600&q=80" alt="Foto de ejemplo" class="absolute inset-0 w-full h-full object-cover">
                             
-                            <!-- Etiqueta de foto de ejemplo -->
                             <span id="demo-photo-tag" class="absolute top-3 left-3 z-10 px-2.5 py-1 bg-slate-950/80 backdrop-blur-sm border border-slate-700 rounded-full text-[10px] font-semibold text-slate-300">
                                 <i class="fa-solid fa-image mr-1 text-brand-400"></i> Foto de ejemplo
                             </span>
 
-                            <!-- Badge de coincidencia (aparece al escanear) -->
                             <div id="demo-match-badge" class="match-badge hidden" style="top: 12px; bottom: auto; left: auto; right: 12px;">
                                 <i class="fa-solid fa-face-smile-beam mr-1"></i> Coincidencia 97%
                             </div>
                             
-                            <!-- ESCÁNER PERMANENTE -->
                             <div id="scanner-line" class="absolute inset-0 rounded-xl overflow-hidden pointer-events-none z-20">
                                 <div class="w-full h-12 scan-animation border-b-2 border-brand-accent"></div>
                             </div>
 
-                            <!-- Prompt de subida -->
                             <div id="upload-prompt" class="absolute bottom-3 left-3 right-3 z-10 bg-slate-950/80 backdrop-blur-sm border border-slate-700/60 rounded-lg p-3 text-center space-y-1">
                                 <p class="text-xs text-slate-200 font-medium"><i class="fa-solid fa-cloud-arrow-up text-brand-400 mr-1"></i> Arrastra tu foto o <span class="text-brand-400 underline">examina</span></p>
                                 <p class="text-[10px] text-slate-500">JPG, PNG (Máx 5MB) — o escanea la de ejemplo</p>
                             </div>
 
-                            <!-- Preview de imagen subida -->
                             <img id="selfie-preview" src="" class="hidden absolute inset-0 w-full h-full object-cover z-10">
                             <input type="file" id="selfie-input" accept="image/*" class="hidden">
                         </div>
                     </div>
 
-                    <!-- Panel de acción y resultados -->
                     <div class="space-y-5">
                         <div>
                             <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">2. Escanear</label>
@@ -673,21 +693,6 @@
         </div>
     </section>
 
-        <!-- BUSCADOR POR CÓDIGO DE EVENTO -->
-    <section id="buscar-evento" class="py-16 bg-slate-900/50 border-y border-slate-800/60">
-        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 class="text-2xl font-bold text-white mb-3">¿Tienes un código de evento?</h2>
-            <p class="text-slate-400 text-sm mb-8">Escribe el código que te compartió tu fotógrafo para ir directo a tu galería.</p>
-            <form onsubmit="irACodigo(event)" class="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto">
-                <input id="event-code-input" type="text" placeholder="Ej: BODA-SOFIA-A3F9" class="flex-1 px-5 py-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm uppercase tracking-wide focus:outline-none focus:border-brand-500 placeholder:normal-case placeholder:text-slate-500">
-                <button type="submit" class="px-7 py-3.5 bg-gradient-to-r from-brand-600 to-brand-accent hover:opacity-95 text-white font-semibold rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-magnifying-glass"></i> Buscar galería
-                </button>
-            </form>
-            <p id="code-error" class="hidden mt-4 text-xs text-red-400 font-medium"></p>
-        </div>
-    </section>
-
     <!-- CTA FINAL -->
     <section class="py-20 relative overflow-hidden">
         <div class="absolute inset-0 bg-gradient-to-br from-brand-600/20 to-brand-accent/20"></div>
@@ -700,15 +705,15 @@
         </div>
     </section>
 
-    <!-- FOOTER -->
+    <!-- FOOTER (logo igual al del menú) -->
     <footer class="bg-slate-950 border-t border-slate-900 py-12">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center text-white text-sm font-bold">
-                    <i class="fa-solid fa-camera"></i>
+            <a href="/" class="flex items-center gap-3 group">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-brand-accent flex items-center justify-center shadow-lg shadow-brand-500/20 group-hover:scale-105 transition-transform">
+                    <i class="fa-solid fa-camera-retro text-white text-xl"></i>
                 </div>
-                <span class="text-lg font-bold text-white">GlobalFoto</span>
-            </div>
+                <span class="text-2xl font-extrabold tracking-tight text-white">Global<span class="gradient-text">Foto</span></span>
+            </a>
             <p class="text-slate-500 text-xs">© 2026 GlobalFoto. Todos los derechos reservados.</p>
             <div class="flex items-center gap-6 text-slate-400 text-xs">
                 <a href="#" class="hover:text-white transition-colors">Términos de Servicio</a>
@@ -740,6 +745,47 @@
             icon.classList.add('fa-bars');
             icon.classList.remove('fa-xmark');
         }
+
+        // ===== BUSCADOR DE CÓDIGO (dropdown del navbar) =====
+        function toggleSearch() {
+            const dd = document.getElementById('search-dropdown');
+            dd.classList.toggle('hidden');
+            if (!dd.classList.contains('hidden')) {
+                document.getElementById('event-code-input').focus();
+            }
+        }
+
+        // Cerrar el dropdown al hacer clic fuera
+        document.addEventListener('click', (e) => {
+            const dd = document.getElementById('search-dropdown');
+            if (!dd || dd.classList.contains('hidden')) return;
+            if (!dd.contains(e.target) && !e.target.closest('[aria-label="Buscar evento"]')) {
+                dd.classList.add('hidden');
+            }
+        });
+
+        // Ir a la galería por código (funciona en desktop y móvil)
+        function irACodigo(e) {
+            e.preventDefault();
+            const input = e.target.querySelector('input');
+            const code = input ? input.value.trim() : '';
+            if (!code) return;
+            window.location.href = '/e/' + encodeURIComponent(code);
+        }
+
+        // Si el código no existe, mostrar error en el dropdown
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('error') === 'codigo') {
+                const dd = document.getElementById('search-dropdown');
+                const err = document.getElementById('code-error');
+                if (dd && err) {
+                    dd.classList.remove('hidden');
+                    err.textContent = 'No encontramos ninguna galería con ese código.';
+                    err.classList.remove('hidden');
+                }
+            }
+        });
 
         // Toggle de planes Mensual/Anual
         function setBilling(type) {
@@ -812,27 +858,6 @@
                 btn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i> Escanear y Encontrar Fotos';
             }, 2500);
         }
-
-                // ===== BUSCADOR POR CÓDIGO DE EVENTO =====
-        function irACodigo(e) {
-            e.preventDefault();
-            const code = document.getElementById('event-code-input').value.trim();
-            if (!code) return;
-            window.location.href = '/e/' + encodeURIComponent(code);
-        }
-
-        // Mostrar error si el código no existe
-        window.addEventListener('DOMContentLoaded', () => {
-            const params = new URLSearchParams(window.location.search);
-            if (params.get('error') === 'codigo') {
-                const err = document.getElementById('code-error');
-                if (err) {
-                    err.textContent = 'No encontramos ninguna galería con ese código. Verifica que esté bien escrito.';
-                    err.classList.remove('hidden');
-                    document.getElementById('buscar-evento').scrollIntoView({ behavior: 'smooth' });
-                }
-            }
-        });
     </script>
 </body>
 </html>
