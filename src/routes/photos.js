@@ -3,25 +3,11 @@ const router = express.Router();
 const pool = require('../db');
 const verificarToken = require('../middleware/auth');
 const multer = require('multer');
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const sharp = require('sharp');
 const crypto = require('crypto');
-const Jimp = require('jimp');
 
-const upload = multer({ 
-    storage: multer.memoryStorage(),
-    limits: { 
-        fileSize: 25 * 1024 * 1024, // 25MB por foto
-        files: 50
-    },
-    fileFilter: (req, file, cb) => {
-        const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-        if (allowedMimes.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(new Error('Tipo de archivo no permitido. Solo JPEG, PNG o WebP.'), false);
-        }
-    }
-});
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const s3Client = new S3Client({
     region: process.env.AWS_REGION,
@@ -31,197 +17,134 @@ const s3Client = new S3Client({
     }
 });
 
-const isValidId = (id) => /^\d+$/.test(id) && parseInt(id) > 0;
-
-// Aplica la orientación EXIF para que las fotos de celular no queden rotadas
-function applyExifOrientation(image) {
-    try {
-        const exif = image.getExif();
-        if (!exif) return;
-        const tags = exif.getImage().tags;
-        const orientation = tags && tags.Orientation ? tags.Orientation : 1;
-        switch (orientation) {
-            case 2: image.flip(true, false); break;
-            case 3: image.rotate(180); break;
-            case 4: image.flip(false, true); break;
-            case 5: image.rotate(90).flip(true, false); break;
-            case 6: image.rotate(-90); break;
-            case 7: image.rotate(-90).flip(true, false); break;
-            case 8: image.rotate(90); break;
-            default: break;
-        }
-    } catch (e) {
-        // Si la imagen no tiene EXIF o falla, continuamos sin rotar
-    }
-}
-
-// Función para agregar marca de agua
-async function addWatermark(imageBuffer) {
-    try {
-        const image = await Jimp.read(imageBuffer);
-
-        // Corregir orientación EXIF (fotos tomadas con celular)
-        applyExifOrientation(image);
-
-        // Redimensionar si es muy grande para ahorrar espacio y tiempo
-        if (image.bitmap.width > 1200 || image.bitmap.height > 1200) {
-            image.resize(1200, Jimp.AUTO);
-        }
-
-        // Cargar fuente
-        const font = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE);
-
-        // Crear una imagen transparente para la marca de agua
-        const watermark = await new Promise((resolve, reject) => {
-            new Jimp(image.bitmap.width, 200, 0x00000000, (err, img) => {
-                if (err) reject(err);
-                else resolve(img);
-            });
-        });
-
-        // Escribir el texto
-        watermark.print(font, 10, 50, {
-            text: 'GlobalFoto',
-            alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
-            alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE
-        }, image.bitmap.width - 20, 200);
-
-        // Rotar y hacer semi-transparente
-        watermark.rotate(-30);
-        watermark.opacity(0.5);
-
-        // Calcular posición centrada
-        const x = (image.bitmap.width - watermark.bitmap.width) / 2;
-        const y = (image.bitmap.height - watermark.bitmap.height) / 2;
-
-        // Superponer
-        image.composite(watermark, x, y);
-
-        // Retornar buffer JPEG
-        return await image.getBufferAsync(Jimp.MIME_JPEG);
-    } catch (error) {
-        console.error('️ Error al generar marca de agua:', error.message);
-        return imageBuffer; // Si falla, devuelve la original para no romper la subida
-    }
-}
-
-// =====================================================
-// SUBIR FOTOS (CON MARCA DE AGUA AUTOMÁTICA)
-// =====================================================
+// SUBIR FOTOS (con ACL pública)
 router.post('/upload', verificarToken, upload.array('photos', 50), async (req, res) => {
     try {
         const { event_id } = req.body;
         const files = req.files;
         const photographer_id = req.user.id;
 
-        console.log('📤 Iniciando subida de', files?.length, 'fotos...');
-
-        if (!files || files.length === 0) {
-            return res.status(400).json({ error: 'No se han seleccionado archivos para subir.' });
-        }
-
-        if (!event_id || !isValidId(event_id)) {
-            return res.status(400).json({ error: 'ID de evento inválido.' });
+        if (!event_id || !files || files.length === 0) {
+            return res.status(400).json({ error: 'Faltan datos o archivos.' });
         }
 
         const eventCheck = await pool.query(
             'SELECT id FROM events WHERE id = $1 AND photographer_id = $2',
             [event_id, photographer_id]
         );
-
-        if (eventCheck.rows.length === 0) {
-            return res.status(404).json({ error: 'Evento no encontrado o sin permisos.' });
-        }
+        if (eventCheck.rows.length === 0) return res.status(404).json({ error: 'Evento no encontrado.' });
 
         const uploadedPhotos = [];
-
         for (const file of files) {
+            const originalName = file.originalname.replace(/\.[^/.]+$/, '');
+            const ext = file.mimetype.split('/')[1] || 'jpg';
             const uniqueId = crypto.randomBytes(16).toString('hex');
-            const ext = file.mimetype === 'image/jpeg' ? 'jpg' : file.mimetype.split('/')[1];
             
-            // Rutas en S3
-            const originalFileName = `events/${event_id}/original/${uniqueId}.${ext}`;
-            const previewFileName = `events/${event_id}/preview/${uniqueId}.jpg`;
-            
-            console.log(`⬆️ Subiendo original: ${file.originalname}`);
-            
-            // 1. Subir versión ORIGINAL a S3
+            // Ruta original
+            const originalKey = `events/${event_id}/original/${uniqueId}.${ext}`;
+            // Ruta preview (con marca de agua)
+            const previewKey = `events/${event_id}/preview/${uniqueId}.jpg`;
+
+            // Subir original con ACL pública
             await s3Client.send(new PutObjectCommand({
                 Bucket: process.env.AWS_BUCKET_NAME,
-                Key: originalFileName,
+                Key: originalKey,
                 Body: file.buffer,
                 ContentType: file.mimetype,
-                ServerSideEncryption: 'AES256'
+                ACL: 'public-read'  // 🔑 CLAVE: hacer público
             }));
+            const originalUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${originalKey}`;
 
-            // 2. Generar y subir versión PREVIEW (con marca de agua)
-            console.log(`🎨 Generando marca de agua para: ${file.originalname}`);
-            const previewBuffer = await addWatermark(file.buffer);
-            
+            // Generar preview con marca de agua
+            let previewBuffer = await sharp(file.buffer)
+                .resize(800, 800, { fit: 'inside' })
+                .jpeg({ quality: 80 })
+                .toBuffer();
+
+            // Agregar marca de agua
+            previewBuffer = await sharp(previewBuffer)
+                .composite([{
+                    input: Buffer.from(`<svg width="400" height="100"><text x="50%" y="50%" font-family="Arial" font-size="32" font-weight="bold" fill="rgba(255,255,255,0.5)" text-anchor="middle" dominant-baseline="middle" transform="rotate(-30 200 50)">GlobalFoto</text></svg>`),
+                    top: 0,
+                    left: 0
+                }])
+                .toBuffer();
+
+            // Subir preview con ACL pública
             await s3Client.send(new PutObjectCommand({
                 Bucket: process.env.AWS_BUCKET_NAME,
-                Key: previewFileName,
+                Key: previewKey,
                 Body: previewBuffer,
                 ContentType: 'image/jpeg',
-                ServerSideEncryption: 'AES256'
+                ACL: 'public-read'  // 🔑 CLAVE: hacer público
             }));
+            const previewUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${previewKey}`;
 
-            const originalUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${originalFileName}`;
-            const previewUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${previewFileName}`;
-
-            // 3. Guardar en la base de datos
-            const newPhoto = await pool.query(
-                'INSERT INTO photos (event_id, url, filename, preview_url) VALUES ($1, $2, $3, $4) RETURNING *',
-                [event_id, originalUrl, originalFileName, previewUrl]
+            // Guardar en base de datos
+            const photoResult = await pool.query(
+                'INSERT INTO photos (event_id, filename, url, preview_url) VALUES ($1, $2, $3, $4) RETURNING id',
+                [event_id, originalKey, originalUrl, previewUrl]
             );
 
-            uploadedPhotos.push(newPhoto.rows[0]);
-            console.log(`✅ Foto ${file.originalname} procesada y guardada.`);
+            uploadedPhotos.push({
+                id: photoResult.rows[0].id,
+                url: originalUrl,
+                preview_url: previewUrl
+            });
         }
 
-        res.status(201).json({
-            mensaje: `¡${uploadedPhotos.length} fotografía(s) subida(s) con marca de agua!`,
+        res.json({
+            mensaje: `${uploadedPhotos.length} foto(s) subida(s) exitosamente.`,
             photos: uploadedPhotos
         });
-
     } catch (error) {
-        console.error('❌ Error al subir fotos a S3:', error);
-        
-        if (error instanceof multer.MulterError) {
-            if (error.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'Archivo demasiado grande. Máximo 25MB.' });
-            if (error.code === 'LIMIT_FILE_COUNT') return res.status(400).json({ error: 'Demasiados archivos. Máximo 50.' });
-        }
-
+        console.error('Error al subir fotos:', error);
         res.status(500).json({ error: 'Error interno al subir las fotos.' });
     }
 });
 
-// =====================================================
-// LISTAR FOTOS DE UN EVENTO (PARA EL PANEL DEL FOTÓGRAFO)
-// =====================================================
-router.get('/:id/photos', verificarToken, async (req, res) => {
+// ELIMINAR FOTO
+router.delete('/:id', verificarToken, async (req, res) => {
     try {
         const { id } = req.params;
         const photographer_id = req.user.id;
 
-        if (!isValidId(id)) return res.status(400).json({ error: 'ID de evento inválido.' });
-
-        const eventCheck = await pool.query(
-            'SELECT id FROM events WHERE id = $1 AND photographer_id = $2',
+        const photoCheck = await pool.query(`
+            SELECT p.*, e.photographer_id 
+            FROM photos p JOIN events e ON p.event_id = e.id 
+            WHERE p.id = $1 AND e.photographer_id = $2`,
             [id, photographer_id]
         );
+        if (photoCheck.rows.length === 0) return res.status(404).json({ error: 'Foto no encontrada.' });
 
-        if (eventCheck.rows.length === 0) return res.status(404).json({ error: 'Evento no encontrado.' });
+        const photo = photoCheck.rows[0];
 
-        const photosResult = await pool.query(
-            'SELECT id, url, filename, preview_url, created_at FROM photos WHERE event_id = $1 ORDER BY created_at DESC',
-            [id]
-        );
+        // Eliminar de S3
+        try {
+            if (photo.filename) {
+                await s3Client.send(new DeleteObjectCommand({
+                    Bucket: process.env.AWS_BUCKET_NAME,
+                    Key: photo.filename
+                }));
+            }
+            if (photo.preview_url) {
+                const previewKey = photo.preview_url.split('.com/')[1];
+                if (previewKey) {
+                    await s3Client.send(new DeleteObjectCommand({
+                        Bucket: process.env.AWS_BUCKET_NAME,
+                        Key: previewKey
+                    }));
+                }
+            }
+        } catch (s3Error) {
+            console.error('Error al eliminar de S3:', s3Error);
+        }
 
-        res.json({ photos: photosResult.rows });
+        await pool.query('DELETE FROM photos WHERE id = $1', [id]);
+        res.json({ mensaje: 'Foto eliminada.' });
     } catch (error) {
-        console.error('Error al obtener fotos:', error);
-        res.status(500).json({ error: 'Error interno al cargar las fotos.' });
+        console.error('Error al eliminar foto:', error);
+        res.status(500).json({ error: 'Error interno al eliminar la foto.' });
     }
 });
 

@@ -59,7 +59,7 @@ router.post('/register', async (req, res) => {
                 html: `
                     <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                         <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
-                            <h1 style="color: white; margin: 0; font-size: 28px;"> GlobalFoto</h1>
+                            <h1 style="color: white; margin: 0; font-size: 28px;">📸 GlobalFoto</h1>
                             <p style="color: #94a3b8; margin-top: 8px; font-size: 14px;">Tu plataforma profesional de fotografía</p>
                         </div>
                         <div style="background: white; padding: 30px; border-radius: 0 0 16px 16px; border: 1px solid #e2e8f0; border-top: none;">
@@ -183,7 +183,7 @@ router.put('/password', verificarToken, async (req, res) => {
     }
 });
 
-// SUBIR LOGO DEL FOTÓGRAFO
+// SUBIR LOGO DEL FOTÓGRAFO (con ACL pública)
 router.put('/logo', verificarToken, uploadLogo.single('logo'), async (req, res) => {
     try {
         const file = req.file;
@@ -192,11 +192,14 @@ router.put('/logo', verificarToken, uploadLogo.single('logo'), async (req, res) 
 
         const ext = file.mimetype.split('/')[1] || 'png';
         const key = `logos/${req.user.id}/${crypto.randomBytes(16).toString('hex')}.${ext}`;
+        
+        //  CAMBIO CLAVE: ACL public-read para que el logo sea accesible desde el navegador
         await s3Client.send(new PutObjectCommand({
             Bucket: process.env.AWS_BUCKET_NAME,
             Key: key,
             Body: file.buffer,
-            ContentType: file.mimetype
+            ContentType: file.mimetype,
+            ACL: 'public-read'
         }));
         const logoUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 
