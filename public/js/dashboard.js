@@ -2,6 +2,8 @@
 // PANEL DEL FOTÓGRAFO: EVENTOS, FOTOS, PAQUETES, PRECIOS, VENTAS
 // =====================================================
 
+let managingEventId = null;
+
 function openModal(eventId = null) {
     document.getElementById('resultadoEvento').textContent = '';
     document.getElementById('eventForm').reset();
@@ -57,7 +59,7 @@ document.getElementById('eventForm').addEventListener('submit', async (e) => {
         if (res.ok) {
             resDiv.className = 'alert alert-success';
             resDiv.textContent = editId ? 'Evento actualizado.' : '¡Evento creado exitosamente!';
-            setTimeout(() => { closeModal(); loadEvents(); }, 1000);
+            setTimeout(() => { closeModal(); loadEvents(); if (managingEventId) openManageModal(managingEventId); }, 1000);
         } else { resDiv.className = 'alert alert-error'; resDiv.textContent = data.error || 'Error al guardar el evento.'; }
     } catch (err) { resDiv.className = 'alert alert-error'; resDiv.textContent = 'Error de conexión.'; }
 });
@@ -144,13 +146,12 @@ async function loadEvents() {
         const eventList = document.getElementById('eventList');
         if (cachedEvents.length === 0) { eventList.innerHTML = '<p style="color: var(--text-muted);">No tienes eventos registrados aún.</p>'; return; }
         eventList.innerHTML = cachedEvents.map(ev => {
-            const publicUrl = `${window.location.origin}${ev.event_code ? '/e/' + ev.event_code : '/g/' + ev.id}`;
             const statusClass = `status-${ev.status || 'published'}`;
             const statusText = ev.status === 'published' ? 'Publicada' : ev.status === 'draft' ? 'Borrador' : 'Archivada';
             const expiryText = ev.expires_at ? `<span style="color: var(--warning);"><i class="fa-solid fa-clock"></i> Expira: ${new Date(ev.expires_at).toLocaleString('es-CO')}</span>` : '';
             const selfieBadge = ev.selfie_required ? ' <span class="event-status-badge" style="background: rgba(168,85,247,0.15); color: #d8b4fe;">🤳 Selfie</span>' : '';
             return `<div class="event-card">
-                <div class="event-header" onclick="toggleEventCard(${ev.id})">
+                <div class="event-header">
                     <div>
                         <div class="event-title">${ev.title} <span class="event-status-badge ${statusClass}">${statusText}</span>${selfieBadge}</div>
                         <div class="event-meta"><span><i class="fa-solid fa-calendar"></i> ${ev.event_date ? ev.event_date.split('T')[0] : ''}</span><span><i class="fa-solid fa-location-dot"></i> ${ev.location || 'Sin ubicación'}</span></div>
@@ -160,66 +161,71 @@ async function loadEvents() {
                             ${expiryText}
                         </div>
                     </div>
-                    <div class="event-actions" onclick="event.stopPropagation()">
-                        <button class="btn-action" onclick="toggleEventCard(${ev.id})" title="Gestionar evento"><i class="fa-solid fa-pen"></i></button>
+                    <div class="event-actions">
+                        <button class="btn-action" onclick="openManageModal(${ev.id})" title="Gestionar evento"><i class="fa-solid fa-pen"></i></button>
                     </div>
                 </div>
                 <div class="event-thumbs" id="eventThumbs_${ev.id}"></div>
-                <div class="event-body collapsed" id="eventBody_${ev.id}">
-                    <div class="event-manage-actions">
-                        <button class="btn-secondary" onclick="openModal(${ev.id})"><i class="fa-solid fa-pen"></i> Editar datos</button>
-                        <button class="btn-danger" onclick="deleteEvent(${ev.id})"><i class="fa-solid fa-trash"></i> Eliminar evento</button>
-                    </div>
-                    <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 8px;">
-                        <span style="font-size: 11px; font-weight: 700; color: #818cf8; background: rgba(99,102,241,0.12); padding: 4px 10px; border-radius: 6px; letter-spacing: 0.5px; font-family: monospace;">${ev.event_code || 'SIN-CODIGO'}</span>
-                        <button class="btn-action" onclick="copyText('${ev.event_code || ''}')" title="Copiar código del evento"><i class="fa-solid fa-copy"></i></button>
-                    </div>
-                    <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">Enlace público:</div>
-                    <div style="display: flex; gap: 6px; margin-bottom: 12px;">
-                        <input type="text" readonly value="${publicUrl}" id="eventUrl_${ev.id}" style="font-size: 11px; padding: 6px; width: 100%; color: var(--text-muted);">
-                        <button class="btn-action" onclick="copyEventUrl(${ev.id})" title="Copiar enlace"><i class="fa-solid fa-copy"></i></button>
-                        <button class="btn-action" onclick="openQrModal(${ev.id}, '${publicUrl}')" title="Generar QR"><i class="fa-solid fa-qrcode"></i></button>
-                    </div>
-                    <div class="upload-box">
-                        <form onsubmit="uploadPhotos(event, ${ev.id})" style="display: flex; width: 100%; gap: 8px;">
-                            <input type="file" id="fileInput_${ev.id}" multiple accept="image/*" class="file-input" onchange="updateFileLabel(${ev.id})">
-                            <label for="fileInput_${ev.id}" class="file-label" id="fileLabel_${ev.id}">Seleccionar fotos</label>
-                            <button type="submit" class="btn-upload">Subir</button>
-                        </form>
-                    </div>
-                    <div id="uploadProgress_${ev.id}"></div>
-                    <div id="photosPreview_${ev.id}">
-                        <div class="photos-preview">
-                            <div class="photos-preview-title"><span><i class="fa-solid fa-images"></i> Fotos del evento</span><span id="photosCount_${ev.id}">Cargando...</span></div>
-                            <div class="photos-grid" id="photosGrid_${ev.id}"><div style="grid-column: 1/-1; text-align: center; padding: 12px; font-size: 12px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Cargando miniaturas...</div></div>
-                        </div>
-                    </div>
-                    <div class="packages-section">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <strong style="font-size: 13px;">📦 Paquetes</strong>
-                            <button class="btn-primary" style="width: auto; padding: 4px 10px; font-size: 11px;" onclick="openPackageModal(${ev.id})">+ Agregar</button>
-                        </div>
-                        <div id="packagesList_${ev.id}">Cargando...</div>
-                    </div>
-                    ${renderPricingSection(ev)}
-                </div>
             </div>`;
         }).join('');
         cachedEvents.forEach(async (ev) => {
             const photos = await loadEventPhotos(ev.id);
             renderPhotosPreview(ev.id, photos);
-            loadPackages(ev.id);
         });
     } catch (err) { console.error('Error al cargar eventos:', err); }
 }
 
-// Acordeón exclusivo: solo una tarjeta abierta a la vez
-function toggleEventCard(eventId) {
-    const target = document.getElementById(`eventBody_${eventId}`);
-    if (!target) return;
-    const willOpen = target.classList.contains('collapsed');
-    document.querySelectorAll('.event-body').forEach(b => b.classList.add('collapsed'));
-    if (willOpen) target.classList.remove('collapsed');
+// ===== MODAL DE GESTIÓN DE EVENTO =====
+function openManageModal(eventId) {
+    const ev = cachedEvents.find(e => e.id === eventId);
+    if (!ev) return;
+    managingEventId = eventId;
+    const publicUrl = `${window.location.origin}${ev.event_code ? '/e/' + ev.event_code : '/g/' + ev.id}`;
+    document.getElementById('manageEventTitle').textContent = `Gestionar: ${ev.title}`;
+    document.getElementById('manageEventBody').innerHTML = `
+        <div class="event-manage-actions">
+            <button class="btn-secondary" onclick="openModal(${ev.id})"><i class="fa-solid fa-pen"></i> Editar datos</button>
+            <button class="btn-danger" onclick="deleteEvent(${ev.id})"><i class="fa-solid fa-trash"></i> Eliminar evento</button>
+        </div>
+        <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 10px;">
+            <span class="code-chip">${ev.event_code || 'SIN-CODIGO'}</span>
+            <button class="btn-action" onclick="copyText('${ev.event_code || ''}')" title="Copiar código"><i class="fa-solid fa-copy"></i></button>
+        </div>
+        <div class="manage-label">Enlace público:</div>
+        <div style="display: flex; gap: 6px; margin-bottom: 14px;">
+            <input type="text" readonly value="${publicUrl}" id="eventUrl_${ev.id}" class="manage-url">
+            <button class="btn-action" onclick="copyEventUrl(${ev.id})" title="Copiar enlace"><i class="fa-solid fa-copy"></i></button>
+            <button class="btn-action" onclick="openQrModal(${ev.id}, '${publicUrl}')" title="Generar QR"><i class="fa-solid fa-qrcode"></i></button>
+        </div>
+        <div class="upload-box">
+            <form onsubmit="uploadPhotos(event, ${ev.id})" style="display: flex; width: 100%; gap: 8px;">
+                <input type="file" id="fileInput_${ev.id}" multiple accept="image/*" class="file-input" onchange="updateFileLabel(${ev.id})">
+                <label for="fileInput_${ev.id}" class="file-label" id="fileLabel_${ev.id}">Seleccionar fotos</label>
+                <button type="submit" class="btn-upload">Subir</button>
+            </form>
+        </div>
+        <div id="uploadProgress_${ev.id}"></div>
+        <div class="photos-preview">
+            <div class="photos-preview-title"><span><i class="fa-solid fa-images"></i> Fotos del evento</span><span id="photosCount_${ev.id}">Cargando...</span></div>
+            <div class="photos-grid" id="photosGrid_${ev.id}"></div>
+        </div>
+        <div class="packages-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <strong style="font-size: 13px;">📦 Paquetes</strong>
+                <button class="btn-primary" style="width: auto; padding: 4px 10px; font-size: 11px;" onclick="openPackageModal(${ev.id})">+ Agregar</button>
+            </div>
+            <div id="packagesList_${ev.id}">Cargando...</div>
+        </div>
+        ${renderPricingSection(ev)}
+    `;
+    document.getElementById('manageEventModal').classList.remove('hidden');
+    renderPhotosPreview(eventId, cachedPhotos[eventId] || []);
+    loadPackages(eventId);
+}
+
+function closeManageModal() {
+    document.getElementById('manageEventModal').classList.add('hidden');
+    managingEventId = null;
 }
 
 function renderPhotosPreview(eventId, photos) {
@@ -230,7 +236,6 @@ function renderPhotosPreview(eventId, photos) {
 
     if (summary) summary.textContent = `${photos.length} foto${photos.length !== 1 ? 's' : ''}`;
 
-    // Fila compacta siempre visible (tarjeta cerrada)
     if (thumbsRow) {
         if (photos.length === 0) {
             thumbsRow.innerHTML = '<span class="thumb-empty">Sin fotos aún</span>';
@@ -245,17 +250,13 @@ function renderPhotosPreview(eventId, photos) {
         }
     }
 
-    // Grid completa dentro del cuerpo expandido
     if (!grid) return;
     if (photos.length === 0) { grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 12px; font-size: 12px; color: var(--text-muted);">Sin fotos aún. ¡Sube la primera!</div>'; if (countLabel) countLabel.textContent = '0 fotos'; return; }
-    const maxThumbs = 4;
-    const thumbs = photos.slice(0, maxThumbs).map(p => `<div class="photo-thumb" style="position: relative;">
+    const thumbs = photos.map(p => `<div class="photo-thumb" style="position: relative;">
         <img src="${p.preview_url || p.url}" onclick="openLightbox('${p.preview_url || p.url}')" title="Ver foto">
         <button class="delete-photo" onclick="deletePhoto(${p.id}, ${eventId})" title="Eliminar foto"><i class="fa-solid fa-xmark"></i></button>
     </div>`).join('');
-    const remaining = photos.length - maxThumbs;
-    const moreHtml = remaining > 0 ? `<div class="photo-more">+${remaining} más</div>` : '';
-    grid.innerHTML = thumbs + moreHtml;
+    grid.innerHTML = thumbs;
     if (countLabel) countLabel.textContent = `${photos.length} foto${photos.length !== 1 ? 's' : ''}`;
 }
 
@@ -263,8 +264,12 @@ async function deletePhoto(photoId, eventId) {
     if (!confirm('¿Eliminar esta foto?')) return;
     try {
         const res = await fetch(`/api/events/photos/${photoId}`, { method: 'DELETE', headers: authHeaders() });
-        if (res.ok) { delete cachedPhotos[eventId]; loadEvents(); }
-        else { const data = await res.json(); alert(data.error || 'Error al eliminar.'); }
+        if (res.ok) {
+            delete cachedPhotos[eventId];
+            const photos = await loadEventPhotos(eventId);
+            renderPhotosPreview(eventId, photos);
+            loadEvents();
+        } else { const data = await res.json(); alert(data.error || 'Error al eliminar.'); }
     } catch (err) { alert('Error de conexión.'); }
 }
 
@@ -312,16 +317,19 @@ async function uploadPhotos(e, eventId) {
         if (res.ok) {
             progressDiv.innerHTML = `<div class="upload-progress success"><i class="fa-solid fa-check"></i> ${data.mensaje || 'Fotos subidas exitosamente'}</div>`;
             delete cachedPhotos[eventId];
-            setTimeout(() => { progressDiv.innerHTML = ''; loadEvents(); }, 2000);
+            const photos = await loadEventPhotos(eventId);
+            renderPhotosPreview(eventId, photos);
+            loadEvents();
+            setTimeout(() => { const p = document.getElementById(`uploadProgress_${eventId}`); if (p) p.innerHTML = ''; }, 2000);
         } else {
             progressDiv.innerHTML = `<div class="upload-progress error"><i class="fa-solid fa-xmark"></i> Error: ${data.error || 'Desconocido'}</div>`;
         }
     } catch (err) {
         progressDiv.innerHTML = '<div class="upload-progress error"><i class="fa-solid fa-xmark"></i> Error de conexión. Verifica tu internet.</div>';
     } finally {
-        if (progressDiv.querySelector('.success')) {
-            input.value = '';
-        }
+        input.value = '';
+        const lbl = document.getElementById(`fileLabel_${eventId}`);
+        if (lbl) lbl.textContent = 'Seleccionar fotos';
     }
 }
 
@@ -329,7 +337,8 @@ async function deleteEvent(id) {
     if (!confirm('¿Estás seguro de eliminar este evento y todas sus fotos?')) return;
     try {
         const res = await fetch(`/api/events/${id}`, { method: 'DELETE', headers: authHeaders() });
-        if (res.ok) loadEvents(); else alert('No se pudo eliminar el evento.');
+        if (res.ok) { closeManageModal(); loadEvents(); }
+        else alert('No se pudo eliminar el evento.');
     } catch (err) { alert('Error de conexión.'); }
 }
 
@@ -358,9 +367,19 @@ function renderGalleriesView() {
         const statusText = ev.status === 'published' ? 'Publicada' : ev.status === 'draft' ? 'Borrador' : 'Archivada';
         return `<div class="event-card">
             <div class="event-header" style="cursor: default;"><div><div class="event-title">${ev.title} <span class="event-status-badge status-${ev.status}">${statusText}</span></div><div class="event-meta"><span>${ev.event_date ? ev.event_date.split('T')[0] : ''}</span></div></div></div>
+            <div class="event-thumbs" id="galleryThumbs_${ev.id}"></div>
             <div class="event-body"><a href="${publicUrl}" target="_blank" class="btn-primary" style="text-align: center; text-decoration: none; display: block;">Visitar Galería Pública <i class="fa-solid fa-external-link-alt"></i></a></div>
         </div>`;
     }).join('');
+    cachedEvents.forEach(async (ev) => {
+        const photos = await loadEventPhotos(ev.id);
+        const row = document.getElementById(`galleryThumbs_${ev.id}`);
+        if (row) {
+            row.innerHTML = photos.length === 0
+                ? '<span class="thumb-empty">Sin fotos aún</span>'
+                : photos.slice(0, 5).map(p => `<img src="${p.preview_url || p.url}">`).join('') + (photos.length > 5 ? `<div class="thumb-more">+${photos.length - 5}</div>` : '');
+        }
+    });
 }
 
 async function toggleSales(eventId) {
@@ -374,12 +393,13 @@ async function toggleSales(eventId) {
     }
     try {
         const res = await fetch(`/api/events/${eventId}/pricing`, { method: 'PUT', headers: jsonHeaders(), body: JSON.stringify({ price_per_photo: 0, price_full_gallery: 0, currency: 'COP', nequi_phone: '', nequi_name: '', sales_enabled: salesEnabled, qr_code_url: '' }) });
-        if (res.ok) loadEvents(); else { alert('Error al actualizar.'); checkbox.checked = !salesEnabled; }
+        if (res.ok) { await loadEvents(); if (managingEventId) openManageModal(managingEventId); }
+        else { alert('Error al actualizar.'); checkbox.checked = !salesEnabled; }
     } catch (err) { alert('Error de conexión.'); checkbox.checked = !salesEnabled; }
 }
 
-function editPricing(eventId) { editingPricingId = eventId; loadEvents(); }
-function cancelEditPricing(eventId) { editingPricingId = null; loadEvents(); }
+function editPricing(eventId) { editingPricingId = eventId; if (managingEventId) openManageModal(managingEventId); }
+function cancelEditPricing(eventId) { editingPricingId = null; if (managingEventId) openManageModal(managingEventId); }
 
 async function savePricing(eventId) {
     const msgDiv = document.getElementById(`pricingMsg_${eventId}`);
@@ -399,7 +419,7 @@ async function savePricing(eventId) {
         if (res.ok) {
             editingPricingId = null;
             if (msgDiv) { msgDiv.className = 'alert alert-success'; msgDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i> ✓ Configuración guardada'; }
-            setTimeout(() => { loadEvents(); }, 800);
+            setTimeout(() => { loadEvents(); if (managingEventId) openManageModal(managingEventId); }, 800);
         } else { if (msgDiv) { msgDiv.className = 'alert alert-error'; msgDiv.textContent = `Error: ${result.error}`; } }
     } catch (err) { if (msgDiv) { msgDiv.className = 'alert alert-error'; msgDiv.textContent = `Error de red: ${err.message}`; } }
     finally { if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.innerHTML = '<i class="fa-solid fa-save"></i> Guardar'; } }
