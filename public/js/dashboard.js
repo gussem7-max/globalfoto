@@ -519,8 +519,8 @@ async function generateQr(url) {
             if (statusMsg.parentNode) statusMsg.remove();
             clearTimeout(timeout);
             
-            // Integrar logo con zona muerta
-            await overlayLogo(canvas);
+            // Logo desactivado temporalmente
+            // await overlayLogo(canvas);
             return;
         }
         
