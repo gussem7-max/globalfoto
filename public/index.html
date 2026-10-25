@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GlobalFoto - Plataforma de Fotografía</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/styles.css">
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
@@ -21,61 +21,36 @@
                 <h1 id="pubEventTitle">Cargando evento...</h1>
                 <p id="pubEventDetails"></p>
             </div>
-            
-            <!-- GATE DE SELFIE - OVERLAY OSCURO + TEXTO/BOTÓN ENCIMA -->
-            <div id="selfieGate" class="hidden" style="max-width: 420px; margin: 0 auto 30px; background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px 24px; text-align: center; position: relative;">
+            <div id="selfieGate" class="hidden" style="max-width: 420px; margin: 0 auto 30px; background: rgba(15,23,42,0.7); border: 1px solid #334155; border-radius: 16px; padding: 32px 24px; text-align: center;">
                 <h2 style="color: white; font-size: 22px; margin-bottom: 8px;">🤳 Verificación de identidad</h2>
                 <p style="color: #94a3b8; font-size: 14px; margin-bottom: 24px; line-height: 1.5;">Esta galería protege tu privacidad: solo verás las fotos donde apareces. Tómate una selfie para filtrarlas.</p>
-                
-                <!-- Contenedor de cámara con overlay oscuro que cubre todo -->
                 <div id="selfieCameraContainer" style="position: relative; width: 240px; height: 320px; margin: 0 auto 16px; display: none;">
                     <video id="selfieVideo" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;"></video>
                     <canvas id="selfieCanvas" style="display: none;"></canvas>
-                    
-                    <!-- Overlay oscuro que cubre TODO el gate -->
-                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5;">
+                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
                         <div style="position: absolute; top: 5%; left: 5%; width: 90%; height: 90%; border: 3px solid rgba(255,255,255,0.95); border-radius: 50%; box-shadow: 0 0 0 9999px rgba(0,0,0,0.7);"></div>
                     </div>
                 </div>
-                
-                <!-- Texto guía ENCIMA del overlay (z-index alto) -->
-                <p id="selfieGuideText" class="hidden" style="color: white; font-size: 15px; font-weight: 700; margin: 12px 0 20px 0; text-shadow: 0 2px 6px rgba(0,0,0,0.9); position: relative; z-index: 10;">👤 Coloca tu rostro dentro del óvalo</p>
-                
-                <!-- Preview de selfie tomada -->
-                <img id="selfiePreview" class="hidden" alt="Tu selfie" style="width: 200px; height: 200px; border-radius: 50%; object-fit: cover; margin: 0 auto 16px; display: none; border: 4px solid var(--accent); position: relative; z-index: 10;">
-                
-                <!-- Botones ENCIMA del overlay (z-index alto) -->
-                <div id="selfieButtonsContainer" style="display: flex; flex-direction: column; gap: 12px; align-items: center; margin-top: 8px; position: relative; z-index: 10;">
-                    
-                    <button id="btnStartCamera" class="btn-primary" style="width: 100%; max-width: 280px; padding: 14px 24px; font-size: 15px; font-weight: 600;">
-                        <i class="fa-solid fa-video"></i> Encender cámara
+                <p id="selfieGuideText" class="hidden" style="color: white; font-size: 15px; font-weight: 700; margin: 12px 0 20px 0; position: relative; z-index: 10;">👤 Coloca tu rostro dentro del óvalo</p>
+                <img id="selfiePreview" class="hidden" alt="Tu selfie" style="width: 200px; height: 200px; border-radius: 50%; object-fit: cover; margin: 0 auto 16px; display: none; border: 4px solid #6366f1;">
+                <div style="display: flex; flex-direction: column; gap: 12px; align-items: center; margin-top: 8px; position: relative; z-index: 10;">
+                    <button id="btnStartCamera" class="btn-primary" style="width: 100%; max-width: 280px;"><i class="fa-solid fa-video"></i> Encender cámara</button>
+                    <button id="btnCapture" class="hidden" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 18px 40px; border-radius: 50px; font-size: 18px; font-weight: 700; border: 3px solid white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0 auto; box-shadow: 0 6px 20px rgba(16,185,129,0.6); min-width: 240px;">
+                        <i class="fa-solid fa-camera" style="font-size: 22px;"></i> Tomar selfie
                     </button>
-                    
-                    <button id="btnCapture" class="hidden" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 18px 40px; border-radius: 50px; font-size: 18px; font-weight: 700; border: 3px solid white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0 auto; box-shadow: 0 6px 20px rgba(16,185,129,0.6), 0 0 0 4px rgba(255,255,255,0.2); transition: all 0.2s; min-width: 240px;">
-                        <i class="fa-solid fa-camera" style="font-size: 22px;"></i>
-                        Tomar selfie
-                    </button>
-                    
-                    <button id="btnRetake" class="hidden" style="background: white; color: var(--accent); padding: 14px 28px; border-radius: 50px; font-size: 15px; font-weight: 600; border: 2px solid var(--accent); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <button id="btnRetake" class="hidden" style="background: white; color: #6366f1; padding: 14px 28px; border-radius: 50px; font-size: 15px; font-weight: 600; border: 2px solid #6366f1; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
                         <i class="fa-solid fa-rotate-left"></i> Repetir selfie
                     </button>
-                    
-                    <button id="btnVerify" class="hidden btn-primary" style="width: 100%; max-width: 280px; padding: 14px 24px; font-size: 15px; font-weight: 600;">
-                        <i class="fa-solid fa-check-circle"></i> Verificar y ver mis fotos
-                    </button>
-                    
+                    <button id="btnVerify" class="hidden btn-primary" style="width: 100%; max-width: 280px;"><i class="fa-solid fa-check-circle"></i> Verificar y ver mis fotos</button>
                     <label id="selfieFileFallback" class="hidden" style="font-size: 13px; color: #94a3b8; cursor: pointer; text-decoration: underline; margin-top: 8px;">
                         O sube una foto tuya
                         <input type="file" id="selfieFileFallbackInput" accept="image/*" capture="user" style="display: none;">
                     </label>
                 </div>
-                
                 <div id="selfieStatus" style="color: #94a3b8; font-size: 13px; margin-top: 16px; min-height: 20px; position: relative; z-index: 10;"></div>
                 <div id="selfieProgress" style="color: #60a5fa; font-size: 14px; font-weight: 600; margin-top: 8px; min-height: 20px; position: relative; z-index: 10;"></div>
-                
                 <p style="color: #64748b; font-size: 11px; margin-top: 20px; padding-top: 16px; border-top: 1px solid #334155;">🔒 Tu selfie se procesa únicamente en tu dispositivo. No se sube a ningún servidor.</p>
             </div>
-            
             <div id="pubPackagesGrid" class="packages-grid"></div>
             <div id="pubPricingBar" class="public-pricing-bar hidden">
                 <div class="public-pricing-info">
@@ -92,7 +67,7 @@
     <!-- AUTH -->
     <div id="authContainer" class="auth-wrapper hidden">
         <div class="auth-card">
-            <div class="brand" style="justify-content: center; margin-bottom: 20px;"><i class="fa-solid fa-camera-retro"></i> Global<span style="background: linear-gradient(135deg, #6366f1, #a855f7); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">Foto</span></div>
+            <div class="brand" style="justify-content: center; margin-bottom: 20px;"><i class="fa-solid fa-camera-retro"></i> Global<span class="grad">Foto</span></div>
             <div class="tabs">
                 <div class="tab active" onclick="switchTab('login')">Iniciar Sesión</div>
                 <div class="tab" onclick="switchTab('register')">Crear Cuenta</div>
@@ -124,7 +99,7 @@
     <div id="dashboardContainer" class="dashboard-layout hidden">
         <aside class="sidebar">
             <div>
-                <div class="brand"><i class="fa-solid fa-camera-retro"></i> <span>GlobalFoto</span></div>
+                <div class="brand"><i class="fa-solid fa-camera-retro"></i> <span>Global<span class="grad">Foto</span></span></div>
                 <ul class="nav-menu">
                     <li class="nav-item active" id="navEvents" onclick="showSection('events')"><i class="fa-solid fa-calendar-days"></i> <span>Eventos</span></li>
                     <li class="nav-item" id="navGalleries" onclick="showSection('galleries')"><i class="fa-solid fa-images"></i> <span>Galerías</span></li>
@@ -147,35 +122,35 @@
         <main class="main-content">
             <div id="sectionEvents">
                 <div class="header">
-                    <div><h1 id="welcomeTitle">¡Hola de nuevo!</h1><p style="font-size: 14px; color: var(--text-muted);">Gestiona tus sesiones y galerías de fotos.</p></div>
+                    <div><h1 id="welcomeTitle">¡Hola de nuevo!</h1><p class="header-sub">Gestiona tus sesiones y galerías de fotos.</p></div>
                     <button class="btn-primary" style="width: auto; padding: 10px 20px;" onclick="openModal()"><i class="fa-solid fa-plus"></i> Nuevo Evento</button>
                 </div>
                 <div class="stats-grid">
                     <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-folder-open"></i></div><div class="stat-data"><h3 id="statEventsCount">0</h3><p>Eventos Totales</p></div></div>
                     <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-image"></i></div><div class="stat-data"><h3 id="statPhotosCount">0</h3><p>Fotos Almacenadas</p></div></div>
                 </div>
-                <h2 style="font-size: 18px; margin-bottom: 16px; color: #0f172a;">Mis Eventos Fotográficos</h2>
+                <h2 class="section-title">Mis Eventos Fotográficos</h2>
                 <div class="events-grid" id="eventList"></div>
             </div>
 
             <div id="sectionGalleries" class="hidden">
-                <div class="header"><div><h1>Galerías de Clientes</h1><p style="font-size: 14px; color: var(--text-muted);">Acceso rápido a los enlaces de galerías públicas.</p></div></div>
+                <div class="header"><div><h1>Galerías de Clientes</h1><p class="header-sub">Acceso rápido a los enlaces de galerías públicas.</p></div></div>
                 <div class="events-grid" id="galleriesGrid"></div>
             </div>
 
             <div id="sectionSales" class="hidden">
-                <div class="header"><div><h1>Ventas y Pedidos</h1><p style="font-size: 14px; color: var(--text-muted);">Gestiona los pedidos de tus clientes.</p></div></div>
+                <div class="header"><div><h1>Ventas y Pedidos</h1><p class="header-sub">Gestiona los pedidos de tus clientes.</p></div></div>
                 <div class="stats-grid">
                     <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-clock"></i></div><div class="stat-data"><h3 id="pendingCount">0</h3><p>Pendientes</p></div></div>
                     <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-check"></i></div><div class="stat-data"><h3 id="approvedCount">0</h3><p>Aprobados</p></div></div>
                     <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-dollar-sign"></i></div><div class="stat-data"><h3 id="totalRevenue">$0</h3><p>Ingresos Totales</p></div></div>
                 </div>
-                <h2 style="font-size: 18px; margin-bottom: 16px; color: #0f172a;">Pedidos Recientes</h2>
+                <h2 class="section-title">Pedidos Recientes</h2>
                 <div class="orders-list" id="ordersList"></div>
             </div>
 
             <div id="sectionAdmin" class="hidden">
-                <div class="header"><div><h1>🛡️ Panel de Administración</h1><p style="font-size: 14px; color: var(--text-muted);">Control total de la plataforma GlobalFoto.</p></div></div>
+                <div class="header"><div><h1>🛡️ Panel de Administración</h1><p class="header-sub">Control total de la plataforma GlobalFoto.</p></div></div>
                 <div class="stats-grid" id="adminStats"></div>
                 <div class="admin-tabs">
                     <button class="admin-tab-btn active" id="tabAdminEvents" onclick="adminTab('events')"><i class="fa-solid fa-calendar-days"></i> Eventos</button>
@@ -186,16 +161,16 @@
             </div>
 
             <div id="sectionUsers" class="hidden">
-                <div class="header"><div><h1>Gestión de Usuarios</h1><p style="font-size: 14px; color: var(--text-muted);">Administra todos los usuarios registrados en la plataforma.</p></div></div>
-                <div style="background: white; border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; overflow-x: auto;">
-                    <table style="width: 100%; border-collapse: collapse; text-align: left; min-width: 600px;">
-                        <thead style="background: #f8fafc; border-bottom: 1px solid var(--border-color);">
+                <div class="header"><div><h1>Gestión de Usuarios</h1><p class="header-sub">Administra todos los usuarios registrados en la plataforma.</p></div></div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
                             <tr>
-                                <th style="padding: 16px; font-size: 13px; font-weight: 600; color: var(--text-muted);">Nombre</th>
-                                <th style="padding: 16px; font-size: 13px; font-weight: 600; color: var(--text-muted);">Correo</th>
-                                <th style="padding: 16px; font-size: 13px; font-weight: 600; color: var(--text-muted);">Rol</th>
-                                <th style="padding: 16px; font-size: 13px; font-weight: 600; color: var(--text-muted);">Fecha de Registro</th>
-                                <th style="padding: 16px; font-size: 13px; font-weight: 600; color: var(--text-muted);">Acciones</th>
+                                <th>Nombre</th>
+                                <th>Correo</th>
+                                <th>Rol</th>
+                                <th>Fecha de Registro</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody"></tbody>
@@ -204,17 +179,17 @@
             </div>
 
             <div id="sectionSettings" class="hidden">
-                <div class="header"><div><h1>Configuración del Perfil</h1><p style="font-size: 14px; color: var(--text-muted);">Administra tus datos personales y credenciales de acceso.</p></div></div>
+                <div class="header"><div><h1>Configuración del Perfil</h1><p class="header-sub">Administra tus datos personales y credenciales de acceso.</p></div></div>
                 <div class="config-grid">
                     <div class="config-card">
-                        <h3 style="margin-bottom: 16px; font-size: 16px; color: #0f172a;"><i class="fa-solid fa-user-pen"></i> Datos Personales</h3>
+                        <h3 class="card-title"><i class="fa-solid fa-user-pen"></i> Datos Personales</h3>
                         <form id="profileForm">
                             <div class="form-group"><label>Nombre Completo / Nombre Comercial</label><input type="text" id="cfgName" required></div>
                             <div class="form-group"><label>Correo Electrónico</label><input type="email" id="cfgEmail" required></div>
                             <div class="form-group">
                                 <label>Logo de tu marca (opcional, aparece en los QR)</label>
                                 <div style="display: flex; align-items: center; gap: 12px;">
-                                    <img id="currentLogo" src="" alt="Logo actual" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border-color); display: none;">
+                                    <img id="currentLogo" src="" alt="Logo actual" class="logo-preview" style="display: none;">
                                     <div>
                                         <input type="file" id="logoInput" accept="image/*" style="display: none;" onchange="uploadLogo(event)">
                                         <button type="button" class="btn-secondary" style="width: auto; padding: 8px 12px;" onclick="document.getElementById('logoInput').click()">
@@ -230,11 +205,11 @@
                         <div id="resProfile"></div>
                     </div>
                     <div class="config-card">
-                        <h3 style="margin-bottom: 16px; font-size: 16px; color: #0f172a;"><i class="fa-solid fa-key"></i> Seguridad y Contraseña</h3>
+                        <h3 class="card-title"><i class="fa-solid fa-key"></i> Seguridad y Contraseña</h3>
                         <form id="passwordForm">
                             <div class="form-group"><label>Contraseña Actual</label><input type="password" id="currentPassword" required placeholder="••••••••"></div>
                             <div class="form-group"><label>Nueva Contraseña</label><input type="password" id="newPassword" required placeholder="••••••••" minlength="8"></div>
-                            <button type="submit" class="btn-primary" style="background: var(--bg-primary);">Actualizar Contraseña</button>
+                            <button type="submit" class="btn-primary">Actualizar Contraseña</button>
                         </form>
                         <div id="resPassword"></div>
                     </div>
@@ -246,7 +221,7 @@
     <!-- MODALES -->
     <div id="eventModal" class="modal hidden">
         <div class="modal-content">
-            <div class="modal-header"><h3 style="font-size: 18px; color: #0f172a;" id="eventModalTitle">Crear Nuevo Evento</h3><i class="fa-solid fa-xmark close-modal" onclick="closeModal()"></i></div>
+            <div class="modal-header"><h3 class="modal-title" id="eventModalTitle">Crear Nuevo Evento</h3><i class="fa-solid fa-xmark close-modal" onclick="closeModal()"></i></div>
             <form id="eventForm">
                 <input type="hidden" id="editEventId">
                 <div class="form-group"><label>Título del Evento</label><input type="text" id="title" required placeholder="Ej. Boda Sofía & Pedro"></div>
@@ -278,7 +253,7 @@
 
     <div id="packageModal" class="modal hidden">
         <div class="modal-content">
-            <div class="modal-header"><h3 style="font-size: 18px; color: #0f172a;">Agregar Paquete</h3><i class="fa-solid fa-xmark close-modal" onclick="closePackageModal()"></i></div>
+            <div class="modal-header"><h3 class="modal-title">Agregar Paquete</h3><i class="fa-solid fa-xmark close-modal" onclick="closePackageModal()"></i></div>
             <form id="packageForm">
                 <input type="hidden" id="pkgEventId">
                 <div class="form-group"><label>Nombre del Paquete</label><input type="text" id="pkgName" placeholder="Ej: Paquete 20 fotos" required></div>
@@ -292,21 +267,21 @@
 
     <div id="purchaseModal" class="modal hidden">
         <div class="modal-content">
-            <div class="modal-header"><h3 style="font-size: 18px; color: #0f172a;" id="purchaseModalTitle">Comprar Foto</h3><i class="fa-solid fa-xmark close-modal" onclick="closePurchaseModal()"></i></div>
+            <div class="modal-header"><h3 class="modal-title" id="purchaseModalTitle">Comprar Foto</h3><i class="fa-solid fa-xmark close-modal" onclick="closePurchaseModal()"></i></div>
             <div id="purchaseModalBody"></div>
         </div>
     </div>
 
     <div id="orderModal" class="modal hidden">
         <div class="modal-content large">
-            <div class="modal-header"><h3 style="font-size: 18px; color: #0f172a;">Detalles del Pedido</h3><i class="fa-solid fa-xmark close-modal" onclick="closeOrderModal()"></i></div>
+            <div class="modal-header"><h3 class="modal-title">Detalles del Pedido</h3><i class="fa-solid fa-xmark close-modal" onclick="closeOrderModal()"></i></div>
             <div id="orderModalContent"></div>
         </div>
     </div>
 
     <div id="editUserModal" class="modal hidden">
         <div class="modal-content">
-            <div class="modal-header"><h3 style="font-size: 18px; color: #0f172a;">Editar Usuario</h3><i class="fa-solid fa-xmark close-modal" onclick="closeEditUserModal()"></i></div>
+            <div class="modal-header"><h3 class="modal-title">Editar Usuario</h3><i class="fa-solid fa-xmark close-modal" onclick="closeEditUserModal()"></i></div>
             <form id="editUserForm">
                 <input type="hidden" id="editUserId">
                 <div class="form-group"><label>Nombre Completo</label><input type="text" id="editUserName" required></div>
@@ -326,11 +301,11 @@
     <div id="qrModal" class="modal hidden">
         <div class="modal-content" style="text-align: center;">
             <div class="modal-header">
-                <h3 style="font-size: 18px; color: #0f172a;">📱 Código QR de la Galería</h3>
+                <h3 class="modal-title">📱 Código QR de la Galería</h3>
                 <i class="fa-solid fa-xmark close-modal" onclick="closeQrModal()"></i>
             </div>
             <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Comparte este QR para que tus clientes accedan directamente a la galería.</p>
-            <div id="qrCanvasContainer" style="background: white; padding: 20px; border-radius: 12px; display: inline-block; margin-bottom: 16px;">
+            <div id="qrCanvasContainer" class="qr-box">
                 <canvas id="qrCanvas"></canvas>
             </div>
             <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
@@ -347,7 +322,7 @@
     <div id="lightboxModal" class="modal hidden" onclick="closeLightbox()">
         <div class="lightbox-content" onclick="event.stopPropagation()">
             <img id="lightboxImg" class="lightbox-img" src="" alt="Vista previa">
-            <button class="btn-primary" style="margin-top: 16px; width: auto; background: rgba(255,255,255,0.2);" onclick="closeLightbox()">Cerrar Vista</button>
+            <button class="btn-primary" style="margin-top: 16px; width: auto; background: rgba(255,255,255,0.15); box-shadow: none;" onclick="closeLightbox()">Cerrar Vista</button>
         </div>
     </div>
 
