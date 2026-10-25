@@ -487,18 +487,14 @@ function closeQrModal() {
 async function generateQr(url) {
     const container = document.getElementById('qrCanvasContainer');
     
-    // Asegurar que exista un canvas (reconstruir si fue destruido)
     let canvas = document.getElementById('qrCanvas');
     if (!canvas) {
         canvas = document.createElement('canvas');
         canvas.id = 'qrCanvas';
-        canvas.width = 280;
-        canvas.height = 280;
         container.innerHTML = '';
         container.appendChild(canvas);
     }
     
-    // Mostrar estado de carga SIN destruir el canvas
     const statusMsg = document.createElement('p');
     statusMsg.id = 'qrStatusMsg';
     statusMsg.style.cssText = 'color: var(--text-muted); margin: 10px 0;';
@@ -506,26 +502,28 @@ async function generateQr(url) {
     canvas.style.display = 'none';
     container.appendChild(statusMsg);
     
-    // Timeout de seguridad: si tarda más de 10s, mostrar error
     const timeout = setTimeout(() => {
-        statusMsg.textContent = '⚠️ El QR tardó demasiado. Intenta de nuevo.';
+        statusMsg.textContent = '️ El QR tardó demasiado. Intenta de nuevo.';
         statusMsg.style.color = 'var(--danger)';
     }, 10000);
     
     try {
-        // MÉTODO 1: Librería QRCode local
         if (typeof QRCode !== 'undefined') {
+            // Canvas más grande para mejor calidad
+            canvas.width = 400;
+            canvas.height = 400;
+            
             await QRCode.toCanvas(canvas, url, {
-                width: 280,
-                margin: 2,
+                width: 400,
+                margin: 3,
                 color: { dark: '#0f172a', light: '#ffffff' },
-                errorCorrectionLevel: 'H'
+                errorCorrectionLevel: 'H' // Máxima tolerancia para logo
             });
+            
             canvas.style.display = 'block';
             if (statusMsg.parentNode) statusMsg.remove();
             clearTimeout(timeout);
             
-            // Superponer logo
             await overlayLogo(canvas);
             return;
         }
@@ -534,20 +532,19 @@ async function generateQr(url) {
     } catch (err) {
         console.warn('Librería QR falló, usando API pública:', err.message);
         
-        // MÉTODO 2: API pública
         try {
-            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=10&color=0f172a&bgcolor=ffffff&ecc=H&data=${encodeURIComponent(url)}`;
+            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=15&color=0f172a&bgcolor=ffffff&ecc=H&data=${encodeURIComponent(url)}`;
             const img = new Image();
             img.crossOrigin = 'anonymous';
             
             await new Promise((resolve, reject) => {
                 img.onload = () => {
-                    canvas.width = 280;
-                    canvas.height = 280;
+                    canvas.width = 400;
+                    canvas.height = 400;
                     const ctx = canvas.getContext('2d');
                     ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, 280, 280);
-                    ctx.drawImage(img, 0, 0, 280, 280);
+                    ctx.fillRect(0, 0, 400, 400);
+                    ctx.drawImage(img, 0, 0, 400, 400);
                     resolve();
                 };
                 img.onerror = () => reject(new Error('No se pudo cargar la imagen QR'));
@@ -561,10 +558,56 @@ async function generateQr(url) {
         } catch (fallbackErr) {
             console.error('Error en fallback QR:', fallbackErr);
             clearTimeout(timeout);
-            statusMsg.textContent = '⚠️ No se pudo generar el QR. Verifica tu conexión.';
+            statusMsg.textContent = '️ No se pudo generar el QR. Verifica tu conexión.';
             statusMsg.style.color = 'var(--danger)';
         }
     }
+}
+
+async function overlayLogo(canvas) {
+    const logoUrl = (currentUser && currentUser.logo_url) 
+        ? currentUser.logo_url 
+        : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzI1NjNlYiIvPjx0ZXh0IHg9IjUwIiB5PSI2NSIgZm9udC1zaXplPSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC13ZWlnaHQ9ImJvbGQiPkdGPC90ZXh0Pjwvc3ZnPg==';
+    
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'anonymous';
+    
+    return new Promise((resolve) => {
+        logoImg.onload = () => {
+            const ctx = canvas.getContext('2d');
+            const canvasSize = canvas.width;
+            
+            // Logo más pequeño: 12% del QR
+            const logoSize = canvasSize * 0.12;
+            
+            // Padding más grande para espacio en blanco visible
+            const padding = 12;
+            const totalSize = logoSize + (padding * 2);
+            
+            const x = (canvasSize - totalSize) / 2;
+            const y = (canvasSize - totalSize) / 2;
+            
+            // Fondo blanco grande y visible
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(x - 4, y - 4, totalSize + 8, totalSize + 8);
+            
+            // Borde gris más visible
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x - 4, y - 4, totalSize + 8, totalSize + 8);
+            
+            // Dibujar logo centrado
+            ctx.drawImage(logoImg, x + padding, y + padding, logoSize, logoSize);
+            
+            console.log('✅ Logo superpuesto (12% del QR, padding 12px)');
+            resolve();
+        };
+        logoImg.onerror = () => {
+            console.warn('️ No se pudo cargar el logo');
+            resolve();
+        };
+        logoImg.src = logoUrl;
+    });
 }
 
 // Función auxiliar para superponer el logo
