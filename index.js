@@ -38,7 +38,7 @@ const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:4000,http:
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('Bloqueado por política CORS');
+    return callback(new Error('Bloqueado por política CORS'));
   },
   credentials: true
 }));
