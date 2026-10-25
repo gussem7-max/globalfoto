@@ -74,16 +74,84 @@ function showDashboard() {
     loadEvents();
     loadPendingOrdersCount();
     loadUserLogo();
+    
+    // Mostrar plan seleccionado si viene de la landing
+    const selectedPlan = localStorage.getItem('selected_plan');
+    if (selectedPlan) {
+        showPlanNotification(selectedPlan);
+        localStorage.removeItem('selected_plan');
+    }
 }
 
-function logout() { localStorage.removeItem('token'); window.location.href = '/'; }
+function showPlanNotification(planName) {
+    const planNames = {
+        'free': 'Prueba Gratis (14 días)',
+        'basic': 'Básico',
+        'pro': 'Pro (Más popular)',
+        'studio': 'Estudio'
+    };
+    const notification = document.createElement('div');
+    notification.style.cssText = 'position: fixed; top: 24px; right: 24px; background: linear-gradient(135deg, #6366f1, #a855f7); color: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 10px 30px rgba(168, 85, 247, 0.4); z-index: 9999; max-width: 320px; animation: slideIn 0.4s ease-out;';
+    notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <i class="fa-solid fa-gift" style="font-size: 24px;"></i>
+            <div>
+                <div style="font-size: 12px; opacity: 0.9;">Plan seleccionado</div>
+                <div style="font-size: 15px; font-weight: 700;">${planNames[planName] || planName}</div>
+                <div style="font-size: 11px; opacity: 0.9; margin-top: 2px;">14 días gratis de prueba</div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.style.animation = 'slideIn 0.4s ease-out reverse';
+        setTimeout(() => notification.remove(), 400);
+    }, 5000);
+}
+
+function logout() { 
+    localStorage.removeItem('token'); 
+    window.location.href = '/'; 
+}
+
+// Estilos para la animación de notificación
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(120%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+`;
+document.head.appendChild(style);
 
 window.addEventListener('DOMContentLoaded', async () => {
     const token = getToken();
+    const pathname = window.location.pathname;
     const urlParams = new URLSearchParams(window.location.search);
-    const galeriaId = urlParams.get('galeria');
 
-    if (galeriaId) { await loadPublicGallery(galeriaId); hideLoadingOverlay(); return; }
+    // Detectar galería pública: /g/ID o ?galeria=ID (compatibilidad)
+    let galeriaId = null;
+    const galleryMatch = pathname.match(/^\/g\/(\d+)/);
+    if (galleryMatch) galeriaId = galleryMatch[1];
+    else if (urlParams.get('galeria')) galeriaId = urlParams.get('galeria');
+
+    if (galeriaId) { 
+        await loadPublicGallery(galeriaId); 
+        hideLoadingOverlay(); 
+        return; 
+    }
+
+    // Detectar tab de registro desde landing: /panel?tab=register&plan=pro
+    const requestedTab = urlParams.get('tab');
+    if (requestedTab === 'register') {
+        switchTab('register');
+    }
+    
+    // Guardar plan seleccionado para mostrarlo después del login/registro
+    const plan = urlParams.get('plan');
+    if (plan) {
+        localStorage.setItem('selected_plan', plan);
+    }
 
     if (!token) {
         document.getElementById('authContainer').classList.remove('hidden');
