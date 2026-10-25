@@ -73,13 +73,11 @@ function showDashboard() {
     }
     loadEvents();
     loadPendingOrdersCount();
+    loadUserLogo();
 }
 
 function logout() { localStorage.removeItem('token'); window.location.href = '/'; }
 
-// =====================================================
-// ARRANQUE DE LA APLICACIÓN
-// =====================================================
 window.addEventListener('DOMContentLoaded', async () => {
     const token = getToken();
     const urlParams = new URLSearchParams(window.location.search);
@@ -114,6 +112,5 @@ window.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('dashboardContainer').classList.add('hidden');
     } finally {
         hideLoadingOverlay();
-            loadUserLogo();
     }
 });
