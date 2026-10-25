@@ -16,11 +16,11 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdn.tailwindcss.com"],
       scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc: ["'self'", "data:", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
-      imgSrc: ["'self'", "data:", "https:", "https://api.qrserver.com"],
+      imgSrc: ["'self'", "data:", "https:", "https://images.unsplash.com"],
       connectSrc: ["'self'", "https://cdn.jsdelivr.net", "https://*.amazonaws.com"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
@@ -64,17 +64,37 @@ const authLimiter = rateLimit({
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
+// ========== RUTAS DE PÁGINAS ==========
+
+// Landing page (raíz)
+app.get('/', (req, res, next) => {
+  // Compatibilidad con enlaces viejos: /?galeria=X -> /g/X
+  if (req.query.galeria) {
+    return res.redirect(301, `/g/${req.query.galeria}`);
+  }
+  res.sendFile(path.join(__dirname, 'public', 'landing.html'));
+});
+
+// Panel (login / registro / dashboard)
+app.get('/panel', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Galería pública (ruta moderna: /g/:id)
+app.get('/g/:id', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Archivos estáticos
 app.use(express.static('public'));
 
+// Verificación de columna en base de datos
 pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS photographer_id INTEGER;`)
   .then(() => console.log('✔ Columna photographer_id verificada/creada exitosamente.'))
   .catch(err => console.error('✖ Error al verificar columna en la base de datos:', err));
 
-app.get('/', (req, res) => {
-  res.json({ mensaje: '¡Bienvenido al backend de GlobalFoto funcionando al 100%!' });
-});
+// ========== RUTAS DE LA API ==========
 
-// RUTAS DE LA API
 const authRoutes = require('./src/routes/auth');
 app.use('/api/auth', authRoutes);
 
@@ -95,10 +115,12 @@ app.use('/api/admin', adminRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Manejo de rutas no encontradas
 app.use((req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada.' });
 });
 
+// Manejo de errores globales
 app.use((err, req, res, next) => {
   console.error('ERROR:', err.message);
   if (res.headersSent) return next(err);
@@ -108,10 +130,12 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Iniciar servidor
 const server = app.listen(PORT, () => {
   console.log(`Servidor corriendo exitosamente en el puerto ${PORT}`);
 });
 
+// Cierre elegante
 process.on('SIGTERM', () => {
   console.log('SIGTERM recibido: cerrando servidor con elegancia...');
   server.close(async () => {
