@@ -624,37 +624,35 @@ async function overlayLogo(canvas) {
             const ctx = canvas.getContext('2d');
             const canvasSize = canvas.width;
             
-            // Logo al 10% del canvas (40px en canvas de 400px)
-            const logoSize = canvasSize * 0.10;
+            // Logo al 15% del canvas (60px en canvas de 400px)
+            const logoSize = canvasSize * 0.15;
             
-            // Padding generoso: 20px de espacio blanco alrededor
-            const padding = 20;
-            const totalSize = logoSize + (padding * 2);
+            // Espacio de "zona muerta" más grande que el logo (para que no haya módulos cerca)
+            const deadZoneSize = logoSize * 1.5;
             
-            const x = (canvasSize - totalSize) / 2;
-            const y = (canvasSize - totalSize) / 2;
+            const x = (canvasSize - deadZoneSize) / 2;
+            const y = (canvasSize - deadZoneSize) / 2;
             
             // Alta calidad de renderizado
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
             
-            // Fondo blanco GRANDE y visible
+            // PASO 1: Limpiar el centro del QR (pintar de blanco la zona muerta)
+            // Esto "borra" los módulos que estaban ahí
             ctx.fillStyle = '#ffffff';
-            ctx.fillRect(x - 6, y - 6, totalSize + 12, totalSize + 12);
+            ctx.fillRect(x, y, deadZoneSize, deadZoneSize);
             
-            // Borde gris sutil pero visible
-            ctx.strokeStyle = '#e2e8f0';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x - 6, y - 6, totalSize + 12, totalSize + 12);
+            // PASO 2: Dibujar el logo centrado en la zona limpia
+            // SIN fondo blanco adicional, porque el QR ya es blanco ahí
+            const logoX = (canvasSize - logoSize) / 2;
+            const logoY = (canvasSize - logoSize) / 2;
+            ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
             
-            // Dibujar logo centrado en el padding
-            ctx.drawImage(logoImg, x + padding, y + padding, logoSize, logoSize);
-            
-            console.log('✅ Logo renderizado con espacio profesional:', {
+            console.log('✅ Logo integrado en QR profesional:', {
                 originalSize: `${logoImg.width}x${logoImg.height}`,
                 logoSize: `${logoSize}x${logoSize}`,
-                padding: `${padding}px`,
-                totalWhiteSpace: `${totalSize + 12}px`
+                deadZoneSize: `${deadZoneSize}x${deadZoneSize}`,
+                url: logoUrl
             });
             resolve();
         };
