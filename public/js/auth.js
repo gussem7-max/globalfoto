@@ -60,3 +60,51 @@ document.getElementById('passwordForm').addEventListener('submit', async (e) => 
         else { resDiv.className = 'alert alert-error'; resDiv.textContent = data.error; }
     } catch (err) { resDiv.className = 'alert alert-error'; resDiv.textContent = 'Error de conexión.'; }
 });
+
+// Cargar logo del usuario al iniciar sesión
+async function loadUserLogo() {
+    if (!currentUser) return;
+    try {
+        const res = await fetch('/api/auth/me', { headers: authHeaders() });
+        if (res.ok) {
+            const data = await res.json();
+            currentUser = data.user;
+            if (currentUser.logo_url) {
+                const avatar = document.getElementById('userAvatar');
+                if (avatar) {
+                    avatar.innerHTML = `<img src="${currentUser.logo_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+                }
+            }
+        }
+    } catch (err) { console.error('Error cargando logo:', err); }
+}
+
+async function uploadLogo(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert('El logo debe pesar menos de 2MB.'); return; }
+    
+    const resultDiv = document.getElementById('logoResult');
+    resultDiv.innerHTML = '<div class="alert" style="background:#eff6ff;color:#1e40af;">Subiendo logo...</div>';
+    
+    const formData = new FormData();
+    formData.append('logo', file);
+    
+    try {
+        const res = await fetch('/api/auth/logo', { method: 'PUT', headers: { 'Authorization': `Bearer ${getToken()}` }, body: formData });
+        const data = await res.json();
+        if (res.ok) {
+            currentUser.logo_url = data.logo_url;
+            const preview = document.getElementById('currentLogo');
+            preview.src = data.logo_url;
+            preview.style.display = 'block';
+            resultDiv.innerHTML = '<div class="alert alert-success">✅ Logo actualizado. Aparecerá en los QR de tus galerías.</div>';
+            setTimeout(() => { resultDiv.innerHTML = ''; }, 3000);
+            loadUserLogo();
+        } else {
+            resultDiv.innerHTML = `<div class="alert alert-error">${data.error}</div>`;
+        }
+    } catch (err) {
+        resultDiv.innerHTML = '<div class="alert alert-error">Error de conexión.</div>';
+    }
+}

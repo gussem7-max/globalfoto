@@ -163,7 +163,11 @@ async function loadEvents() {
                 <div class="event-body">
                     <div class="event-desc">${ev.description || ''}</div>
                     <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">Enlace público:</div>
-                    <div style="display: flex; gap: 6px; margin-bottom: 12px;"><input type="text" readonly value="${publicUrl}" style="font-size: 11px; background: #f8fafc; padding: 6px; border: 1px solid var(--border-color); border-radius: 6px; width: 100%; color: var(--text-muted);"></div>
+                    <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+                        <input type="text" readonly value="${publicUrl}" id="eventUrl_${ev.id}" style="font-size: 11px; background: #f8fafc; padding: 6px; border: 1px solid var(--border-color); border-radius: 6px; width: 100%; color: var(--text-muted);">
+                        <button class="btn-action" onclick="copyEventUrl(${ev.id})" title="Copiar enlace"><i class="fa-solid fa-copy"></i></button>
+                        <button class="btn-action" onclick="openQrModal(${ev.id}, '${publicUrl}')" title="Generar QR"><i class="fa-solid fa-qrcode"></i></button>
+                    </div>
                     <div class="upload-box">
                         <form onsubmit="uploadPhotos(event, ${ev.id})" style="display: flex; width: 100%; gap: 8px;">
                             <input type="file" id="fileInput_${ev.id}" multiple accept="image/*" class="file-input" onchange="updateFileLabel(${ev.id})">
@@ -450,4 +454,87 @@ async function rejectOrder(orderId) {
         if (res.ok) { alert('❌ Pedido rechazado. Cliente notificado.'); loadOrders(); loadPendingOrdersCount(); }
         else { const data = await res.json(); alert(`Error: ${data.error}`); }
     } catch (err) { alert('Error de conexión.'); }
+}
+
+// ---------- COPIAR ENLACE ----------
+async function copyEventUrl(eventId) {
+    const input = document.getElementById(`eventUrl_${eventId}`);
+    if (!input) return;
+    try {
+        await navigator.clipboard.writeText(input.value);
+        const btn = input.nextElementSibling;
+        if (btn) {
+            const original = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check" style="color: var(--success);"></i>';
+            setTimeout(() => { btn.innerHTML = original; }, 1500);
+        }
+    } catch (err) {
+        // Fallback para navegadores antiguos
+        input.select();
+        document.execCommand('copy');
+        alert('Enlace copiado: ' + input.value);
+    }
+}
+
+// ---------- MODAL QR ----------
+let currentQrUrl = '';
+
+function openQrModal(eventId, url) {
+    currentQrUrl = url;
+    document.getElementById('qrModal').classList.remove('hidden');
+    generateQr(url);
+}
+
+function closeQrModal() {
+    document.getElementById('qrModal').classList.add('hidden');
+}
+
+async function generateQr(url) {
+    const canvas = document.getElementById('qrCanvas');
+    const container = document.getElementById('qrCanvasContainer');
+    container.innerHTML = '<p style="color: var(--text-muted);">Generando QR...</p>';
+    
+    try {
+        // Generar QR base
+        await QRCode.toCanvas(canvas, url, {
+            width: 280,
+            margin: 2,
+            color: { dark: '#0f172a', light: '#ffffff' },
+            errorCorrectionLevel: 'H' // Alta corrección (permite logo encima)
+        });
+
+        // Superponer logo del fotógrafo (o de GlobalFoto)
+        const logoUrl = currentUser.logo_url || 'https://globalfotoapp.com/logo.png';
+        const logoImg = new Image();
+        logoImg.crossOrigin = 'anonymous';
+        logoImg.onload = () => {
+            const ctx = canvas.getContext('2d');
+            const logoSize = canvas.width * 0.22; // 22% del QR (seguro con error correction H)
+            const x = (canvas.width - logoSize) / 2;
+            const y = (canvas.height - logoSize) / 2;
+            
+            // Fondo blanco detrás del logo para que el QR siga siendo legible
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(x - 4, y - 4, logoSize + 8, logoSize + 8);
+            
+            // Dibujar logo
+            ctx.drawImage(logoImg, x, y, logoSize, logoSize);
+        };
+        logoImg.onerror = () => {
+            // Si el logo no carga, dejar el QR sin logo
+            console.warn('No se pudo cargar el logo para el QR');
+        };
+        logoImg.src = logoUrl;
+    } catch (err) {
+        console.error('Error generando QR:', err);
+        container.innerHTML = '<p style="color: var(--danger);">Error al generar el QR.</p>';
+    }
+}
+
+function downloadQr() {
+    const canvas = document.getElementById('qrCanvas');
+    const link = document.createElement('a');
+    link.download = `globalfoto-qr-${Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
 }

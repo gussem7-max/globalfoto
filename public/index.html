@@ -7,6 +7,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 </head>
 <body>
     <div id="loadingOverlay" class="loading-overlay"><div class="spinner"></div></div>
@@ -19,7 +21,6 @@
                 <h1 id="pubEventTitle">Cargando evento...</h1>
                 <p id="pubEventDetails"></p>
             </div>
-                        <!-- GATE DE VERIFICACIÓN POR SELFIE -->
             <div id="selfieGate" class="hidden" style="max-width: 420px; margin: 0 auto 30px; background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 24px; text-align: center;">
                 <h2 style="color: white; font-size: 20px; margin-bottom: 8px;">🤳 Verificación de identidad</h2>
                 <p style="color: #94a3b8; font-size: 13px; margin-bottom: 16px;">Esta galería protege tu privacidad: solo verás las fotos donde apareces. Tómate una selfie para filtrarlas.</p>
@@ -175,6 +176,20 @@
                         <form id="profileForm">
                             <div class="form-group"><label>Nombre Completo / Nombre Comercial</label><input type="text" id="cfgName" required></div>
                             <div class="form-group"><label>Correo Electrónico</label><input type="email" id="cfgEmail" required></div>
+                            <div class="form-group">
+                                <label>Logo de tu marca (opcional, aparece en los QR)</label>
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <img id="currentLogo" src="" alt="Logo actual" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border-color); display: none;">
+                                    <div>
+                                        <input type="file" id="logoInput" accept="image/*" style="display: none;" onchange="uploadLogo(event)">
+                                        <button type="button" class="btn-secondary" style="width: auto; padding: 8px 12px;" onclick="document.getElementById('logoInput').click()">
+                                            <i class="fa-solid fa-upload"></i> Subir logo
+                                        </button>
+                                        <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">PNG o JPG, máx. 2MB. Cuadrado recomendado.</p>
+                                    </div>
+                                </div>
+                                <div id="logoResult"></div>
+                            </div>
                             <button type="submit" class="btn-primary">Guardar Cambios</button>
                         </form>
                         <div id="resProfile"></div>
@@ -211,10 +226,10 @@
                     </select>
                 </div>
                 <div class="form-group"><label>Expira el (Opcional)</label><input type="datetime-local" id="event_expires"></div>
-                                <div class="form-group">
+                <div class="form-group">
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                         <input type="checkbox" id="event_selfie" style="width: auto;">
-                        🤳 Requerir selfie de verificación
+                         Requerir selfie de verificación
                     </label>
                     <small style="color: var(--text-muted); display: block; margin-top: 4px;">
                         Actívalo en graduaciones o eventos donde debas garantizar que cada persona solo vea y compre sus propias fotos. El cliente deberá tomarse una selfie para filtrar la galería.
@@ -273,6 +288,27 @@
         </div>
     </div>
 
+    <div id="qrModal" class="modal hidden">
+        <div class="modal-content" style="text-align: center;">
+            <div class="modal-header">
+                <h3 style="font-size: 18px; color: #0f172a;">📱 Código QR de la Galería</h3>
+                <i class="fa-solid fa-xmark close-modal" onclick="closeQrModal()"></i>
+            </div>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Comparte este QR para que tus clientes accedan directamente a la galería.</p>
+            <div id="qrCanvasContainer" style="background: white; padding: 20px; border-radius: 12px; display: inline-block; margin-bottom: 16px;">
+                <canvas id="qrCanvas"></canvas>
+            </div>
+            <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                <button class="btn-primary" style="width: auto; padding: 10px 20px;" onclick="downloadQr()">
+                    <i class="fa-solid fa-download"></i> Descargar QR
+                </button>
+                <button class="btn-secondary" style="width: auto; padding: 10px 20px;" onclick="closeQrModal()">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="lightboxModal" class="modal hidden" onclick="closeLightbox()">
         <div class="lightbox-content" onclick="event.stopPropagation()">
             <img id="lightboxImg" class="lightbox-img" src="" alt="Vista previa">
@@ -280,8 +316,7 @@
         </div>
     </div>
 
-    <!-- Scripts en orden: estado → ui → auth → dashboard → public → admin -->
-    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <!-- Scripts en orden: estado → ui → auth → dashboard → public → admin → selfie -->
     <script src="/js/state.js"></script>
     <script src="/js/ui.js"></script>
     <script src="/js/auth.js"></script>

@@ -114,5 +114,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('dashboardContainer').classList.add('hidden');
     } finally {
         hideLoadingOverlay();
+            loadUserLogo();
     }
 });

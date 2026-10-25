@@ -1,3 +1,6 @@
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const multer = require('multer');
+const crypto = require('crypto');
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
@@ -192,6 +195,37 @@ router.put('/password', async (req, res) => {
     } catch (error) {
         console.error('Error al actualizar contraseña:', error);
         res.status(500).json({ error: 'Error interno al actualizar la contraseña.' });
+    }
+});
+
+// SUBIR LOGO DEL FOTÓGRAFO
+const multer = require('multer');
+const { PutObjectCommand } = require('@aws-sdk/client-s3');
+const crypto = require('crypto');
+
+const uploadLogo = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
+
+router.put('/logo', verificarToken, uploadLogo.single('logo'), async (req, res) => {
+    try {
+        const file = req.file;
+        if (!file) return res.status(400).json({ error: 'No se recibió archivo.' });
+        if (!file.mimetype.startsWith('image/')) return res.status(400).json({ error: 'Solo se permiten imágenes.' });
+
+        const ext = file.mimetype.split('/')[1] || 'png';
+        const key = `logos/${req.user.id}/${crypto.randomBytes(16).toString('hex')}.${ext}`;
+        await s3Client.send(new PutObjectCommand({
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: key,
+            Body: file.buffer,
+            ContentType: file.mimetype
+        }));
+        const logoUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+
+        await pool.query('UPDATE users SET logo_url = $1 WHERE id = $2', [logoUrl, req.user.id]);
+        res.json({ mensaje: 'Logo actualizado.', logo_url: logoUrl });
+    } catch (error) {
+        console.error('Error subiendo logo:', error);
+        res.status(500).json({ error: 'Error al subir el logo.' });
     }
 });
 

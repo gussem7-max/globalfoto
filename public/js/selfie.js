@@ -8,7 +8,7 @@ let selfieStream = null;
 let selfieDescriptor = null;
 
 const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';
-const MATCH_THRESHOLD = 0.6;
+const MATCH_THRESHOLD = 0.65; // más permisivo (encuentra más, pero puede haber falsos positivos)
 const SELFIE_MAX_DIM = 640;
 
 function el(id) { return document.getElementById(id); }
