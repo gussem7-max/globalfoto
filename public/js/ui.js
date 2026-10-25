@@ -1,13 +1,10 @@
 // =====================================================
-// UTILIDADES DE UI, NAVEGACIÓN Y ARRANQUE
+// UI: NAVEGACIÓN Y ARRANQUE
 // =====================================================
 
 function hideLoadingOverlay() {
     const overlay = document.getElementById('loadingOverlay');
-    if (overlay) { 
-        overlay.classList.add('hidden'); 
-        setTimeout(() => overlay.remove(), 300); 
-    }
+    if (overlay) { overlay.classList.add('hidden'); setTimeout(() => overlay.remove(), 300); }
 }
 
 function showSection(section) {
@@ -35,8 +32,10 @@ function showSection(section) {
     }
     else if (section === 'settings') {
         if (currentUser) {
-            document.getElementById('cfgName').value = currentUser.name || '';
-            document.getElementById('cfgEmail').value = currentUser.email || '';
+            const n = document.getElementById('cfgName');
+            const e = document.getElementById('cfgEmail');
+            if (n) n.value = currentUser.name || '';
+            if (e) e.value = currentUser.email || '';
         }
     }
 }
@@ -51,21 +50,23 @@ function switchTab(tab) {
     });
 }
 
-function closeOrderModal() { document.getElementById('orderModal').classList.add('hidden'); }
-function closePackageModal() { document.getElementById('packageModal').classList.add('hidden'); }
+function closeOrderModal() { const m = document.getElementById('orderModal'); if (m) m.classList.add('hidden'); }
+function closePackageModal() { const m = document.getElementById('packageModal'); if (m) m.classList.add('hidden'); }
 function closeManageModal() { 
-    document.getElementById('manageEventModal').classList.add('hidden'); 
+    const m = document.getElementById('manageEventModal'); 
+    if (m) m.classList.add('hidden'); 
     managingEventId = null; 
 }
 function closeEditUserModal() { 
-    document.getElementById('editUserModal').classList.add('hidden'); 
+    const m = document.getElementById('editUserModal');
+    if (m) m.classList.add('hidden'); 
     const r = document.getElementById('editUserResult');
     if (r) r.textContent = ''; 
 }
-
-function closePurchaseModal() {
-    document.getElementById('purchaseModal').classList.add('hidden');
-    clearSelection();
+function closePurchaseModal() { 
+    const m = document.getElementById('purchaseModal');
+    if (m) m.classList.add('hidden'); 
+    if (typeof clearSelection === 'function') clearSelection();
 }
 
 function openLightbox(url) {
@@ -106,41 +107,9 @@ function showDashboard() {
         if (navUsers) navUsers.classList.add('hidden');
         if (navAdmin) navAdmin.classList.add('hidden');
     }
-    loadEvents();
-    loadPendingOrdersCount();
-    loadUserLogo();
-    
-    const selectedPlan = localStorage.getItem('selected_plan');
-    if (selectedPlan) {
-        showPlanNotification(selectedPlan);
-        localStorage.removeItem('selected_plan');
-    }
-}
-
-function showPlanNotification(planName) {
-    const planNames = {
-        'free': 'Prueba Gratis (14 días)',
-        'basic': 'Básico',
-        'pro': 'Pro (Más popular)',
-        'studio': 'Estudio'
-    };
-    const notification = document.createElement('div');
-    notification.style.cssText = 'position: fixed; top: 24px; right: 24px; background: linear-gradient(135deg, #6366f1, #a855f7); color: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 10px 30px rgba(168, 85, 247, 0.4); z-index: 9999; max-width: 320px; animation: slideIn 0.4s ease-out;';
-    notification.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <i class="fa-solid fa-gift" style="font-size: 24px;"></i>
-            <div>
-                <div style="font-size: 12px; opacity: 0.9;">Plan seleccionado</div>
-                <div style="font-size: 15px; font-weight: 700;">${planNames[planName] || planName}</div>
-                <div style="font-size: 11px; opacity: 0.9; margin-top: 2px;">14 días gratis de prueba</div>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(notification);
-    setTimeout(() => {
-        notification.style.animation = 'slideIn 0.4s ease-out reverse';
-        setTimeout(() => notification.remove(), 400);
-    }, 5000);
+    if (typeof loadEvents === 'function') loadEvents();
+    if (typeof loadPendingOrdersCount === 'function') loadPendingOrdersCount();
+    if (typeof loadUserLogo === 'function') loadUserLogo();
 }
 
 function logout() { 
@@ -148,51 +117,40 @@ function logout() {
     window.location.href = '/'; 
 }
 
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(120%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-`;
-document.head.appendChild(style);
-
+// ===== ARRANQUE =====
 window.addEventListener('DOMContentLoaded', async () => {
     const token = getToken();
     const pathname = window.location.pathname;
     const urlParams = new URLSearchParams(window.location.search);
 
-    // Detectar galería pública: /g/ID o ?galeria=ID
+    // Galería pública
     let galeriaId = null;
     const galleryMatch = pathname.match(/^\/g\/(\d+)/);
     if (galleryMatch) galeriaId = galleryMatch[1];
     else if (urlParams.get('galeria')) galeriaId = urlParams.get('galeria');
 
     if (galeriaId) { 
-        console.log('Cargando galería pública:', galeriaId);
-        try {
-            await loadPublicGallery(galeriaId);
-        } catch (err) {
-            console.error('Error cargando galería:', err);
-            const grid = document.getElementById('pubPhotoGrid');
-            if (grid) {
-                grid.innerHTML = `
-                    <div class="gallery-closed" style="grid-column: 1/-1;">
+        if (typeof loadPublicGallery === 'function') {
+            try {
+                await loadPublicGallery(galeriaId);
+            } catch (err) {
+                console.error('Error galería:', err);
+                const grid = document.getElementById('pubPhotoGrid');
+                if (grid) {
+                    grid.innerHTML = `<div class="gallery-closed" style="grid-column: 1/-1;">
                         <i class="fa-solid fa-circle-exclamation"></i>
                         <h3 style="color: white; margin-bottom: 8px;">Error al cargar</h3>
-                        <p style="color: var(--text-muted);">${err.message || 'Error desconocido'}</p>
+                        <p style="color: var(--text-muted);">${err.message}</p>
                     </div>`;
+                }
             }
-        } finally {
-            hideLoadingOverlay();
         }
+        hideLoadingOverlay();
         return; 
     }
 
-    // Detectar tab de registro
-    const requestedTab = urlParams.get('tab');
-    if (requestedTab === 'register') switchTab('register');
-    
+    // Panel
+    if (urlParams.get('tab') === 'register') switchTab('register');
     const plan = urlParams.get('plan');
     if (plan) localStorage.setItem('selected_plan', plan);
 
@@ -219,7 +177,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (dash) dash.classList.add('hidden');
         }
     } catch (error) {
-        console.error('Error al verificar la sesión:', error);
+        console.error('Error sesión:', error);
         localStorage.removeItem('token');
         const auth = document.getElementById('authContainer');
         const dash = document.getElementById('dashboardContainer');

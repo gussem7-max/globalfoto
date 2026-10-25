@@ -543,4 +543,33 @@ router.get('/:id/public', async (req, res) => {
     }
 });
 
+// ===== GALERÍA PÚBLICA (sin autenticación) =====
+router.get('/:id/public', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const eventResult = await pool.query('SELECT * FROM events WHERE id = $1', [id]);
+        if (eventResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Evento no encontrado.' });
+        }
+        const event = eventResult.rows[0];
+        
+        const photosResult = await pool.query(
+            'SELECT id, url, preview_url, filename FROM photos WHERE event_id = $1 ORDER BY created_at ASC',
+            [id]
+        );
+        const photos = photosResult.rows;
+        
+        const packagesResult = await pool.query(
+            'SELECT * FROM packages WHERE event_id = $1 ORDER BY price ASC',
+            [id]
+        );
+        const packages = packagesResult.rows;
+        
+        res.json({ event: { ...event, packages }, photos });
+    } catch (error) {
+        console.error('Error galería pública:', error);
+        res.status(500).json({ error: 'Error al cargar la galería.' });
+    }
+});
+
 module.exports = router;
