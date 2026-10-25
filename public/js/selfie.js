@@ -145,7 +145,7 @@ async function verifySelfie() {
             await loadFaceModels();
         } catch (m) {
             console.error('Error cargando modelos:', m);
-            setStatus('️ No se pudieron descargar los modelos. Detalle: ' + (m.message || m));
+            setStatus('⚠️ No se pudieron descargar los modelos. Detalle: ' + (m.message || m));
             if (btn) btn.disabled = false;
             return;
         }
@@ -155,7 +155,7 @@ async function verifySelfie() {
             selfieDets = await detectFaces(el('selfieCanvas'));
         } catch (d) {
             console.error('Error procesando selfie:', d);
-            setStatus('⚠️ Error al procesar tu selfie. Detalle: ' + (d.message || d));
+            setStatus('️ Error al procesar tu selfie. Detalle: ' + (d.message || d));
             if (btn) btn.disabled = false;
             return;
         }
@@ -211,7 +211,7 @@ async function verifySelfie() {
             revealGallery(matched);
         } catch (r) {
             console.error('Error al mostrar galería:', r);
-            setStatus('️ Error al mostrar tus fotos. Detalle: ' + (r.message || r));
+            setStatus('⚠️ Error al mostrar tus fotos. Detalle: ' + (r.message || r));
             if (btn) btn.disabled = false;
             return;
         }
