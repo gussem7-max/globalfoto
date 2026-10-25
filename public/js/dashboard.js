@@ -94,7 +94,7 @@ function renderPricingSection(ev) {
     const hasData = ev.price_per_photo > 0 || ev.nequi_phone;
     const salesEnabled = ev.sales_enabled;
     let html = `<div class="pricing-section"><div class="pricing-header"><h4>💰 Configuración de Ventas</h4><label class="toggle-switch"><input type="checkbox" id="salesToggle_${ev.id}" ${salesEnabled ? 'checked' : ''} onchange="toggleSales(${ev.id})"><span class="toggle-slider"></span></label></div>`;
-    if (!salesEnabled) { html += `<div style="font-size: 12px; color: var(--text-muted); padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px dashed var(--border-color);"><i class="fa-solid fa-lock"></i> Las ventas están desactivadas. Activa el toggle para configurar precios.</div></div>`; return html; }
+    if (!salesEnabled) { html += `<div style="font-size: 12px; color: var(--text-muted); padding: 12px; background: rgba(2,6,23,0.6); border-radius: 8px; border: 1px dashed var(--border-strong);"><i class="fa-solid fa-lock"></i> Las ventas están desactivadas. Activa el toggle para configurar precios.</div></div>`; return html; }
     if (isEditing) {
         html += `<div class="pricing-card"><div class="pricing-grid">
             <div class="form-group"><label style="font-size: 12px;">Precio por foto (COP)</label><input type="number" id="pricePhoto_${ev.id}" value="${ev.price_per_photo || 0}" min="0" step="1000"></div>
@@ -147,28 +147,33 @@ async function loadEvents() {
             const publicUrl = `${window.location.origin}${ev.event_code ? '/e/' + ev.event_code : '/g/' + ev.id}`;
             const statusClass = `status-${ev.status || 'published'}`;
             const statusText = ev.status === 'published' ? 'Publicada' : ev.status === 'draft' ? 'Borrador' : 'Archivada';
-            const expiryText = ev.expires_at ? `<br><small style="color: var(--warning);">Expira: ${new Date(ev.expires_at).toLocaleString('es-CO')}</small>` : '';
-            const selfieBadge = ev.selfie_required ? ' <span class="event-status-badge" style="background:#ede9fe;color:#6d28d9;">🤳 Selfie</span>' : '';
+            const expiryText = ev.expires_at ? `<span style="color: var(--warning);"><i class="fa-solid fa-clock"></i> Expira: ${new Date(ev.expires_at).toLocaleString('es-CO')}</span>` : '';
+            const selfieBadge = ev.selfie_required ? ' <span class="event-status-badge" style="background: rgba(168,85,247,0.15); color: #d8b4fe;">🤳 Selfie</span>' : '';
             return `<div class="event-card">
-                <div class="event-header">
+                <div class="event-header" onclick="toggleEventCard(${ev.id})">
                     <div>
                         <div class="event-title">${ev.title} <span class="event-status-badge ${statusClass}">${statusText}</span>${selfieBadge}</div>
-                        <div class="event-meta"><span><i class="fa-solid fa-calendar"></i> ${ev.event_date ? ev.event_date.split('T')[0] : ''}</span><span><i class="fa-solid fa-location-dot"></i> ${ev.location || 'Sin ubicación'}</span>${expiryText}</div>
+                        <div class="event-meta"><span><i class="fa-solid fa-calendar"></i> ${ev.event_date ? ev.event_date.split('T')[0] : ''}</span><span><i class="fa-solid fa-location-dot"></i> ${ev.location || 'Sin ubicación'}</span></div>
+                        <div class="event-summary">
+                            <span><i class="fa-solid fa-images"></i> <span id="eventSummary_${ev.id}">${ev.photosCount || 0} fotos</span></span>
+                            ${ev.price_per_photo ? `<span><i class="fa-solid fa-tag"></i> ${formatMoney(ev.price_per_photo)} / foto</span>` : ''}
+                            ${expiryText}
+                        </div>
                     </div>
-                    <div class="event-actions">
-                        <button class="btn-action" onclick="openModal(${ev.id})" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                    <div class="event-actions" onclick="event.stopPropagation()">
+                        <button class="btn-action" onclick="openModal(${ev.id})" title="Editar datos"><i class="fa-solid fa-pen"></i></button>
                         <button class="btn-action" onclick="deleteEvent(${ev.id})" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                        <button class="btn-chevron" id="eventChevron_${ev.id}" onclick="toggleEventCard(${ev.id})" title="Expandir / Colapsar"><i class="fa-solid fa-chevron-down"></i></button>
                     </div>
                 </div>
-                <div class="event-body">
-                    <div class="event-desc">${ev.description || ''}</div>
+                <div class="event-body collapsed" id="eventBody_${ev.id}">
                     <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 8px;">
-                        <span style="font-size: 11px; font-weight: 700; color: #4f46e5; background: #eef2ff; padding: 4px 10px; border-radius: 6px; letter-spacing: 0.5px; font-family: monospace;">${ev.event_code || 'SIN-CODIGO'}</span>
+                        <span style="font-size: 11px; font-weight: 700; color: #818cf8; background: rgba(99,102,241,0.12); padding: 4px 10px; border-radius: 6px; letter-spacing: 0.5px; font-family: monospace;">${ev.event_code || 'SIN-CODIGO'}</span>
                         <button class="btn-action" onclick="copyText('${ev.event_code || ''}')" title="Copiar código del evento"><i class="fa-solid fa-copy"></i></button>
                     </div>
                     <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">Enlace público:</div>
                     <div style="display: flex; gap: 6px; margin-bottom: 12px;">
-                        <input type="text" readonly value="${publicUrl}" id="eventUrl_${ev.id}" style="font-size: 11px; background: #f8fafc; padding: 6px; border: 1px solid var(--border-color); border-radius: 6px; width: 100%; color: var(--text-muted);">
+                        <input type="text" readonly value="${publicUrl}" id="eventUrl_${ev.id}" style="font-size: 11px; padding: 6px; width: 100%; color: var(--text-muted);">
                         <button class="btn-action" onclick="copyEventUrl(${ev.id})" title="Copiar enlace"><i class="fa-solid fa-copy"></i></button>
                         <button class="btn-action" onclick="openQrModal(${ev.id}, '${publicUrl}')" title="Generar QR"><i class="fa-solid fa-qrcode"></i></button>
                     </div>
@@ -205,14 +210,25 @@ async function loadEvents() {
     } catch (err) { console.error('Error al cargar eventos:', err); }
 }
 
+// Expandir / colapsar tarjeta de evento
+function toggleEventCard(eventId) {
+    const body = document.getElementById(`eventBody_${eventId}`);
+    const chev = document.getElementById(`eventChevron_${eventId}`);
+    if (!body) return;
+    const isCollapsed = body.classList.toggle('collapsed');
+    if (chev) chev.classList.toggle('open', !isCollapsed);
+}
+
 function renderPhotosPreview(eventId, photos) {
     const grid = document.getElementById(`photosGrid_${eventId}`);
     const countLabel = document.getElementById(`photosCount_${eventId}`);
+    const summary = document.getElementById(`eventSummary_${eventId}`);
+    if (summary) summary.textContent = `${photos.length} foto${photos.length !== 1 ? 's' : ''}`;
     if (!grid) return;
     if (photos.length === 0) { grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 12px; font-size: 12px; color: var(--text-muted);">Sin fotos aún. ¡Sube la primera!</div>'; if (countLabel) countLabel.textContent = '0 fotos'; return; }
     const maxThumbs = 4;
     const thumbs = photos.slice(0, maxThumbs).map(p => `<div class="photo-thumb" style="position: relative;">
-        <img src="${p.preview_url || p.url}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;" onclick="openLightbox('${p.preview_url || p.url}')" title="Ver foto">
+        <img src="${p.preview_url || p.url}" onclick="openLightbox('${p.preview_url || p.url}')" title="Ver foto">
         <button class="delete-photo" onclick="deletePhoto(${p.id}, ${eventId})" title="Eliminar foto"><i class="fa-solid fa-xmark"></i></button>
     </div>`).join('');
     const remaining = photos.length - maxThumbs;
@@ -319,7 +335,7 @@ function renderGalleriesView() {
         const publicUrl = `${window.location.origin}${ev.event_code ? '/e/' + ev.event_code : '/g/' + ev.id}`;
         const statusText = ev.status === 'published' ? 'Publicada' : ev.status === 'draft' ? 'Borrador' : 'Archivada';
         return `<div class="event-card">
-            <div class="event-header"><div><div class="event-title">${ev.title} <span class="event-status-badge status-${ev.status}">${statusText}</span></div><div class="event-meta"><span>${ev.event_date ? ev.event_date.split('T')[0] : ''}</span></div></div></div>
+            <div class="event-header" style="cursor: default;"><div><div class="event-title">${ev.title} <span class="event-status-badge status-${ev.status}">${statusText}</span></div><div class="event-meta"><span>${ev.event_date ? ev.event_date.split('T')[0] : ''}</span></div></div></div>
             <div class="event-body"><a href="${publicUrl}" target="_blank" class="btn-primary" style="text-align: center; text-decoration: none; display: block;">Visitar Galería Pública <i class="fa-solid fa-external-link-alt"></i></a></div>
         </div>`;
     }).join('');
@@ -419,16 +435,16 @@ function viewOrderDetails(orderId) {
     if (!order) return;
     const modalContent = document.getElementById('orderModalContent');
     modalContent.innerHTML = `
-        <div style="margin-bottom: 20px;"><img src="${order.receipt_url}" style="width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px; border: 1px solid var(--border-color);"></div>
-        <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
-            <h4 style="margin-bottom: 12px; color: #0f172a;">Información del Pedido</h4>
-            <p style="font-size: 13px; color: #475569; margin-bottom: 8px;"><strong>Cliente:</strong> ${order.customer_name || 'No especificado'}</p>
-            <p style="font-size: 13px; color: #475569; margin-bottom: 8px;"><strong>Email:</strong> ${order.customer_email}</p>
-            <p style="font-size: 13px; color: #475569; margin-bottom: 8px;"><strong>Evento:</strong> ${order.event_title}</p>
-            <p style="font-size: 13px; color: #475569; margin-bottom: 8px;"><strong>Tipo:</strong> ${order.order_type === 'gallery' ? 'Galería completa' : order.order_type === 'package' ? 'Paquete' : `${(JSON.parse(order.photo_ids || '[]')).length} foto(s)`}</p>
-            <p style="font-size: 13px; color: #475569; margin-bottom: 8px;"><strong>Monto total:</strong> ${formatMoney(order.amount)}</p>
-            <p style="font-size: 13px; color: #475569; margin-bottom: 8px;"><strong>Tu ganancia (90%):</strong> ${formatMoney(order.photographer_net)}</p>
-            <p style="font-size: 13px; color: #475569;"><strong>Comisión GlobalFoto (10%):</strong> ${formatMoney(order.commission_amount)}</p>
+        <div style="margin-bottom: 20px;"><img src="${order.receipt_url}" style="width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px; border: 1px solid var(--border-strong);"></div>
+        <div style="background: rgba(2,6,23,0.6); padding: 16px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border-color);">
+            <h4 style="margin-bottom: 12px; color: var(--text-main);">Información del Pedido</h4>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;"><strong>Cliente:</strong> ${order.customer_name || 'No especificado'}</p>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;"><strong>Email:</strong> ${order.customer_email}</p>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;"><strong>Evento:</strong> ${order.event_title}</p>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;"><strong>Tipo:</strong> ${order.order_type === 'gallery' ? 'Galería completa' : order.order_type === 'package' ? 'Paquete' : `${(JSON.parse(order.photo_ids || '[]')).length} foto(s)`}</p>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;"><strong>Monto total:</strong> ${formatMoney(order.amount)}</p>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;"><strong>Tu ganancia (90%):</strong> ${formatMoney(order.photographer_net)}</p>
+            <p style="font-size: 13px; color: var(--text-muted);"><strong>Comisión GlobalFoto (10%):</strong> ${formatMoney(order.commission_amount)}</p>
         </div>
         ${order.status === 'pending' ? `<div style="display: flex; gap: 8px;"><button onclick="approveOrder(${order.id}); closeOrderModal();" class="btn-success" style="flex: 1;"><i class="fa-solid fa-check"></i> Aprobar Pedido</button><button onclick="rejectOrder(${order.id}); closeOrderModal();" class="btn-danger" style="flex: 1;"><i class="fa-solid fa-xmark"></i> Rechazar</button></div>` : `<div class="alert ${order.status === 'approved' ? 'alert-success' : 'alert-error'}">Pedido ${order.status === 'approved' ? 'aprobado' : 'rechazado'}</div>`}
     `;
@@ -457,7 +473,7 @@ async function rejectOrder(orderId) {
     } catch (err) { alert('Error de conexión.'); }
 }
 
-// ---------- COPIAR ENLACE Y QR ----------
+// ---------- COPIAR ENLACE, QR Y UTILIDADES ----------
 async function copyEventUrl(eventId) {
     const input = document.getElementById(`eventUrl_${eventId}`);
     if (!input) return;
@@ -476,6 +492,20 @@ async function copyEventUrl(eventId) {
     }
 }
 
+async function copyText(text) {
+    if (!text) return;
+    try {
+        await navigator.clipboard.writeText(text);
+    } catch (err) {
+        const tmp = document.createElement('textarea');
+        tmp.value = text;
+        document.body.appendChild(tmp);
+        tmp.select();
+        document.execCommand('copy');
+        tmp.remove();
+    }
+}
+
 let currentQrUrl = '';
 
 function openQrModal(eventId, url) {
@@ -490,64 +520,47 @@ function closeQrModal() {
 
 async function generateQr(url) {
     const container = document.getElementById('qrCanvasContainer');
-    
-    // Limpiar contenedor y crear canvas fresco
     container.innerHTML = '';
     const canvas = document.createElement('canvas');
     canvas.id = 'qrCanvas';
     canvas.width = 400;
     canvas.height = 400;
     container.appendChild(canvas);
-    
-    // Mostrar estado de carga
     const statusMsg = document.createElement('p');
     statusMsg.style.cssText = 'color: var(--text-muted); margin: 10px 0;';
     statusMsg.textContent = 'Generando QR...';
     canvas.style.display = 'none';
     container.appendChild(statusMsg);
-    
     const timeout = setTimeout(() => {
         statusMsg.textContent = '⚠️ El QR tardó demasiado. Intenta de nuevo.';
         statusMsg.style.color = 'var(--danger)';
     }, 10000);
-    
     try {
         if (typeof QRCode !== 'undefined') {
-            await QRCode.toCanvas(canvas, url, {
-                width: 400,
-                margin: 3,
-                color: { dark: '#0f172a', light: '#ffffff' },
-                errorCorrectionLevel: 'H'
-            });
+            await QRCode.toCanvas(canvas, url, { width: 400, margin: 3, color: { dark: '#0f172a', light: '#ffffff' }, errorCorrectionLevel: 'H' });
             canvas.style.display = 'block';
             if (statusMsg.parentNode) statusMsg.remove();
             clearTimeout(timeout);
-            return; // QR generado limpio, sin logo
+            return;
         }
-        
         throw new Error('QRCode no disponible');
     } catch (err) {
         console.warn('Librería QR falló, usando API pública:', err.message);
-        
         try {
             const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=15&color=0f172a&bgcolor=ffffff&ecc=H&data=${encodeURIComponent(url)}`;
             const img = new Image();
             img.crossOrigin = 'anonymous';
-            
             await new Promise((resolve, reject) => {
                 img.onload = () => {
-                    canvas.width = 400;
-                    canvas.height = 400;
+                    canvas.width = 400; canvas.height = 400;
                     const ctx = canvas.getContext('2d');
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, 400, 400);
+                    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 400, 400);
                     ctx.drawImage(img, 0, 0, 400, 400);
                     resolve();
                 };
                 img.onerror = () => reject(new Error('No se pudo cargar la imagen QR'));
                 img.src = qrApiUrl;
             });
-            
             canvas.style.display = 'block';
             if (statusMsg.parentNode) statusMsg.remove();
             clearTimeout(timeout);
@@ -566,18 +579,4 @@ function downloadQr() {
     link.download = `globalfoto-qr-${Date.now()}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
-}
-
-async function copyText(text) {
-    if (!text) return;
-    try {
-        await navigator.clipboard.writeText(text);
-    } catch (err) {
-        const tmp = document.createElement('textarea');
-        tmp.value = text;
-        document.body.appendChild(tmp);
-        tmp.select();
-        document.execCommand('copy');
-        tmp.remove();
-    }
 }

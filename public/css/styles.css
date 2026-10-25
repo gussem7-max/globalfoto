@@ -283,3 +283,12 @@ input:checked + .toggle-slider:before { transform: translateX(24px); }
     .public-photo-img { height: 250px; }
     .header h1 { font-size: 18px; }
 }
+
+/* ===== TARJETAS DE EVENTO COLAPSABLES ===== */
+.event-body.collapsed { display: none; }
+.event-header { cursor: pointer; }
+.event-summary { font-size: 12px; color: var(--text-muted); display: flex; gap: 14px; margin-top: 8px; flex-wrap: wrap; }
+.event-summary i { color: var(--accent); margin-right: 4px; }
+.btn-chevron { background: rgba(148, 163, 184, 0.1); border: none; color: var(--text-muted); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.25s ease, background 0.2s, color 0.2s; }
+.btn-chevron:hover { background: rgba(99, 102, 241, 0.2); color: var(--accent); }
+.btn-chevron.open { transform: rotate(180deg); color: var(--accent); }
