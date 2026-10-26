@@ -33,6 +33,16 @@ function showSection(section) {
         if (typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin' && typeof loadUsers === 'function') loadUsers();
         else { alert('No tienes permisos.'); showSection('events'); }
     }
+        else if (section === 'subscription') {
+        if (typeof loadPlans === 'function') loadPlans();
+        const pendingId = localStorage.getItem('pending_order_id');
+        if (pendingId && typeof showPaymentDetails === 'function') {
+            fetch(`/api/subscriptions/orders/${pendingId}`, { headers: authHeaders() })
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .then(data => { if (data.order && data.order.status === 'pending') showPaymentDetails(data.order); else localStorage.removeItem('pending_order_id'); })
+                .catch(() => localStorage.removeItem('pending_order_id'));
+        }
+    }
     else if (section === 'settings') {
         if (typeof currentUser !== 'undefined' && currentUser) {
             const n = document.getElementById('cfgName');
