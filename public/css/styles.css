@@ -314,3 +314,95 @@ input:checked + .toggle-slider:before { transform: translateX(24px); }
 .public-wrapper a:hover { color: white; }
 #pubEventTitle { color: white; }
 #pubEventDetails { color: var(--text-muted); }
+
+/* =====================================================
+   BARRA MÓVIL TIPO CÁPSULA + DRAWER (solo móvil)
+   No afecta escritorio: #gfMobileBar está display:none
+   por defecto y el sidebar clásico NO se modifica aquí.
+   ===================================================== */
+#gfMobileBar { display: none; }
+#gfOverlay { display: none; }
+#gfDrawer {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: 300px; max-width: 85vw;
+    background: var(--bg-primary);
+    border-left: 1px solid var(--border-strong);
+    z-index: 1200;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    display: flex; flex-direction: column; overflow-y: auto;
+}
+#gfDrawer.open { transform: translateX(0); }
+#gfOverlay.show {
+    display: block; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+    z-index: 1100;
+}
+.gf-drawer-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px; border-bottom: 1px solid var(--border-color);
+}
+.gf-drawer-user { display: flex; align-items: center; gap: 12px; }
+.gf-close {
+    background: rgba(148,163,184,0.1); border: none; color: var(--text-muted);
+    width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.gf-close:hover { background: rgba(148,163,184,0.2); color: #fff; }
+.gf-drawer-items { padding: 8px 0; flex: 1; }
+.gf-ditem {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 20px; color: var(--text-main);
+    cursor: pointer; transition: background 0.2s; font-size: 14px; font-weight: 500;
+}
+.gf-ditem:hover { background: rgba(99,102,241,0.1); }
+.gf-ditem i { font-size: 18px; color: var(--accent); width: 24px; text-align: center; }
+.gf-dbadge {
+    margin-left: auto; background: var(--danger); color: #fff;
+    font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 700;
+}
+.gf-ddivider { height: 1px; background: var(--border-color); margin: 8px 0; }
+
+/* Pills de la cápsula */
+.gf-pill {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 6px; border: none; background: transparent; cursor: pointer;
+    color: #64748b; font-size: 12px; font-weight: 600; border-radius: 999px;
+    transition: all 0.25s ease; position: relative; white-space: nowrap;
+}
+.gf-pill i { font-size: 19px; }
+.gf-pill .gf-label { display: none; }
+.gf-pill.active {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color: #fff; box-shadow: 0 4px 12px rgba(139,92,246,0.4);
+}
+.gf-pill.active .gf-label { display: inline; }
+.gf-pill-account { color: #a5b4fc; }
+.gf-pill-account i {
+    background: rgba(99,102,241,0.15); border-radius: 50%;
+    width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+}
+.gf-sales-dot {
+    position: absolute; top: 6px; right: 14px;
+    min-width: 16px; height: 16px; padding: 0 4px;
+    background: var(--danger); color: #fff; font-size: 9px; font-weight: 700;
+    border-radius: 10px; display: none; align-items: center; justify-content: center; line-height: 1;
+}
+
+@media (max-width: 768px) {
+    /* Oculta SOLO en móvil la barra clásica; el escritorio no entra aquí */
+    .sidebar { display: none !important; }
+    #gfMobileBar {
+        display: flex; position: fixed;
+        bottom: 16px; left: 16px; right: 16px;
+        z-index: 1000;
+        background: rgba(19,25,39,0.92);
+        backdrop-filter: blur(16px);
+        border: 1px solid #1e293b;
+        box-shadow: 0 12px 32px rgba(0,0,0,0.6);
+        border-radius: 999px; padding: 6px;
+        align-items: center; justify-content: space-between;
+        max-width: 480px; margin: 0 auto;
+    }
+    .main-content { padding-bottom: 96px; }
+}
