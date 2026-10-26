@@ -62,12 +62,16 @@ async function selectPlan(planKey) {
 
 function showPaymentDetails(order) {
     currentOrderId = order.id;
-    localStorage.setItem('pending_order_id', order.id); // Para retomar si cierra pestaña
+    localStorage.setItem('pending_order_id', order.id);
     
     const detailsDiv = document.getElementById('paymentDetails');
     if (!detailsDiv) return;
     
-    const amtStr = formatAmount(order.expected_amount, order.currency);
+    // Normalizar monto UNA VEZ: número para cálculos, string para mostrar/copiar
+    const rawNum = parseFloat(order.expected_amount);
+    const safeAmount = isNaN(rawNum) ? '0' : rawNum.toString();
+    const amtStr = formatAmount(safeAmount, order.currency);
+    const refCode = String(order.reference_code || '').trim();
     const isZinli = order.channel === 'zinli';
     
     let html = `
@@ -77,25 +81,23 @@ function showPaymentDetails(order) {
             <span class="payment-label">Monto exacto a transferir:</span>
             <span class="payment-value">
                 ${amtStr}
-                <button class="copy-btn" onclick="copyToClipboard('${order.expected_amount}', this)">📋</button>
+                <button class="copy-btn" onclick="copyToClipboard('${safeAmount}', this)">📋</button>
             </span>
         </div>
         
         <div class="payment-row">
             <span class="payment-label">Código de referencia (concepto):</span>
             <span class="payment-value">
-                <strong>${order.reference_code}</strong>
-                <button class="copy-btn" onclick="copyToClipboard('${order.reference_code}', this)">📋</button>
+                <strong>${refCode}</strong>
+                <button class="copy-btn" onclick="copyToClipboard('${refCode}', this)">📋</button>
             </span>
         </div>
         
-        <div class="instructions-box">${escapeHtml(order.instructions)}</div>
+        <div class="instructions-box">${escapeHtml(order.instructions || '')}</div>
     `;
     
     if (isZinli) {
-        // Generar link de Zinli con monto incrustado (URL real dependerá de tu cuenta Zinli)
-        // Ejemplo: https://pay.zin.li/your-username?amount=6.93&currency=USD
-        const zinliUrl = `https://pay.zin.li/TU_USUARIO_ZINLI?amount=${order.expected_amount}&currency=${order.currency}`;
+        const zinliUrl = `https://pay.zin.li/TU_USUARIO_ZINLI?amount=${encodeURIComponent(safeAmount)}&currency=${encodeURIComponent(order.currency)}`;
         html += `
             <a href="${zinliUrl}" target="_blank" class="zinli-link-btn">
                 💳 Abrir cobro en Zinli (${amtStr})
@@ -115,11 +117,11 @@ function showPaymentDetails(order) {
             <h4 style="color: var(--text-main); margin-bottom: 12px;">Reporta tu pago</h4>
             <div class="form-group">
                 <label>Monto que transfiriste:</label>
-                <input type="number" step="0.01" id="reportedAmount" placeholder="${order.expected_amount}" required>
+                <input type="number" step="0.01" id="reportedAmount" placeholder="${safeAmount}" required>
             </div>
             <div class="form-group">
                 <label>Código/referencia usada (opcional):</label>
-                <input type="text" id="reportedRef" placeholder="${order.reference_code}">
+                <input type="text" id="reportedRef" placeholder="${refCode}">
             </div>
             <button class="btn-primary" onclick="submitManualVerification()">Enviar verificación</button>
         </div>
@@ -136,10 +138,12 @@ function showPaymentDetails(order) {
 }
 
 function formatAmount(amount, currency) {
-    if (currency === 'USD') return `$${parseFloat(amount).toFixed(2)}`;
-    if (currency === 'COP') return `${parseInt(amount).toLocaleString('es-CO')} COP`;
-    if (currency === 'VES') return `Bs. ${parseFloat(amount).toFixed(2)}`;
-    return amount;
+    const num = parseFloat(amount);
+    if (isNaN(num)) return String(amount); // fallback seguro si viene raro
+    if (currency === 'USD') return `$${num.toFixed(2)}`;
+    if (currency === 'COP') return `${Math.round(num).toLocaleString('es-CO')} COP`;
+    if (currency === 'VES') return `Bs. ${num.toFixed(2)}`;
+    return num.toString();
 }
 
 function escapeHtml(text) {
