@@ -11,19 +11,20 @@ const PLANS = {
     studio: { usd: 24.90, cop: 100000, ves: 850 }
 };
 
-/**
- * Genera un código corto único tipo "GF-XXXX"
- * Máximo 7 caracteres para caber en conceptos bancarios limitados.
- */
+/** Convierte cualquier cosa a número seguro. Si no puede, lanza error claro. */
+function toNum(v, label) {
+    const n = parseFloat(v);
+    if (isNaN(n)) throw new Error(`Valor no numérico para ${label}: "${v}"`);
+    return n;
+}
+
+/** Genera un código corto único tipo "GF-XXXX" */
 function generateReferenceCode() {
-    // 4 caracteres alfanuméricos mayúsculos (base 36 -> A-Z, 0-9)
     const chars = crypto.randomBytes(4).toString('hex').toUpperCase().slice(0, 4);
     return `GF-${chars}`;
 }
 
-/**
- * Genera un monto esperado ÚNICO sumando un sufijo al precio base.
- */
+/** Genera un monto esperado ÚNICO sumando un sufijo al precio base. */
 function generateUniqueAmount(base, currency, takenSuffixes) {
     let maxSuffix;
     if (currency === 'USD') maxSuffix = 10;       // 0..9 (decimales)
@@ -31,7 +32,7 @@ function generateUniqueAmount(base, currency, takenSuffixes) {
     else maxSuffix = 100;                        // VES
 
     for (let i = 0; i < maxSuffix; i++) {
-        const candidate = +(base + i * (currency === 'USD' ? 0.01 : 1)).toFixed(4);
+        const candidate = +(toNum(base, 'base') + i * (currency === 'USD' ? 0.01 : 1)).toFixed(4);
         if (!takenSuffixes.has(candidate)) {
             return { expected: candidate, suffix: i };
         }
@@ -39,16 +40,18 @@ function generateUniqueAmount(base, currency, takenSuffixes) {
     return null;
 }
 
-/**
- * Crea una nueva orden de suscripción pendiente.
- */
+/** Crea una nueva orden de suscripción pendiente. */
 async function createSubscriptionOrder(userId, planKey, countryMeta) {
     const plan = PLANS[planKey];
     if (!plan) throw new Error('Plan inválido.');
 
-    const currency = countryMeta.currency; 
-    const base = plan[currency.toLowerCase()] || plan.usd; 
-    
+    const currency = String(countryMeta.currency || '').toUpperCase();
+    if (!['USD', 'COP', 'VES'].includes(currency)) throw new Error(`Moneda no soportada: ${currency}`);
+
+    // Obtener base YA COMO NÚMERO (evita concatenación accidental con strings)
+    const baseRaw = plan[currency.toLowerCase()] ?? plan.usd;
+    const base = toNum(baseRaw, `precio_base_${planKey}_${currency}`);
+
     // 1. Buscar qué sufijos están ocupados AHORA MISMO (últimos 30 min)
     const recentOrders = await pool.query(
         `SELECT expected_amount FROM subscription_orders 
@@ -56,13 +59,14 @@ async function createSubscriptionOrder(userId, planKey, countryMeta) {
            AND created_at > NOW() - INTERVAL '30 minutes'`,
         [currency, planKey]
     );
-    const taken = new Set(recentOrders.rows.map(r => parseFloat(r.expected_amount)));
+    // Convertir cada fila a número ANTES de meterla al Set (Postgres devuelve strings)
+    const taken = new Set(recentOrders.rows.map(r => toNum(r.expected_amount, 'recent_expected')));
 
     // 2. Generar monto único
     const gen = generateUniqueAmount(base, currency, taken);
     if (!gen) throw new Error('Sistema saturado de pagos pendientes. Intenta de nuevo en unos minutos.');
 
-    // 3. Generar código de referencia único (reintentar si choca, aunque es improbable)
+    // 3. Generar código de referencia único
     let refCode = generateReferenceCode();
     let attempts = 0;
     while (attempts < 5) {
@@ -72,18 +76,28 @@ async function createSubscriptionOrder(userId, planKey, countryMeta) {
         attempts++;
     }
 
-    // 4. Insertar orden
+    // 4. Insertar orden — passing numbers explicitly avoids type coercion issues
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutos
     
     const result = await pool.query(
         `INSERT INTO subscription_orders 
          (user_id, plan, currency, channel, base_amount, expected_amount, suffix, reference_code, expires_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-         RETURNING *`,
+         RETURNING id, user_id, plan, currency, channel, 
+                   base_amount::text AS base_amount, 
+                   expected_amount::text AS expected_amount, 
+                   suffix, reference_code, status, created_at, expires_at`,
         [userId, planKey, currency, countryMeta.channel, base, gen.expected, gen.suffix, refCode, expiresAt]
     );
 
-    return result.rows[0];
+    const row = result.rows[0];
+    // Normalizar TODOS los campos numéricos/string antes de devolverlos
+    return {
+        ...row,
+        base_amount: Number(row.base_amount),
+        expected_amount: Number(row.expected_amount),
+        suffix: Number(row.suffix)
+    };
 }
 
 module.exports = { PLANS, createSubscriptionOrder };

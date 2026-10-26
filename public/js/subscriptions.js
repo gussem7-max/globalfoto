@@ -138,8 +138,8 @@ function showPaymentDetails(order) {
 }
 
 function formatAmount(amount, currency) {
-    const num = parseFloat(amount);
-    if (isNaN(num)) return String(amount); // fallback seguro si viene raro
+    const num = typeof amount === 'number' ? amount : parseFloat(String(amount));
+    if (isNaN(num)) return String(amount); // fallback seguro
     if (currency === 'USD') return `$${num.toFixed(2)}`;
     if (currency === 'COP') return `${Math.round(num).toLocaleString('es-CO')} COP`;
     if (currency === 'VES') return `Bs. ${num.toFixed(2)}`;
