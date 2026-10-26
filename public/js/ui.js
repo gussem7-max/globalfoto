@@ -58,42 +58,35 @@ function openLightbox(url) {
 function closeLightbox() { document.getElementById('lightboxModal').classList.add('hidden'); }
 
 function showDashboard() {
-    document.getElementById('authContainer').classList.add('hidden');
-    document.getElementById('dashboardContainer').classList.remove('hidden');
-    document.getElementById('userName').textContent = currentUser.name;
-    document.getElementById('userAvatar').textContent = currentUser.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-    document.getElementById('userRole').textContent = currentUser.role === 'admin' ? 'Administrador' : 'Fotógrafo';
-    document.getElementById('welcomeTitle').textContent = `¡Hola de nuevo, ${currentUser.name}!`;
-    if (currentUser.role === 'admin') {
-        document.getElementById('navUsers').classList.remove('hidden');
-        document.getElementById('navAdmin').classList.remove('hidden');
-    } else {
-        document.getElementById('navUsers').classList.add('hidden');
-        document.getElementById('navAdmin').classList.add('hidden');
-    }
-    loadEvents();
-    loadPendingOrdersCount();
-    loadUserLogo();
+    const auth = document.getElementById('authContainer');
+    const dash = document.getElementById('dashboardContainer');
+    if (auth) auth.classList.add('hidden');
+    if (dash) dash.classList.remove('hidden');
     
-    // Mostrar plan seleccionado si viene de la landing
-    const selectedPlan = localStorage.getItem('selected_plan');
-    if (selectedPlan) {
-        showPlanNotification(selectedPlan);
-        localStorage.removeItem('selected_plan');
-    }
-
-    // Sincronizar visibilidad de opciones admin en menú móvil
-    const mobileAdmin = document.getElementById('mobileNavAdmin');
-    const mobileUsers = document.getElementById('mobileNavUsers');
+    const nameEl = document.getElementById('userName');
+    const avatarEl = document.getElementById('userAvatar');
+    const roleEl = document.getElementById('userRole');
+    const welcomeEl = document.getElementById('welcomeTitle');
+    
+    if (nameEl) nameEl.textContent = currentUser.name;
+    if (avatarEl) avatarEl.textContent = currentUser.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    if (roleEl) roleEl.textContent = currentUser.role === 'admin' ? 'Administrador' : 'Fotógrafo';
+    if (welcomeEl) welcomeEl.textContent = `¡Hola de nuevo, ${currentUser.name}!`;
+    
+    const navUsers = document.getElementById('navUsers');
+    const navAdmin = document.getElementById('navAdmin');
     if (currentUser.role === 'admin') {
-        if (mobileAdmin) mobileAdmin.classList.remove('hidden');
-        if (mobileUsers) mobileUsers.classList.remove('hidden');
+        if (navUsers) navUsers.classList.remove('hidden');
+        if (navAdmin) navAdmin.classList.remove('hidden');
     } else {
-        if (mobileAdmin) mobileAdmin.classList.add('hidden');
-        if (mobileUsers) mobileUsers.classList.add('hidden');
+        if (navUsers) navUsers.classList.add('hidden');
+        if (navAdmin) navAdmin.classList.add('hidden');
     }
+    if (typeof loadEvents === 'function') loadEvents();
+    if (typeof loadPendingOrdersCount === 'function') loadPendingOrdersCount();
+    if (typeof loadUserLogo === 'function') loadUserLogo();
 
-    // Sincronizar drawer con datos del usuario
+    // === SINCRONIZAR DRAWER (UNA SOLA VEZ) ===
     const drawerAvatar = document.getElementById('drawerAvatar');
     const drawerUserName = document.getElementById('drawerUserName');
     const drawerUserRole = document.getElementById('drawerUserRole');
@@ -101,23 +94,14 @@ function showDashboard() {
     if (drawerUserName) drawerUserName.textContent = currentUser.name;
     if (drawerUserRole) drawerUserRole.textContent = currentUser.role === 'admin' ? 'Administrador' : 'Fotógrafo';
 
-    // Mostrar opciones de admin en drawer si aplica
     const drawerAdmin = document.getElementById('drawerAdmin');
     const drawerUsers = document.getElementById('drawerUsers');
-    const drawerBadge = document.getElementById('drawerPendingBadge');
     if (currentUser.role === 'admin') {
         if (drawerAdmin) drawerAdmin.classList.remove('hidden');
         if (drawerUsers) drawerUsers.classList.remove('hidden');
     } else {
         if (drawerAdmin) drawerAdmin.classList.add('hidden');
         if (drawerUsers) drawerUsers.classList.add('hidden');
-    }
-
-    // Sincronizar badge de pendientes en drawer
-    const pendingBadge = document.getElementById('pendingOrdersBadge');
-    if (drawerBadge && pendingBadge) {
-        drawerBadge.textContent = pendingBadge.textContent;
-        drawerBadge.classList.toggle('hidden', pendingBadge.classList.contains('hidden'));
     }
 }
 
