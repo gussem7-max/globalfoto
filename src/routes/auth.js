@@ -20,7 +20,16 @@ const s3Client = new S3Client({
     }
 });
 
-const uploadLogo = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
+// === Catálogo país → moneda/canal (ESPEJO de public/js/countries.js) ===
+// Al agregar un país, agrégalo AQUÍ y en countries.js. La moneda se deriva del
+// país en el servidor: el cliente nunca manda currency, solo country.
+const USD_ZINLI = ['US','MX','AR','CL','PE','EC','BO','PY','UY','BR','PA','CR','DO','GT','HN','SV','NI','CU','PR','ES','IT','FR','DE','PT','GB','CA','AU'];
+const COUNTRY_META = {
+    VE: { currency: 'VES', channel: 'pagomovil' },
+    CO: { currency: 'COP', channel: 'nequi' },
+    XX: { currency: 'USD', channel: 'zinli' },
+};
+USD_ZINLI.forEach(iso => { COUNTRY_META[iso] = { currency: 'USD', channel: 'zinli' }; });
 
 function verificarToken(req, res, next) {
     const authHeader = req.headers.authorization;
@@ -38,16 +47,30 @@ function verificarToken(req, res, next) {
 // REGISTRO
 router.post('/register', async (req, res) => {
     try {
-        const { name, email, password, role } = req.body;
+        const { name, email, password } = req.body;
         if (!name || !email || !password) return res.status(400).json({ error: 'Faltan datos requeridos.' });
+
+        // País -> moneda derivada EN EL SERVIDOR (el cliente no manda currency)
+        const countryRaw = String(req.body.country || '').toUpperCase().slice(0, 2);
+        const country = Object.prototype.hasOwnProperty.call(COUNTRY_META, countryRaw) ? countryRaw : 'XX';
+        const currency = COUNTRY_META[country].currency;
+
+        // Teléfono: lo arma el front como "+57 300 123 4567"; lo normalizo y corto a 32
+        const phoneRaw = typeof req.body.phone === 'string' ? req.body.phone.trim() : '';
+        const phone = phoneRaw ? phoneRaw.slice(0, 32) : null;
 
         const existingUser = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         if (existingUser.rows.length > 0) return res.status(400).json({ error: 'El correo electrónico ya está registrado.' });
 
         const hashedPassword = await bcrypt.hash(password, 10);
+
+        // role FORZADO a photographer (el registro es solo de fotógrafos; ignora role del body)
+        // plan_expires_at = hoy + 14 días de trial, coherente con los usuarios ya existentes
         const newUser = await pool.query(
-            'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role, created_at',
-            [name, email, hashedPassword, role || 'photographer']
+            `INSERT INTO users (name, email, password, role, country, phone, currency, plan, plan_started_at, plan_expires_at)
+             VALUES ($1, $2, $3, 'photographer', $4, $5, $6, 'trial', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '14 days')
+             RETURNING id, name, email, role, country, phone, currency, plan, plan_started_at, plan_expires_at, created_at`,
+            [name, email, hashedPassword, country, phone, currency]
         );
         const user = newUser.rows[0];
 
@@ -70,13 +93,14 @@ router.post('/register', async (req, res) => {
                                 <ul style="color: #475569; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
                                     <li>Crear eventos fotográficos</li>
                                     <li>Subir tus fotos con marca de agua automática</li>
-                                    <li>Configurar precios y métodos de pago (Nequi)</li>
+                                    <li>Configurar precios y métodos de pago</li>
                                     <li>Compartir galerías públicas con tus clientes</li>
                                     <li>Recibir pedidos y aprobar pagos</li>
                                 </ul>
                             </div>
+                            <p style="color: #64748b; font-size: 13px; margin-bottom: 8px;">Tu periodo de prueba de 14 días comenzó hoy. Después podrás elegir un plan según tu país.</p>
                             <div style="text-align: center; margin: 24px 0;">
-                                <a href="${process.env.FRONTEND_URL || 'https://www.globalfotoapp.com'}" 
+                                <a href="${process.env.FRONTEND_URL || 'https://www.globalfotoapp.com'}"
                                    style="background: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; display: inline-block;">
                                     Ir a mi Panel
                                 </a>
@@ -95,7 +119,11 @@ router.post('/register', async (req, res) => {
 
         res.status(201).json({
             mensaje: 'Usuario registrado exitosamente.',
-            user: { id: user.id, name: user.name, email: user.email, role: user.role }
+            user: {
+                id: user.id, name: user.name, email: user.email, role: user.role,
+                country: user.country, phone: user.phone, currency: user.currency,
+                plan: user.plan, plan_expires_at: user.plan_expires_at
+            }
         });
     } catch (error) {
         console.error('Error al registrar usuario:', error);
@@ -125,7 +153,7 @@ router.post('/login', async (req, res) => {
         res.json({
             mensaje: 'Inicio de sesión exitoso.',
             token,
-            user: { id: user.id, name: user.name, email: user.email, role: user.role, logo_url: user.logo_url }
+            user: { id: user.id, name: user.name, email: user.email, role: user.role, logo_url: user.logo_url, country: user.country, phone: user.phone, currency: user.currency, plan: user.plan, plan_started_at: user.plan_started_at, plan_expires_at: user.plan_expires_at }
         });
     } catch (error) {
         console.error('Error al iniciar sesión:', error);
@@ -136,7 +164,7 @@ router.post('/login', async (req, res) => {
 // OBTENER PERFIL ACTUAL
 router.get('/me', verificarToken, async (req, res) => {
     try {
-        const userResult = await pool.query('SELECT id, name, email, role, created_at, logo_url FROM users WHERE id = $1', [req.user.id]);
+        const userResult = await pool.query('SELECT id, name, email, role, created_at, logo_url, country, phone, currency, plan, plan_started_at, plan_expires_at FROM users WHERE id = $1', [req.user.id]);
         if (userResult.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado.' });
         res.json({ user: userResult.rows[0] });
     } catch (error) {

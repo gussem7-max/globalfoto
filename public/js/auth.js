@@ -17,15 +17,29 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
 document.getElementById('registerForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const name = document.getElementById('name').value;
-    const email = document.getElementById('email').value;
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
-    const role = document.getElementById('role').value;
+    const country = (document.getElementById('regCountry')?.value || 'XX').toUpperCase();
+    const prefix = (document.getElementById('phonePrefix')?.textContent || '').trim();
+    const national = (document.getElementById('regPhone')?.value || '').trim();
     const resDiv = document.getElementById('resultado');
+
+    if (!national) { resDiv.className = 'alert alert-error'; resDiv.textContent = 'Introduce tu número de teléfono.'; return; }
+
+    // El chip (+57) y el input están separados en pantalla; los uno para enviar el teléfono completo
+    const phone = (prefix + ' ' + national).replace(/\s+/g, ' ').trim();
+
     try {
-        const res = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password, role }) });
+        const res = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password, country, phone }) });
         const data = await res.json();
-        if (res.ok) { resDiv.className = 'alert alert-success'; resDiv.textContent = '¡Cuenta creada con éxito! Ya puedes iniciar sesión.'; e.target.reset(); }
+        if (res.ok) {
+            resDiv.className = 'alert alert-success';
+            resDiv.textContent = '¡Cuenta creada con éxito! Ya puedes iniciar sesión.';
+            e.target.reset();
+            // reset() pone el hidden en VE pero NO toca el chip/trigger (son JS); los reconcilio:
+            if (typeof renderTrigger === 'function' && typeof getCountry === 'function') renderTrigger(getCountry('VE'));
+        }
         else { resDiv.className = 'alert alert-error'; resDiv.textContent = data.error; }
     } catch (err) { resDiv.className = 'alert alert-error'; resDiv.textContent = 'Error de conexión.'; }
 });
