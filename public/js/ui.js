@@ -4,10 +4,7 @@
 
 function hideLoadingOverlay() {
     const overlay = document.getElementById('loadingOverlay');
-    if (overlay) { 
-        overlay.classList.add('hidden'); 
-        setTimeout(() => overlay.remove(), 300); 
-    }
+    if (overlay) { overlay.classList.add('hidden'); setTimeout(() => overlay.remove(), 300); }
 }
 
 function showSection(section) {
@@ -55,22 +52,9 @@ function switchTab(tab) {
 
 function closeOrderModal() { const m = document.getElementById('orderModal'); if (m) m.classList.add('hidden'); }
 function closePackageModal() { const m = document.getElementById('packageModal'); if (m) m.classList.add('hidden'); }
-function closeManageModal() { 
-    const m = document.getElementById('manageEventModal'); 
-    if (m) m.classList.add('hidden'); 
-    if (typeof managingEventId !== 'undefined') managingEventId = null; 
-}
-function closeEditUserModal() { 
-    const m = document.getElementById('editUserModal');
-    if (m) m.classList.add('hidden'); 
-    const r = document.getElementById('editUserResult');
-    if (r) r.textContent = ''; 
-}
-function closePurchaseModal() { 
-    const m = document.getElementById('purchaseModal');
-    if (m) m.classList.add('hidden'); 
-    if (typeof clearSelection === 'function') clearSelection();
-}
+function closeManageModal() { const m = document.getElementById('manageEventModal'); if (m) m.classList.add('hidden'); if (typeof managingEventId !== 'undefined') managingEventId = null; }
+function closeEditUserModal() { const m = document.getElementById('editUserModal'); if (m) m.classList.add('hidden'); const r = document.getElementById('editUserResult'); if (r) r.textContent = ''; }
+function closePurchaseModal() { const m = document.getElementById('purchaseModal'); if (m) m.classList.add('hidden'); if (typeof clearSelection === 'function') clearSelection(); }
 
 function openLightbox(url) {
     let safeUrl = url;
@@ -80,10 +64,7 @@ function openLightbox(url) {
     const modal = document.getElementById('lightboxModal');
     if (modal) modal.classList.remove('hidden');
 }
-function closeLightbox() { 
-    const modal = document.getElementById('lightboxModal');
-    if (modal) modal.classList.add('hidden'); 
-}
+function closeLightbox() { const modal = document.getElementById('lightboxModal'); if (modal) modal.classList.add('hidden'); }
 
 function showDashboard() {
     const auth = document.getElementById('authContainer');
@@ -136,10 +117,7 @@ function showDashboard() {
     if (typeof loadUserLogo === 'function') loadUserLogo();
 }
 
-function logout() { 
-    localStorage.removeItem('token'); 
-    window.location.href = '/'; 
-}
+function logout() { localStorage.removeItem('token'); window.location.href = '/'; }
 
 // ===== FUNCIONES GLOBALES PARA LA BARRA MÓVIL Y DRAWER =====
 window.switchMobileTab = function(selectedBtn) {
@@ -150,7 +128,6 @@ window.switchMobileTab = function(selectedBtn) {
         const label = pill.querySelector('.tab-label');
         if (label) label.classList.add('hidden');
     });
-
     selectedBtn.classList.add('active', 'bg-purple-600', 'text-white', 'shadow-md', 'shadow-purple-500/30', 'px-4');
     selectedBtn.classList.remove('text-slate-400', 'px-3.5');
     const activeLabel = selectedBtn.querySelector('.tab-label');
@@ -179,7 +156,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     const pathname = window.location.pathname;
     const urlParams = new URLSearchParams(window.location.search);
 
-    // 1. Galería pública
     let galeriaId = null;
     const galleryMatch = pathname.match(/^\/g\/(\d+)/);
     if (galleryMatch) galeriaId = galleryMatch[1];
@@ -194,11 +170,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 console.error('Error galería:', err);
                 const grid = document.getElementById('pubPhotoGrid');
                 if (grid) {
-                    grid.innerHTML = `<div class="gallery-closed" style="grid-column: 1/-1;">
-                        <i class="fa-solid fa-circle-exclamation"></i>
-                        <h3 style="color: white; margin-bottom: 8px;">Error al cargar</h3>
-                        <p style="color: var(--text-muted);">${err.message}</p>
-                    </div>`;
+                    grid.innerHTML = `<div class="gallery-closed" style="grid-column: 1/-1;"><i class="fa-solid fa-circle-exclamation"></i><h3 style="color: white; margin-bottom: 8px;">Error al cargar</h3><p style="color: var(--text-muted);">${err.message}</p></div>`;
                 }
             }
         }
@@ -206,7 +178,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         return; 
     }
 
-    // 2. Panel de control
     if (urlParams.get('tab') === 'register') switchTab('register');
     const plan = urlParams.get('plan');
     if (plan) localStorage.setItem('selected_plan', plan);
@@ -241,7 +212,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (auth) auth.classList.remove('hidden');
         if (dash) dash.classList.add('hidden');
     } finally {
-        // ESTO GARANTIZA QUE LA PANTALLA DE CARGA SIEMPRE SE QUITA
         hideLoadingOverlay();
     }
 });
