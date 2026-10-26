@@ -270,13 +270,9 @@ input:checked + .toggle-slider:before { transform: translateX(24px); }
 .receipt-preview { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 12px; }
 
 /* ===== DRAWER LATERAL DE PERFIL ===== */
-.profile-drawer-overlay {
-    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); z-index: 1100; opacity: 1; transition: opacity 0.3s ease;
-}
+.profile-drawer-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); z-index: 1100; opacity: 1; transition: opacity 0.3s ease; }
 .profile-drawer-overlay.hidden { opacity: 0; pointer-events: none; }
-.profile-drawer {
-    position: fixed; top: 0; right: 0; bottom: 0; width: 300px; max-width: 85vw; background: var(--bg-primary); border-left: 1px solid var(--border-strong); z-index: 1200; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; overflow-y: auto;
-}
+.profile-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 300px; max-width: 85vw; background: var(--bg-primary); border-left: 1px solid var(--border-strong); z-index: 1200; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; overflow-y: auto; }
 .profile-drawer.open { transform: translateX(0); }
 .profile-drawer-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid var(--border-color); }
 .profile-drawer-user { display: flex; align-items: center; gap: 12px; }
@@ -289,9 +285,13 @@ input:checked + .toggle-slider:before { transform: translateX(24px); }
 .drawer-badge { margin-left: auto; background: var(--danger); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 700; }
 .drawer-divider { height: 1px; background: var(--border-color); margin: 8px 0; }
 
-/* ===== RESPONSIVE / MÓVIL ===== */
+/* ===== BARRA MÓVIL TIPO CÁPSULA ===== */
+.nav-pill { min-width: unset; flex: 1; justify-content: center; }
+.nav-pill.active { background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important; color: white !important; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4); }
+.nav-pill.active .tab-label { display: block !important; }
+
+/* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
-    .sidebar { display: none !important; }
     .main-content { padding: 16px; padding-bottom: 100px; margin-left: 0; }
     .header { flex-direction: column; align-items: flex-start; gap: 12px; }
     .header h1 { font-size: 20px; }
@@ -310,36 +310,4 @@ input:checked + .toggle-slider:before { transform: translateX(24px); }
     .public-gallery { grid-template-columns: 1fr; }
     .public-photo-img { height: 250px; }
     .header h1 { font-size: 18px; }
-}
-
-/* ===== BARRA MÓVIL TIPO CÁPSULA (SOLO MÓVIL) ===== */
-@media (max-width: 768px) {
-    /* Ocultar sidebar de escritorio en móvil */
-    .dashboard-layout > .sidebar {
-        display: none !important;
-    }
-    
-    /* Ajustar padding del contenido */
-    .main-content { 
-        padding: 16px; 
-        padding-bottom: 100px; 
-        margin-left: 0; 
-    }
-}
-
-/* Estilos de la barra tipo cápsula */
-.nav-pill {
-    min-width: unset;
-    flex: 1;
-    justify-content: center;
-}
-
-.nav-pill.active {
-    background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important;
-    color: white !important;
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
-}
-
-.nav-pill.active .tab-label {
-    display: block !important;
 }
