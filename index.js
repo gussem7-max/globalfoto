@@ -112,6 +112,7 @@ pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS photographer_id INTEGER;
 
 const authRoutes = require('./src/routes/auth');
 app.use('/api/auth', authRoutes);
+app.use('/api/subscriptions', require('./routes/subscriptions'));
 
 const eventRoutes = require('./src/routes/events');
 app.use('/api/events', eventRoutes);
