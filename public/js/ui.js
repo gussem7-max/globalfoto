@@ -11,7 +11,7 @@ function hideLoadingOverlay() {
 }
 
 function showSection(section) {
-    ['events', 'galleries', 'sales', 'users', 'settings', 'admin'].forEach(s => {
+    ['events', 'galleries', 'sales', 'users', 'settings', 'admin', 'subscription'].forEach(s => {
         const sec = document.getElementById(`section${s.charAt(0).toUpperCase() + s.slice(1)}`);
         const nav = document.getElementById(`nav${s.charAt(0).toUpperCase() + s.slice(1)}`);
         if (sec) sec.classList.add('hidden');
