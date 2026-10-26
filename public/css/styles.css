@@ -312,7 +312,34 @@ input:checked + .toggle-slider:before { transform: translateX(24px); }
     .header h1 { font-size: 18px; }
 }
 
-/* ===== BARRA MÓVIL TIPO CÁPSULA ===== */
-.nav-pill { min-width: unset; flex: 1; justify-content: center; }
-.nav-pill.active { background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important; color: white !important; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4); }
-.nav-pill.active .tab-label { display: block !important; }
+/* ===== BARRA MÓVIL TIPO CÁPSULA (SOLO MÓVIL) ===== */
+@media (max-width: 768px) {
+    /* Ocultar sidebar de escritorio en móvil */
+    .dashboard-layout > .sidebar {
+        display: none !important;
+    }
+    
+    /* Ajustar padding del contenido */
+    .main-content { 
+        padding: 16px; 
+        padding-bottom: 100px; 
+        margin-left: 0; 
+    }
+}
+
+/* Estilos de la barra tipo cápsula */
+.nav-pill {
+    min-width: unset;
+    flex: 1;
+    justify-content: center;
+}
+
+.nav-pill.active {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+}
+
+.nav-pill.active .tab-label {
+    display: block !important;
+}
