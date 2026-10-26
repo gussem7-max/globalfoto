@@ -101,12 +101,28 @@
             <div>
                 <div class="brand"><i class="fa-solid fa-camera-retro"></i> <span>Global<span class="grad">Foto</span></span></div>
                 <ul class="nav-menu">
-                    <li class="nav-item" id="navSettings" onclick="showSection('settings')"><i class="fa-solid fa-user"></i> <span>Perfil</span></li>
-                    <li class="nav-item active" id="navEvents" onclick="showSection('events')"><i class="fa-solid fa-calendar-days"></i> <span>Eventos</span></li>
-                    <li class="nav-item" id="navGalleries" onclick="showSection('galleries')"><i class="fa-solid fa-images"></i> <span>Galerías</span></li>
-                    <li class="nav-item" id="navSales" onclick="showSection('sales')"><i class="fa-solid fa-cart-shopping"></i> <span>Ventas</span> <span class="nav-badge hidden" id="pendingOrdersBadge">0</span></li>
-                    <li class="nav-item hidden" id="navAdmin" onclick="showSection('admin')"><i class="fa-solid fa-shield-halved"></i> <span>Administración</span></li>
-                    <li class="nav-item hidden" id="navUsers" onclick="showSection('users')"><i class="fa-solid fa-users"></i> <span>Usuarios</span></li>
+                    <li class="nav-item active" id="navEvents" onclick="showSection('events')">
+                        <i class="fa-solid fa-calendar-days"></i><span>Eventos</span>
+                    </li>
+                    <li class="nav-item" id="navGalleries" onclick="showSection('galleries')">
+                        <i class="fa-solid fa-images"></i><span>Galerías</span>
+                    </li>
+                    <li class="nav-item" id="navSales" onclick="showSection('sales')">
+                        <i class="fa-solid fa-cart-shopping"></i><span>Ventas</span>
+                        <span class="nav-badge hidden" id="pendingOrdersBadge">0</span>
+                    </li>
+                    <li class="nav-item" id="navSettings" onclick="showSection('settings')">
+                        <i class="fa-solid fa-gear"></i><span>Configuración</span>
+                    </li>
+                    <li class="nav-item profile-item" id="navProfile" onclick="openProfileDrawer()">
+                        <i class="fa-solid fa-user"></i><span>Perfil</span>
+                    </li>
+                    <li class="nav-item hidden" id="navAdmin" onclick="showSection('admin')">
+                        <i class="fa-solid fa-shield-halved"></i><span>Administración</span>
+                    </li>
+                    <li class="nav-item hidden" id="navUsers" onclick="showSection('users')">
+                        <i class="fa-solid fa-users"></i><span>Usuarios</span>
+                    </li>
                 </ul>
             </div>
             <div class="user-profile">
@@ -118,6 +134,46 @@
                 <button class="btn-logout" onclick="logout()" title="Cerrar Sesión"><i class="fa-solid fa-right-from-bracket"></i></button>
             </div>
         </aside>
+
+        <!-- DRAWER LATERAL DE PERFIL (se desliza desde la derecha) -->
+        <div id="profileDrawerOverlay" class="profile-drawer-overlay hidden" onclick="closeProfileDrawer()"></div>
+        <div id="profileDrawer" class="profile-drawer">
+            <div class="profile-drawer-header">
+                <div class="profile-drawer-user">
+                    <div class="avatar" id="drawerAvatar" style="width:48px;height:48px;font-size:18px;">U</div>
+                    <div>
+                        <div class="user-name" id="drawerUserName" style="font-size:15px;">Usuario</div>
+                        <div class="user-role" id="drawerUserRole">Fotógrafo</div>
+                    </div>
+                </div>
+                <button onclick="closeProfileDrawer()" class="btn-close-drawer"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="profile-drawer-items">
+                <div class="drawer-item" onclick="showSection('events'); closeProfileDrawer();">
+                    <i class="fa-solid fa-calendar-days"></i><span>Eventos</span>
+                </div>
+                <div class="drawer-item" onclick="showSection('galleries'); closeProfileDrawer();">
+                    <i class="fa-solid fa-images"></i><span>Galerías</span>
+                </div>
+                <div class="drawer-item" onclick="showSection('sales'); closeProfileDrawer();">
+                    <i class="fa-solid fa-cart-shopping"></i><span>Ventas</span>
+                    <span class="drawer-badge hidden" id="drawerPendingBadge">0</span>
+                </div>
+                <div class="drawer-item" onclick="showSection('settings'); closeProfileDrawer();">
+                    <i class="fa-solid fa-gear"></i><span>Configuración</span>
+                </div>
+                <div class="drawer-item hidden" id="drawerAdmin" onclick="showSection('admin'); closeProfileDrawer();">
+                    <i class="fa-solid fa-shield-halved"></i><span>Administración</span>
+                </div>
+                <div class="drawer-item hidden" id="drawerUsers" onclick="showSection('users'); closeProfileDrawer();">
+                    <i class="fa-solid fa-users"></i><span>Usuarios</span>
+                </div>
+                <div class="drawer-divider"></div>
+                <div class="drawer-item" onclick="logout()" style="color: var(--danger);">
+                    <i class="fa-solid fa-right-from-bracket"></i><span>Cerrar Sesión</span>
+                </div>
+            </div>
+        </div>
 
         <!-- Menú móvil expandido -->
         <div id="mobileMenuExpanded" class="mobile-menu-expanded hidden">

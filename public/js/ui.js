@@ -92,6 +92,33 @@ function showDashboard() {
         if (mobileAdmin) mobileAdmin.classList.add('hidden');
         if (mobileUsers) mobileUsers.classList.add('hidden');
     }
+
+    // Sincronizar drawer con datos del usuario
+    const drawerAvatar = document.getElementById('drawerAvatar');
+    const drawerUserName = document.getElementById('drawerUserName');
+    const drawerUserRole = document.getElementById('drawerUserRole');
+    if (drawerAvatar) drawerAvatar.textContent = currentUser.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    if (drawerUserName) drawerUserName.textContent = currentUser.name;
+    if (drawerUserRole) drawerUserRole.textContent = currentUser.role === 'admin' ? 'Administrador' : 'Fotógrafo';
+
+    // Mostrar opciones de admin en drawer si aplica
+    const drawerAdmin = document.getElementById('drawerAdmin');
+    const drawerUsers = document.getElementById('drawerUsers');
+    const drawerBadge = document.getElementById('drawerPendingBadge');
+    if (currentUser.role === 'admin') {
+        if (drawerAdmin) drawerAdmin.classList.remove('hidden');
+        if (drawerUsers) drawerUsers.classList.remove('hidden');
+    } else {
+        if (drawerAdmin) drawerAdmin.classList.add('hidden');
+        if (drawerUsers) drawerUsers.classList.add('hidden');
+    }
+
+    // Sincronizar badge de pendientes en drawer
+    const pendingBadge = document.getElementById('pendingOrdersBadge');
+    if (drawerBadge && pendingBadge) {
+        drawerBadge.textContent = pendingBadge.textContent;
+        drawerBadge.classList.toggle('hidden', pendingBadge.classList.contains('hidden'));
+    }
 }
 
 function showPlanNotification(planName) {
@@ -197,4 +224,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     const menu = document.getElementById('mobileMenuExpanded');
     if (menu) menu.classList.add('hidden');
 }
+
+// ===== DRAWER DE PERFIL =====
+function openProfileDrawer() {
+    const drawer = document.getElementById('profileDrawer');
+    const overlay = document.getElementById('profileDrawerOverlay');
+    if (drawer) drawer.classList.add('open');
+    if (overlay) overlay.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeProfileDrawer() {
+    const drawer = document.getElementById('profileDrawer');
+    const overlay = document.getElementById('profileDrawerOverlay');
+    if (drawer) drawer.classList.remove('open');
+    if (overlay) overlay.classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
 });
