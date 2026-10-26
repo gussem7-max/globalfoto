@@ -629,3 +629,134 @@ input:checked + .toggle-slider:before { transform: translateX(24px); }
     background: var(--border-color);
     margin: 8px 0;
 }
+
+/* ===== BARRA MÓVIL TIPO CÁPSULA (LANDING STYLE) ===== */
+@media (max-width: 768px) {
+    .sidebar { display: none !important; }
+    
+    .main-content { 
+        padding: 16px; 
+        padding-bottom: 100px; 
+        margin-left: 0; 
+    }
+}
+
+/* Estilos de la barra móvil tipo cápsula */
+.nav-pill {
+    min-width: unset;
+    flex: 1;
+    justify-content: center;
+}
+
+.nav-pill.active {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+}
+
+.nav-pill.active .tab-label {
+    display: block !important;
+}
+
+/* DRAWER LATERAL */
+.profile-drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 1100;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+.profile-drawer-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.profile-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 300px;
+    max-width: 85vw;
+    background: var(--bg-primary);
+    border-left: 1px solid var(--border-strong);
+    z-index: 1200;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+.profile-drawer.open {
+    transform: translateX(0);
+}
+
+.profile-drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+.profile-drawer-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.btn-close-drawer {
+    background: rgba(148, 163, 184, 0.1);
+    border: none;
+    color: var(--text-muted);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: all 0.2s;
+}
+.btn-close-drawer:hover {
+    background: rgba(148, 163, 184, 0.2);
+    color: white;
+}
+
+.profile-drawer-items {
+    padding: 8px 0;
+    flex: 1;
+}
+.drawer-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    color: var(--text-main);
+    cursor: pointer;
+    transition: background 0.2s;
+    font-size: 14px;
+    font-weight: 500;
+}
+.drawer-item:hover { background: rgba(99, 102, 241, 0.1); }
+.drawer-item i {
+    font-size: 18px;
+    color: var(--accent);
+    width: 24px;
+    text-align: center;
+}
+.drawer-badge {
+    margin-left: auto;
+    background: var(--danger);
+    color: white;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 700;
+}
+.drawer-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 8px 0;
+}

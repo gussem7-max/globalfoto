@@ -103,6 +103,25 @@ function showDashboard() {
         if (drawerAdmin) drawerAdmin.classList.add('hidden');
         if (drawerUsers) drawerUsers.classList.add('hidden');
     }
+
+    // Sincronizar drawer
+    const drawerAvatar = document.getElementById('drawerAvatar');
+    const drawerUserName = document.getElementById('drawerUserName');
+    const drawerUserRole = document.getElementById('drawerUserRole');
+    if (drawerAvatar) drawerAvatar.textContent = currentUser.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    if (drawerUserName) drawerUserName.textContent = currentUser.name;
+    if (drawerUserRole) drawerUserRole.textContent = currentUser.role === 'admin' ? 'Administrador' : 'Fotógrafo';
+
+    const drawerAdmin = document.getElementById('drawerAdmin');
+    const drawerUsers = document.getElementById('drawerUsers');
+    if (currentUser.role === 'admin') {
+        if (drawerAdmin) drawerAdmin.classList.remove('hidden');
+        if (drawerUsers) drawerUsers.classList.remove('hidden');
+    } else {
+        if (drawerAdmin) drawerAdmin.classList.add('hidden');
+        if (drawerUsers) drawerUsers.classList.add('hidden');
+    }
+
 }
 
 function showPlanNotification(planName) {
@@ -225,5 +244,40 @@ function closeProfileDrawer() {
     if (overlay) overlay.classList.add('hidden');
     document.body.style.overflow = '';
 }
+
+// ===== BARRA MÓVIL TIPO CÁPSULA =====
+window.switchMobileTab = function(selectedBtn) {
+    const allPills = document.querySelectorAll('.nav-pill');
+    allPills.forEach(pill => {
+        pill.classList.remove('active');
+        pill.classList.remove('bg-purple-600', 'text-white', 'shadow-md', 'shadow-purple-500/30', 'px-4');
+        pill.classList.add('text-slate-400', 'px-3.5');
+        const label = pill.querySelector('.tab-label');
+        if (label) label.classList.add('hidden');
+    });
+
+    selectedBtn.classList.add('active');
+    selectedBtn.classList.remove('text-slate-400', 'px-3.5');
+    selectedBtn.classList.add('bg-purple-600', 'text-white', 'shadow-md', 'shadow-purple-500/30', 'px-4');
+    const activeLabel = selectedBtn.querySelector('.tab-label');
+    if (activeLabel) activeLabel.classList.remove('hidden');
+};
+
+// ===== DRAWER DE PERFIL =====
+window.openProfileDrawer = function() {
+    const drawer = document.getElementById('profileDrawer');
+    const overlay = document.getElementById('profileDrawerOverlay');
+    if (drawer) drawer.classList.add('open');
+    if (overlay) overlay.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+};
+
+window.closeProfileDrawer = function() {
+    const drawer = document.getElementById('profileDrawer');
+    const overlay = document.getElementById('profileDrawerOverlay');
+    if (drawer) drawer.classList.remove('open');
+    if (overlay) overlay.classList.add('hidden');
+    document.body.style.overflow = '';
+};
 
 });
