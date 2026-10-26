@@ -101,12 +101,12 @@
             <div>
                 <div class="brand"><i class="fa-solid fa-camera-retro"></i> <span>Global<span class="grad">Foto</span></span></div>
                 <ul class="nav-menu">
+                    <li class="nav-item" id="navSettings" onclick="showSection('settings')"><i class="fa-solid fa-user"></i> <span>Perfil</span></li>
                     <li class="nav-item active" id="navEvents" onclick="showSection('events')"><i class="fa-solid fa-calendar-days"></i> <span>Eventos</span></li>
                     <li class="nav-item" id="navGalleries" onclick="showSection('galleries')"><i class="fa-solid fa-images"></i> <span>Galerías</span></li>
                     <li class="nav-item" id="navSales" onclick="showSection('sales')"><i class="fa-solid fa-cart-shopping"></i> <span>Ventas</span> <span class="nav-badge hidden" id="pendingOrdersBadge">0</span></li>
                     <li class="nav-item hidden" id="navAdmin" onclick="showSection('admin')"><i class="fa-solid fa-shield-halved"></i> <span>Administración</span></li>
                     <li class="nav-item hidden" id="navUsers" onclick="showSection('users')"><i class="fa-solid fa-users"></i> <span>Usuarios</span></li>
-                    <li class="nav-item" id="navSettings" onclick="showSection('settings')"><i class="fa-solid fa-gear"></i> <span>Configuración</span></li>
                 </ul>
             </div>
             <div class="user-profile">
@@ -118,6 +118,33 @@
                 <button class="btn-logout" onclick="logout()" title="Cerrar Sesión"><i class="fa-solid fa-right-from-bracket"></i></button>
             </div>
         </aside>
+
+        <!-- Menú móvil expandido -->
+        <div id="mobileMenuExpanded" class="mobile-menu-expanded hidden">
+            <div class="mobile-menu-header">
+                <h3>Mi Cuenta</h3>
+                <button onclick="closeMobileMenu()" class="btn-close-menu"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="mobile-menu-items">
+                <div class="mobile-menu-item" onclick="showSection('settings'); closeMobileMenu();">
+                    <i class="fa-solid fa-gear"></i>
+                    <span>Configuración</span>
+                </div>
+                <div class="mobile-menu-item hidden" id="mobileNavAdmin" onclick="showSection('admin'); closeMobileMenu();">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Administración</span>
+                </div>
+                <div class="mobile-menu-item hidden" id="mobileNavUsers" onclick="showSection('users'); closeMobileMenu();">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Usuarios</span>
+                </div>
+                <div class="mobile-menu-divider"></div>
+                <div class="mobile-menu-item" onclick="logout()" style="color: var(--danger);">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Cerrar Sesión</span>
+                </div>
+            </div>
+        </div>
 
         <main class="main-content">
             <div id="sectionEvents">

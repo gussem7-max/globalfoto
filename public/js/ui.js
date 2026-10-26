@@ -81,6 +81,17 @@ function showDashboard() {
         showPlanNotification(selectedPlan);
         localStorage.removeItem('selected_plan');
     }
+
+    // Sincronizar visibilidad de opciones admin en menú móvil
+    const mobileAdmin = document.getElementById('mobileNavAdmin');
+    const mobileUsers = document.getElementById('mobileNavUsers');
+    if (currentUser.role === 'admin') {
+        if (mobileAdmin) mobileAdmin.classList.remove('hidden');
+        if (mobileUsers) mobileUsers.classList.remove('hidden');
+    } else {
+        if (mobileAdmin) mobileAdmin.classList.add('hidden');
+        if (mobileUsers) mobileUsers.classList.add('hidden');
+    }
 }
 
 function showPlanNotification(planName) {
@@ -181,4 +192,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     } finally {
         hideLoadingOverlay();
     }
+
+    function closeMobileMenu() {
+    const menu = document.getElementById('mobileMenuExpanded');
+    if (menu) menu.classList.add('hidden');
+}
 });
