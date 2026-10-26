@@ -20,9 +20,11 @@ const s3Client = new S3Client({
     }
 });
 
+const uploadLogo = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
+
 // === Catálogo país → moneda/canal (ESPEJO de public/js/countries.js) ===
-// Al agregar un país, agrégalo AQUÍ y en countries.js. La moneda se deriva del
-// país en el servidor: el cliente nunca manda currency, solo country.
+// La moneda se deriva del país EN EL SERVIDOR: el cliente nunca manda currency.
+// Al agregar un país, agrégalo AQUÍ y en countries.js.
 const USD_ZINLI = ['US','MX','AR','CL','PE','EC','BO','PY','UY','BR','PA','CR','DO','GT','HN','SV','NI','CU','PR','ES','IT','FR','DE','PT','GB','CA','AU'];
 const COUNTRY_META = {
     VE: { currency: 'VES', channel: 'pagomovil' },
@@ -55,7 +57,7 @@ router.post('/register', async (req, res) => {
         const country = Object.prototype.hasOwnProperty.call(COUNTRY_META, countryRaw) ? countryRaw : 'XX';
         const currency = COUNTRY_META[country].currency;
 
-        // Teléfono: lo arma el front como "+57 300 123 4567"; lo normalizo y corto a 32
+        // Teléfono: el front lo arma como "+57 300 123 4567"; normalizo y corto a 32
         const phoneRaw = typeof req.body.phone === 'string' ? req.body.phone.trim() : '';
         const phone = phoneRaw ? phoneRaw.slice(0, 32) : null;
 
@@ -64,8 +66,8 @@ router.post('/register', async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // role FORZADO a photographer (el registro es solo de fotógrafos; ignora role del body)
-        // plan_expires_at = hoy + 14 días de trial, coherente con los usuarios ya existentes
+        // role FORZADO a photographer (registro solo de fotógrafos; ignora role del body)
+        // plan_expires_at = hoy + 14 días de trial
         const newUser = await pool.query(
             `INSERT INTO users (name, email, password, role, country, phone, currency, plan, plan_started_at, plan_expires_at)
              VALUES ($1, $2, $3, 'photographer', $4, $5, $6, 'trial', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '14 days')
@@ -221,7 +223,6 @@ router.put('/logo', verificarToken, uploadLogo.single('logo'), async (req, res) 
         const ext = file.mimetype.split('/')[1] || 'png';
         const key = `logos/${req.user.id}/${crypto.randomBytes(16).toString('hex')}.${ext}`;
         
-        //  CAMBIO CLAVE: ACL public-read para que el logo sea accesible desde el navegador
         await s3Client.send(new PutObjectCommand({
             Bucket: process.env.AWS_BUCKET_NAME,
             Key: key,
