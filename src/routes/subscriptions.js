@@ -208,4 +208,34 @@ function getInstructions(channel, amount, currency, refCode) {
     return `${intro}\n\n${codeStr}\n\nIMPORTANTE: Copia este código y pégalo en el campo "Concepto", "Mensaje" o "Referencia" al momento de pagar.\nSi olvidas el código, asegúrate de transferir el MONTO EXACTO (${amtStr}) incluyendo los centavos.`;
 }
 
+// GET /api/subscriptions/orders/:id/status
+router.get('/orders/:id/status', verifyToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT status FROM subscription_orders WHERE id=$1 AND user_id=$2',
+            [req.params.id, req.user.id]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Orden no encontrada.' });
+        res.json({ status: result.rows[0].status });
+    } catch (error) {
+        console.error('Error consultando estado:', error);
+        res.status(500).json({ error: 'Error interno.' });
+    }
+});
+
+// GET /api/subscriptions/orders/:id (retomar orden completa)
+router.get('/orders/:id', verifyToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM subscription_orders WHERE id=$1 AND user_id=$2',
+            [req.params.id, req.user.id]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Orden no encontrada.' });
+        res.json({ order: result.rows[0] });
+    } catch (error) {
+        console.error('Error obteniendo orden:', error);
+        res.status(500).json({ error: 'Error interno.' });
+    }
+});
+
 module.exports = router;
