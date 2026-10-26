@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { createSubscriptionOrder, PLANS } = require('../lib/subscription');
+const { getCurrentRate } = require('../lib/exchangeRate');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'globalfoto_secret_key_2024';
 
@@ -25,19 +27,44 @@ router.get('/plans', verifyToken, async (req, res) => {
         const userResult = await pool.query('SELECT currency, country FROM users WHERE id = $1', [req.user.id]);
         if (userResult.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado.' });
         
-        const { currency } = userResult.rows[0];
+        const { currency, country } = userResult.rows[0];
         
-        const plansOut = Object.keys(PLANS).map(key => ({
-            key,
-            name: key.charAt(0).toUpperCase() + key.slice(1),
-            price: PLANS[key][currency.toLowerCase()] || PLANS[key].usd,
-            currency
-        }));
+        // Calcular precios dinámicos según moneda/tasa
+        let plansOut;
+        if (currency === 'VES') {
+            // Obtener tasa EUR→VES vigente
+            const eurVesRate = await getCurrentRate('EUR_VES');
+            
+            plansOut = Object.keys(PLANS).map(key => ({
+                key,
+                name: key.charAt(0).toUpperCase() + key.slice(1),
+                price_usd: PLANS[key].usd,
+                price_ves: +(PLANS[key].usd * eurVesRate).toFixed(2), // conversión automática
+                currency: 'VES',
+                exchange_rate: eurVesRate
+            }));
+        } else if (currency === 'COP') {
+            // COP tiene precio fijo definido en PLANS
+            plansOut = Object.keys(PLANS).map(key => ({
+                key,
+                name: key.charAt(0).toUpperCase() + key.slice(1),
+                price_cop: PLANS[key].cop,
+                currency: 'COP'
+            }));
+        } else {
+            // USD/Zinli: precio base directo
+            plansOut = Object.keys(PLANS).map(key => ({
+                key,
+                name: key.charAt(0).toUpperCase() + key.slice(1),
+                price_usd: PLANS[key].usd,
+                currency: 'USD'
+            }));
+        }
 
         res.json({ plans: plansOut, currency });
     } catch (error) {
         console.error('Error obteniendo planes:', error);
-        res.status(500).json({ error: 'Error interno.' });
+        res.status(500).json({ error: 'Error interno: ' + error.message });
     }
 });
 
@@ -56,18 +83,28 @@ router.post('/order', verifyToken, async (req, res) => {
         if (country === 'VE') channel = 'pagomovil';
         else if (country === 'CO') channel = 'nequi';
 
-        const order = await createSubscriptionOrder(req.user.id, plan, { currency, channel });
+        // Para VES, calcular monto base con tasa actual ANTES de crear orden
+        let baseAmount;
+        if (currency === 'VES') {
+            const eurVesRate = await getCurrentRate('EUR_VES');
+            baseAmount = +(PLANS[plan].usd * eurVesRate).toFixed(2);
+        } else {
+            baseAmount = PLANS[plan][currency.toLowerCase()] || PLANS[plan].usd;
+        }
+
+        // Crear orden con monto base ya convertido
+        const order = await createSubscriptionOrderWithBase(req.user.id, plan, { currency, channel }, baseAmount);
 
         res.status(201).json({
             message: 'Orden creada.',
             order: {
                 id: order.id,
-                expected_amount: order.expected_amount,
-                reference_code: order.reference_code, // <-- EL CÓDIGO PARA COPIAR
+                expected_amount: Number(order.expected_amount), // forzar número
+                reference_code: sanitizeRefCode(order.reference_code), // limpiar símbolos
                 currency: order.currency,
                 channel: order.channel,
                 expires_at: order.expires_at,
-                instructions: getInstructions(channel, order.expected_amount, currency, order.reference_code)
+                instructions: getInstructions(channel, Number(order.expected_amount), currency, sanitizeRefCode(order.reference_code))
             }
         });
 
@@ -77,42 +114,113 @@ router.post('/order', verifyToken, async (req, res) => {
     }
 });
 
+// Función auxiliar para crear orden con base pre-calculada (VES dinámico)
+async function createSubscriptionOrderWithBase(userId, planKey, countryMeta, customBase) {
+    const plan = PLANS[planKey];
+    if (!plan) throw new Error('Plan inválido.');
+
+    const currency = String(countryMeta.currency || '').toUpperCase();
+    const base = typeof customBase === 'number' ? customBase : (plan[currency.toLowerCase()] ?? plan.usd);
+    
+    if (isNaN(base) || base <= 0) throw new Error(`Precio base inválido: ${base}`);
+
+    // Buscar sufijos ocupados (últimos 30 min)
+    const recentOrders = await pool.query(
+        `SELECT expected_amount FROM subscription_orders 
+         WHERE currency = $1 AND plan = $2 AND status = 'pending' 
+           AND created_at > NOW() - INTERVAL '30 minutes'`,
+        [currency, planKey]
+    );
+    const taken = new Set(recentOrders.rows.map(r => parseFloat(r.expected_amount)));
+
+    // Generar monto único
+    const gen = generateUniqueAmount(base, currency, taken);
+    if (!gen) throw new Error('Sistema saturado de pagos pendientes. Intenta de nuevo en unos minutos.');
+
+    // Generar código limpio (solo letras/números)
+    let refCode = generateCleanReferenceCode();
+    let attempts = 0;
+    while (attempts < 5) {
+        const exists = await pool.query('SELECT 1 FROM subscription_orders WHERE reference_code = $1', [refCode]);
+        if (exists.rows.length === 0) break;
+        refCode = generateCleanReferenceCode();
+        attempts++;
+    }
+
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    
+    const result = await pool.query(
+        `INSERT INTO subscription_orders 
+         (user_id, plan, currency, channel, base_amount, expected_amount, suffix, reference_code, expires_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING id, user_id, plan, currency, channel, 
+                   base_amount::text AS base_amount, 
+                   expected_amount::text AS expected_amount, 
+                   suffix, reference_code, status, created_at, expires_at`,
+        [userId, planKey, currency, countryMeta.channel, base, gen.expected, gen.suffix, refCode, expiresAt]
+    );
+
+    const row = result.rows[0];
+    return {
+        ...row,
+        base_amount: Number(row.base_amount),
+        expected_amount: Number(row.expected_amount),
+        suffix: Number(row.suffix)
+    };
+}
+
+function generateUniqueAmount(base, currency, takenSuffixes) {
+    let maxSuffix;
+    if (currency === 'USD') maxSuffix = 10;       // 0..9
+    else if (currency === 'COP') maxSuffix = 100; // 0..99
+    else maxSuffix = 100;                        // VES
+
+    for (let i = 0; i < maxSuffix; i++) {
+        const candidate = +(parseFloat(base) + i * (currency === 'USD' ? 0.01 : 1)).toFixed(4);
+        if (!takenSuffixes.has(candidate)) {
+            return { expected: candidate, suffix: i };
+        }
+    }
+    return null;
+}
+
+// Código SIN símbolos bancarios problemáticos (-*/#@_)
+function generateCleanReferenceCode() {
+    // Solo A-Z y 0-9, longitud 6 caracteres
+    const chars = crypto.randomBytes(6).toString('hex').toUpperCase().slice(0, 6);
+    return `GF${chars}`; // Ej: GFABC123
+}
+
+// Sanitizar cualquier código existente por seguridad
+function sanitizeRefCode(code) {
+    return String(code || '').replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 10);
+}
+
 // --- CONCILIACIÓN AUTOMÁTICA (WEBHOOK CASERO) ---
-// Este endpoint lo llama tu teléfono Android vía MacroDroid
 router.post('/webhook', async (req, res) => {
-    // Seguridad básica: header secreto desde el teléfono
     const secret = req.headers['x-webhook-secret'];
     if (secret !== process.env.WEBHOOK_SECRET) return res.status(401).json({ error: 'Secret invalido' });
 
     const { amount, currency, reference_text, sender_name } = req.body;
     
-    // Normalizar inputs
     const cleanAmount = parseFloat(amount);
-    const cleanRef = String(reference_text || '').trim().toUpperCase();
+    const cleanRef = String(reference_text || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, ''); // quitar todo excepto alfanuméricos
 
     try {
-        // ESTRATEGIA 1: Búsqueda por CÓDIGO EXACTO en el texto de referencia/concepto
-        // Ejemplo: el usuario escribió "Pago GF-ABCD" o "GF-ABCD Suscripcion"
         let matchedOrder = null;
         
-        if (cleanRef.includes('GF-')) {
-            // Extraer el código GF-XXXX usando regex simple
-            const match = cleanRef.match(/GF-[A-Z0-9]{4}/i);
-            if (match) {
-                const code = match[0].toUpperCase();
-                
-                // ⚠️ DOBLE VERIFICACIÓN: buscar por código Y validar que el MONTO coincida
-                const foundByCode = await pool.query(
-                    `UPDATE subscription_orders SET status='paid', paid_at=NOW(), webhook_raw=$1 
-                     WHERE reference_code=$2 AND expected_amount=$3 AND currency=$4 AND status='pending' 
-                     RETURNING *`,
-                    [JSON.stringify(req.body), code, cleanAmount, currency]
-                );
-                if (foundByCode.rows.length > 0) matchedOrder = foundByCode.rows[0];
-            }
+        // ESTRATEGIA 1: Búsqueda por CÓDIGO EXACTO (sin símbolos)
+        if (cleanRef.startsWith('GF') && cleanRef.length >= 6) {
+            const foundByCode = await pool.query(
+                `UPDATE subscription_orders SET status='paid', paid_at=NOW(), webhook_raw=$1 
+                 WHERE reference_code=$2 AND expected_amount=$3 AND currency=$4 AND status='pending' 
+                 RETURNING *`,
+                [JSON.stringify(req.body), cleanRef, cleanAmount, currency]
+            );
+            if (foundByCode.rows.length > 0) matchedOrder = foundByCode.rows[0];
         }
 
-        // ESTRATEGIA 2: Si no hubo código, buscar por MONTO ÚNICO (sufijo)
+        // ESTRATEGIA 2: Monto único (fallback)
         if (!matchedOrder) {
             const foundByAmount = await pool.query(
                 `UPDATE subscription_orders SET status='paid', paid_at=NOW(), webhook_raw=$1 
@@ -125,13 +233,11 @@ router.post('/webhook', async (req, res) => {
         }
 
         if (matchedOrder) {
-            // ACTIVAR PLAN EN USERS
             await activateUserPlan(matchedOrder.user_id, matchedOrder.plan);
             console.log(`✅ Pago confirmado automáticamente para orden ${matchedOrder.id}`);
             return res.json({ success: true, order_id: matchedOrder.id });
         } else {
             console.warn(`⚠️ Notificación recibida pero sin coincidencia clara: ${amount} ${currency} Ref:${reference_text}`);
-            // Guardamos la notificación cruda para revisión manual posterior si quieres
             return res.json({ success: false, reason: 'no_match' });
         }
 
@@ -141,13 +247,11 @@ router.post('/webhook', async (req, res) => {
     }
 });
 
-// --- VALIDACIÓN MANUAL (BOTÓN DEL CLIENTE) ---
-// El cliente dice "Ya pagué X monto con referencia Y"
+// --- VALIDACIÓN MANUAL ---
 router.post('/verify-manual', verifyToken, async (req, res) => {
     const { order_id, reported_amount, reported_reference } = req.body;
     
     try {
-        // Verificar que la orden pertenezca al usuario y esté pendiente
         const orderCheck = await pool.query(
             `SELECT * FROM subscription_orders WHERE id=$1 AND user_id=$2 AND status='pending'`,
             [order_id, req.user.id]
@@ -156,18 +260,14 @@ router.post('/verify-manual', verifyToken, async (req, res) => {
         
         const order = orderCheck.rows[0];
         const cleanReportedAmount = parseFloat(reported_amount);
-        const cleanReportedRef = String(reported_reference || '').trim().toUpperCase();
+        const cleanReportedRef = String(reported_reference || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-        // LÓGICA DE CONCILIACIÓN MANUAL (igual que el webhook pero iniciada por el usuario)
         let isMatch = false;
 
         // 1. ¿Coincide el código?
-        if (cleanReportedRef.includes('GF-')) {
-            const match = cleanReportedRef.match(/GF-[A-Z0-9]{4}/i);
-            if (match && match[0].toUpperCase() === order.reference_code) isMatch = true;
-        }
+        if (cleanReportedRef.startsWith('GF') && cleanReportedRef === order.reference_code) isMatch = true;
 
-        // 2. ¿Coincide el monto exacto? (tolerancia pequeña por decimales)
+        // 2. ¿Coincide el monto exacto?
         if (!isMatch && Math.abs(cleanReportedAmount - parseFloat(order.expected_amount)) < 0.01) {
             isMatch = true;
         }
@@ -186,18 +286,22 @@ router.post('/verify-manual', verifyToken, async (req, res) => {
     }
 });
 
-// Helper: Activar plan en la tabla users
+// Helpers
 async function activateUserPlan(userId, planKey) {
-    const expirationDays = 30; // Mensual
+    const expirationDays = 30;
     await pool.query(
         `UPDATE users SET plan=$1, plan_expires_at=CURRENT_TIMESTAMP + INTERVAL '${expirationDays} days' WHERE id=$2`,
         [planKey, userId]
     );
 }
 
-// Helper: Instrucciones claras
 function getInstructions(channel, amount, currency, refCode) {
-    const amtStr = `${amount.toFixed(currency === 'USD' ? 2 : 0)} ${currency}`;
+    // Formatear monto SEGÚN moneda (Bs. sin $, COP con $, USD con $)
+    let amtStr;
+    if (currency === 'VES') amtStr = `Bs. ${amount.toFixed(2)}`;
+    else if (currency === 'COP') amtStr = `$${Math.round(amount).toLocaleString('es-CO')} COP`;
+    else amtStr = `$${amount.toFixed(2)} USD`;
+    
     const codeStr = `TU CÓDIGO DE REFERENCIA ES: ${refCode}`;
     
     let intro = "";
@@ -205,10 +309,10 @@ function getInstructions(channel, amount, currency, refCode) {
     else if (channel === 'pagomovil') intro = `Realiza Pago Móvil por ${amtStr}.`;
     else intro = `Genera un cobro o transferencia en Zinli por ${amtStr}.`;
 
-    return `${intro}\n\n${codeStr}\n\nIMPORTANTE: Copia este código y pégalo en el campo "Concepto", "Mensaje" o "Referencia" al momento de pagar.\nSi olvidas el código, asegúrate de transferir el MONTO EXACTO (${amtStr}) incluyendo los centavos.`;
+    return `${intro}\n\n${codeStr}\n\nIMPORTANTE: Copia este código y pégalo en el campo "Concepto", "Mensaje" o "Referencia" al momento de pagar.\nSi olvidas el código, asegúrate de transferir el MONTO EXACTO (${amtStr}).`;
 }
 
-// GET /api/subscriptions/orders/:id/status
+// Endpoints de consulta de estado
 router.get('/orders/:id/status', verifyToken, async (req, res) => {
     try {
         const result = await pool.query(
@@ -223,7 +327,6 @@ router.get('/orders/:id/status', verifyToken, async (req, res) => {
     }
 });
 
-// GET /api/subscriptions/orders/:id (retomar orden completa)
 router.get('/orders/:id', verifyToken, async (req, res) => {
     try {
         const result = await pool.query(
@@ -231,7 +334,12 @@ router.get('/orders/:id', verifyToken, async (req, res) => {
             [req.params.id, req.user.id]
         );
         if (result.rows.length === 0) return res.status(404).json({ error: 'Orden no encontrada.' });
-        res.json({ order: result.rows[0] });
+        const order = result.rows[0];
+        // Normalizar números antes de devolver
+        order.expected_amount = Number(order.expected_amount);
+        order.base_amount = Number(order.base_amount);
+        order.reference_code = sanitizeRefCode(order.reference_code);
+        res.json({ order });
     } catch (error) {
         console.error('Error obteniendo orden:', error);
         res.status(500).json({ error: 'Error interno.' });

@@ -155,3 +155,14 @@ process.on('SIGTERM', () => {
     process.exit(0);
   });
 });
+
+// Al final de index.js, después de app.listen(...)
+setInterval(async () => {
+    try {
+        const { updateExchangeRate } = require('./src/lib/exchangeRate');
+        await updateExchangeRate();
+        console.log('⏰ Tasa EUR→VES refrescada automáticamente');
+    } catch (err) {
+        console.error('⚠️ Error refrescando tasa:', err.message);
+    }
+}, 60 * 60 * 1000); // Cada 1 hora
