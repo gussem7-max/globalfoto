@@ -89,9 +89,24 @@
                     <div class="form-group"><label>Contraseña</label><input type="password" id="password" required placeholder="••••••••"></div>
                     <div class="form-group">
                         <label>País</label>
-                        <select id="regCountry" required></select>
+                        <div class="country-select" id="countrySelect">
+                            <button type="button" class="country-trigger" id="countryTrigger" aria-haspopup="listbox" aria-expanded="false">
+                                <img class="country-flag" id="countryFlag" src="" alt="">
+                                <span class="country-globe" id="countryGlobe"></span>
+                                <span class="country-name" id="countryName">Venezuela</span>
+                                <i class="fa-solid fa-chevron-down country-caret"></i>
+                            </button>
+                            <ul class="country-list" id="countryList" role="listbox"></ul>
+                            <input type="hidden" id="regCountry" value="VE">
+                        </div>
                     </div>
-                    <div class="form-group"><label>Teléfono</label><input type="tel" id="regPhone" required placeholder="+58 412 000 0000"></div>
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <div class="phone-field">
+                            <span class="phone-prefix" id="phonePrefix">+58</span>
+                            <input type="tel" id="regPhone" placeholder="412 000 0000" autocomplete="tel-national">
+                        </div>
+                    </div>
                     <input type="hidden" id="role" value="photographer">
                     <button type="submit" class="btn-primary">Registrarme</button>
                 </form>
