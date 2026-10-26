@@ -97,18 +97,16 @@
 
     <!-- DASHBOARD -->
     <div id="dashboardContainer" class="dashboard-layout hidden">
-        <!-- SIDEBAR ESCRITORIO (oculta en móvil) -->
-        <aside class="sidebar hidden md:flex">
+        <aside class="sidebar">
             <div>
                 <div class="brand"><i class="fa-solid fa-camera-retro"></i> <span>Global<span class="grad">Foto</span></span></div>
                 <ul class="nav-menu">
-                    <li class="nav-item active" id="navEvents" onclick="showSection('events')"><i class="fa-solid fa-calendar-days"></i><span>Eventos</span></li>
-                    <li class="nav-item" id="navGalleries" onclick="showSection('galleries')"><i class="fa-solid fa-images"></i><span>Galerías</span></li>
-                    <li class="nav-item" id="navSales" onclick="showSection('sales')"><i class="fa-solid fa-cart-shopping"></i><span>Ventas</span><span class="nav-badge hidden" id="pendingOrdersBadge">0</span></li>
-                    <li class="nav-item" id="navSettings" onclick="showSection('settings')"><i class="fa-solid fa-gear"></i><span>Configuración</span></li>
-                    <li class="nav-item profile-item" id="navProfile" onclick="openProfileDrawer()"><i class="fa-solid fa-user"></i><span>Perfil</span></li>
-                    <li class="nav-item hidden" id="navAdmin" onclick="showSection('admin')"><i class="fa-solid fa-shield-halved"></i><span>Administración</span></li>
-                    <li class="nav-item hidden" id="navUsers" onclick="showSection('users')"><i class="fa-solid fa-users"></i><span>Usuarios</span></li>
+                    <li class="nav-item active" id="navEvents" onclick="showSection('events')"><i class="fa-solid fa-calendar-days"></i> <span>Eventos</span></li>
+                    <li class="nav-item" id="navGalleries" onclick="showSection('galleries')"><i class="fa-solid fa-images"></i> <span>Galerías</span></li>
+                    <li class="nav-item" id="navSales" onclick="showSection('sales')"><i class="fa-solid fa-cart-shopping"></i> <span>Ventas</span> <span class="nav-badge hidden" id="pendingOrdersBadge">0</span></li>
+                    <li class="nav-item hidden" id="navAdmin" onclick="showSection('admin')"><i class="fa-solid fa-shield-halved"></i> <span>Administración</span></li>
+                    <li class="nav-item hidden" id="navUsers" onclick="showSection('users')"><i class="fa-solid fa-users"></i> <span>Usuarios</span></li>
+                    <li class="nav-item" id="navSettings" onclick="showSection('settings')"><i class="fa-solid fa-gear"></i> <span>Configuración</span></li>
                 </ul>
             </div>
             <div class="user-profile">
@@ -120,58 +118,6 @@
                 <button class="btn-logout" onclick="logout()" title="Cerrar Sesión"><i class="fa-solid fa-right-from-bracket"></i></button>
             </div>
         </aside>
-
-        <!-- BARRA MÓVIL TIPO CÁPSULA (solo visible en móvil) -->
-        <div class="md:hidden fixed bottom-6 left-0 right-0 z-50 px-4 flex justify-center pointer-events-none">
-            <nav class="pointer-events-auto bg-[#131927]/90 backdrop-blur-xl border border-slate-800 shadow-[0_12px_32px_rgba(0,0,0,0.6)] rounded-full p-1.5 max-w-md w-full flex items-center justify-between transition-all">
-                <button onclick="showSection('events'); switchMobileTab(this)" class="nav-pill flex items-center gap-2 px-4 py-2.5 rounded-full bg-purple-600 text-white font-medium text-xs transition-all duration-300 ease-out shadow-md shadow-purple-500/30">
-                    <i class="fa-solid fa-calendar-days w-5 h-5 flex items-center justify-center"></i>
-                    <span class="tab-label whitespace-nowrap font-semibold">Eventos</span>
-                </button>
-                <button onclick="showSection('galleries'); switchMobileTab(this)" class="nav-pill flex items-center gap-2 px-3.5 py-2.5 rounded-full text-slate-400 hover:text-white font-medium text-xs transition-all duration-300 ease-out">
-                    <i class="fa-solid fa-images w-5 h-5 flex items-center justify-center"></i>
-                    <span class="tab-label hidden whitespace-nowrap font-semibold">Galerías</span>
-                </button>
-                <button onclick="showSection('sales'); switchMobileTab(this)" class="nav-pill flex items-center gap-2 px-3.5 py-2.5 rounded-full text-slate-400 hover:text-white font-medium text-xs transition-all duration-300 ease-out relative">
-                    <i class="fa-solid fa-cart-shopping w-5 h-5 flex items-center justify-center"></i>
-                    <span class="tab-label hidden whitespace-nowrap font-semibold">Ventas</span>
-                    <span id="mobileBadge" class="hidden absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">0</span>
-                </button>
-                <button onclick="showSection('settings'); switchMobileTab(this)" class="nav-pill flex items-center gap-2 px-3.5 py-2.5 rounded-full text-slate-400 hover:text-white font-medium text-xs transition-all duration-300 ease-out">
-                    <i class="fa-solid fa-gear w-5 h-5 flex items-center justify-center"></i>
-                    <span class="tab-label hidden whitespace-nowrap font-semibold">Ajustes</span>
-                </button>
-                <button onclick="openProfileDrawer(); switchMobileTab(this)" class="nav-pill flex items-center gap-2 px-3.5 py-2.5 rounded-full text-slate-400 hover:text-white font-medium text-xs transition-all duration-300 ease-out">
-                    <i class="fa-solid fa-user w-5 h-5 flex items-center justify-center"></i>
-                    <span class="tab-label hidden whitespace-nowrap font-semibold">Perfil</span>
-                </button>
-            </nav>
-        </div>
-
-        <!-- DRAWER LATERAL DE PERFIL -->
-        <div id="profileDrawerOverlay" class="profile-drawer-overlay hidden" onclick="closeProfileDrawer()"></div>
-        <div id="profileDrawer" class="profile-drawer">
-            <div class="profile-drawer-header">
-                <div class="profile-drawer-user">
-                    <div class="avatar" id="drawerAvatar" style="width:48px;height:48px;font-size:18px;">U</div>
-                    <div>
-                        <div class="user-name" id="drawerUserName" style="font-size:15px;">Usuario</div>
-                        <div class="user-role" id="drawerUserRole">Fotógrafo</div>
-                    </div>
-                </div>
-                <button onclick="closeProfileDrawer()" class="btn-close-drawer"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div class="profile-drawer-items">
-                <div class="drawer-item" onclick="showSection('events'); closeProfileDrawer();"><i class="fa-solid fa-calendar-days"></i><span>Eventos</span></div>
-                <div class="drawer-item" onclick="showSection('galleries'); closeProfileDrawer();"><i class="fa-solid fa-images"></i><span>Galerías</span></div>
-                <div class="drawer-item" onclick="showSection('sales'); closeProfileDrawer();"><i class="fa-solid fa-cart-shopping"></i><span>Ventas</span><span class="drawer-badge hidden" id="drawerPendingBadge">0</span></div>
-                <div class="drawer-item" onclick="showSection('settings'); closeProfileDrawer();"><i class="fa-solid fa-gear"></i><span>Configuración</span></div>
-                <div class="drawer-item hidden" id="drawerAdmin" onclick="showSection('admin'); closeProfileDrawer();"><i class="fa-solid fa-shield-halved"></i><span>Administración</span></div>
-                <div class="drawer-item hidden" id="drawerUsers" onclick="showSection('users'); closeProfileDrawer();"><i class="fa-solid fa-users"></i><span>Usuarios</span></div>
-                <div class="drawer-divider"></div>
-                <div class="drawer-item" onclick="logout()" style="color: var(--danger);"><i class="fa-solid fa-right-from-bracket"></i><span>Cerrar Sesión</span></div>
-            </div>
-        </div>
 
         <main class="main-content">
             <div id="sectionEvents">
@@ -218,7 +164,11 @@
                 <div class="header"><div><h1>Gestión de Usuarios</h1><p class="header-sub">Administra todos los usuarios registrados en la plataforma.</p></div></div>
                 <div class="table-wrap">
                     <table class="data-table">
-                        <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Fecha de Registro</th><th>Acciones</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Nombre</th><th>Correo</th><th>Rol</th><th>Fecha de Registro</th><th>Acciones</th>
+                            </tr>
+                        </thead>
                         <tbody id="usersTableBody"></tbody>
                     </table>
                 </div>
@@ -238,7 +188,9 @@
                                     <img id="currentLogo" src="" alt="Logo actual" class="logo-preview" style="display: none;">
                                     <div>
                                         <input type="file" id="logoInput" accept="image/*" style="display: none;" onchange="uploadLogo(event)">
-                                        <button type="button" class="btn-secondary" style="width: auto; padding: 8px 12px;" onclick="document.getElementById('logoInput').click()"><i class="fa-solid fa-upload"></i> Subir logo</button>
+                                        <button type="button" class="btn-secondary" style="width: auto; padding: 8px 12px;" onclick="document.getElementById('logoInput').click()">
+                                            <i class="fa-solid fa-upload"></i> Subir logo
+                                        </button>
                                         <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">PNG o JPG, máx. 2MB. Cuadrado recomendado.</p>
                                     </div>
                                 </div>
@@ -282,9 +234,12 @@
                 <div class="form-group"><label>Expira el (Opcional)</label><input type="datetime-local" id="event_expires"></div>
                 <div class="form-group">
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                        <input type="checkbox" id="event_selfie" style="width: auto;"> Requerir selfie de verificación
+                        <input type="checkbox" id="event_selfie" style="width: auto;">
+                         Requerir selfie de verificación
                     </label>
-                    <small style="color: var(--text-muted); display: block; margin-top: 4px;">Actívalo en graduaciones o eventos donde debas garantizar que cada persona solo vea y compre sus propias fotos.</small>
+                    <small style="color: var(--text-muted); display: block; margin-top: 4px;">
+                        Actívalo en graduaciones o eventos donde debas garantizar que cada persona solo vea y compre sus propias fotos.
+                    </small>
                 </div>
                 <button type="submit" class="btn-primary" id="eventSubmitBtn">Guardar Evento</button>
             </form>
@@ -292,9 +247,13 @@
         </div>
     </div>
 
+    <!-- MODAL DE GESTIÓN DE EVENTO -->
     <div id="manageEventModal" class="modal hidden">
         <div class="modal-content large">
-            <div class="modal-header"><h3 class="modal-title" id="manageEventTitle">Gestionar Evento</h3><i class="fa-solid fa-xmark close-modal" onclick="closeManageModal()"></i></div>
+            <div class="modal-header">
+                <h3 class="modal-title" id="manageEventTitle">Gestionar Evento</h3>
+                <i class="fa-solid fa-xmark close-modal" onclick="closeManageModal()"></i>
+            </div>
             <div id="manageEventBody"></div>
         </div>
     </div>
@@ -348,12 +307,21 @@
 
     <div id="qrModal" class="modal hidden">
         <div class="modal-content" style="text-align: center;">
-            <div class="modal-header"><h3 class="modal-title">📱 Código QR de la Galería</h3><i class="fa-solid fa-xmark close-modal" onclick="closeQrModal()"></i></div>
+            <div class="modal-header">
+                <h3 class="modal-title">📱 Código QR de la Galería</h3>
+                <i class="fa-solid fa-xmark close-modal" onclick="closeQrModal()"></i>
+            </div>
             <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Comparte este QR para que tus clientes accedan directamente a la galería.</p>
-            <div id="qrCanvasContainer" class="qr-box"><canvas id="qrCanvas"></canvas></div>
+            <div id="qrCanvasContainer" class="qr-box">
+                <canvas id="qrCanvas"></canvas>
+            </div>
             <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
-                <button class="btn-primary" style="width: auto; padding: 10px 20px;" onclick="downloadQr()"><i class="fa-solid fa-download"></i> Descargar QR</button>
-                <button class="btn-secondary" style="width: auto; padding: 10px 20px;" onclick="closeQrModal()">Cerrar</button>
+                <button class="btn-primary" style="width: auto; padding: 10px 20px;" onclick="downloadQr()">
+                    <i class="fa-solid fa-download"></i> Descargar QR
+                </button>
+                <button class="btn-secondary" style="width: auto; padding: 10px 20px;" onclick="closeQrModal()">
+                    Cerrar
+                </button>
             </div>
         </div>
     </div>
