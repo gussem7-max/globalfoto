@@ -14,25 +14,33 @@ async function checkSubscriptionStatus() {
         const data = await res.json();
         const user = data.user;
 
-        // Verificar si tiene un plan pagado activo (no trial) Y no ha expirado
-        // auto_renew = false NO significa que el plan esté inactivo, solo que no se renovará
-        if (user.plan && user.plan !== 'trial' && user.plan_expires_at) {
+        // Verificación robusta:
+        // 1. Debe tener un plan asignado (que no sea null/undefined)
+        // 2. El plan no debe ser 'trial' (a menos que quieras mostrar dashboard para trial, pero normalmente trial muestra planes)
+        // 3. Debe tener fecha de expiración
+        // 4. La fecha no debe haber pasado
+        
+        const hasPlan = user.plan && user.plan !== 'trial';
+        const hasExpiry = user.plan_expires_at;
+        
+        if (hasPlan && hasExpiry) {
             const expiresAt = new Date(user.plan_expires_at);
             const now = new Date();
             const daysLeft = Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24));
 
-            // Si aún quedan días (> 0), mostrar dashboard aunque auto_renew sea false
+            // Si quedan días (> 0), mostrar dashboard SIEMPRE, sin importar auto_renew
             if (daysLeft > 0) {
                 showActiveSubscriptionDashboard(user, daysLeft);
-                return; // Salir temprano, no mostrar planes de venta
+                return; 
             }
         }
 
-        // Si no tiene plan, es trial, o ya expiró (daysLeft <= 0), mostrar planes normales
+        // Si no cumple las condiciones, mostrar planes de venta
         loadPlans();
     } catch (err) {
         console.error('Error verificando suscripción:', err);
-        loadPlans(); // Fallback a planes normales
+        // En caso de error, mostrar planes por seguridad
+        loadPlans(); 
     }
 }
 

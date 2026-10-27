@@ -11,17 +11,23 @@ function hideLoadingOverlay() {
 }
 
 function showSection(section) {
-    ['events', 'galleries', 'sales', 'users', 'settings', 'admin', 'subscription'].forEach(s => {
+    // Lista completa de secciones para ocultar
+    const sections = ['events', 'galleries', 'sales', 'users', 'settings', 'admin', 'subscription'];
+    
+    sections.forEach(s => {
         const sec = document.getElementById(`section${s.charAt(0).toUpperCase() + s.slice(1)}`);
         const nav = document.getElementById(`nav${s.charAt(0).toUpperCase() + s.slice(1)}`);
         if (sec) sec.classList.add('hidden');
         if (nav) nav.classList.remove('active');
     });
+
     const targetSec = document.getElementById(`section${section.charAt(0).toUpperCase() + section.slice(1)}`);
     const targetNav = document.getElementById(`nav${section.charAt(0).toUpperCase() + section.slice(1)}`);
+    
     if (targetSec) targetSec.classList.remove('hidden');
     if (targetNav) targetNav.classList.add('active');
 
+    // Cargar datos específicos de la sección
     if (section === 'events' && typeof loadEvents === 'function') loadEvents();
     else if (section === 'galleries' && typeof renderGalleriesView === 'function') renderGalleriesView();
     else if (section === 'sales' && typeof loadOrders === 'function') loadOrders();
@@ -33,13 +39,19 @@ function showSection(section) {
         if (typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin' && typeof loadUsers === 'function') loadUsers();
         else { alert('No tienes permisos.'); showSection('events'); }
     }
-        else if (section === 'subscription') {
-        if (typeof loadPlans === 'function') loadPlans();
+    else if (section === 'subscription') {
+        if (typeof checkSubscriptionStatus === 'function') checkSubscriptionStatus();
+        else if (typeof loadPlans === 'function') loadPlans();
+        
+        // Retomar orden pendiente si existe
         const pendingId = localStorage.getItem('pending_order_id');
-        if (pendingId && typeof showPaymentDetails === 'function') {
+        if (pendingId && typeof openPaymentModal === 'function') {
             fetch(`/api/subscriptions/orders/${pendingId}`, { headers: authHeaders() })
                 .then(r => r.ok ? r.json() : Promise.reject())
-                .then(data => { if (data.order && data.order.status === 'pending') showPaymentDetails(data.order); else localStorage.removeItem('pending_order_id'); })
+                .then(data => { 
+                    if (data.order && data.order.status === 'pending') openPaymentModal(data.order); 
+                    else localStorage.removeItem('pending_order_id'); 
+                })
                 .catch(() => localStorage.removeItem('pending_order_id'));
         }
     }
@@ -122,7 +134,7 @@ function showDashboard() {
             if (navAdmin) navAdmin.classList.add('hidden');
         }
 
-        // Sincronizar drawer de perfil
+        // Sincronizar drawer móvil
         const drawerAvatar = document.getElementById('drawerAvatar');
         const drawerUserName = document.getElementById('drawerUserName');
         const drawerUserRole = document.getElementById('drawerUserRole');
@@ -151,7 +163,7 @@ function logout() {
     window.location.href = '/'; 
 }
 
-// ===== FUNCIONES GLOBALES PARA LA BARRA MÓVIL Y DRAWER =====
+// ===== FUNCIONES GLOBALES PARA LA BARRA MÓVIL =====
 window.switchMobileTab = function(selectedBtn) {
     const allPills = document.querySelectorAll('.gf-pill');
     allPills.forEach(pill => pill.classList.remove('active'));
@@ -174,7 +186,7 @@ window.closeProfileDrawer = function() {
     document.body.style.overflow = '';
 };
 
-// ===== ARRANQUE DE LA APLICACIÓN =====
+// ===== ARRANQUE DE LA APLICACIÓN (CORREGIDO PARA NO BORRAR TOKEN) =====
 window.addEventListener('DOMContentLoaded', async () => {
     const token = typeof getToken === 'function' ? getToken() : localStorage.getItem('token');
     const pathname = window.location.pathname;
@@ -189,19 +201,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (galeriaId) { 
         console.log('Cargando galería pública:', galeriaId);
         if (typeof loadPublicGallery === 'function') {
-            try {
-                await loadPublicGallery(galeriaId);
-            } catch (err) {
-                console.error('Error galería:', err);
-                const grid = document.getElementById('pubPhotoGrid');
-                if (grid) {
-                    grid.innerHTML = `<div class="gallery-closed" style="grid-column: 1/-1;">
-                        <i class="fa-solid fa-circle-exclamation"></i>
-                        <h3 style="color: white; margin-bottom: 8px;">Error al cargar</h3>
-                        <p style="color: var(--text-muted);">${err.message}</p>
-                    </div>`;
-                }
-            }
+            try { await loadPublicGallery(galeriaId); } catch (err) { console.error('Error galería:', err); }
         }
         hideLoadingOverlay();
         return; 
@@ -222,25 +222,43 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
-        const response = await fetch('/api/auth/me', { method: 'GET', headers: typeof authHeaders === 'function' ? authHeaders() : { 'Authorization': `Bearer ${token}` } });
+        const response = await fetch('/api/auth/me', { 
+            method: 'GET', 
+            headers: typeof authHeaders === 'function' ? authHeaders() : { 'Authorization': `Bearer ${token}` } 
+        });
+        
         if (response.ok) {
             const data = await response.json();
             currentUser = data.user;
             showDashboard();
-        } else {
+        } else if (response.status === 401) {
+            // Solo borrar token si es explícitamente 401 (token inválido/expirado)
+            console.warn('Token inválido, cerrando sesión.');
             localStorage.removeItem('token');
+            window.location.href = '/';
+        } else {
+            // Si es 500 u otro error del servidor, NO borrar token. Intentar mostrar dashboard con datos cached si existen
+            console.error('Error del servidor al validar sesión:', response.status);
+            // Intentar mostrar dashboard de todos modos si tenemos currentUser en memoria (raro en reload, pero seguro)
+            if (typeof currentUser !== 'undefined') showDashboard();
+            else {
+                // Fallback: mostrar auth pero mantener token para reintentar
+                const auth = document.getElementById('authContainer');
+                const dash = document.getElementById('dashboardContainer');
+                if (auth) auth.classList.remove('hidden');
+                if (dash) dash.classList.add('hidden');
+            }
+        }
+    } catch (error) {
+        // Error de red (offline, timeout). NO borrar token.
+        console.error('Error de conexión al validar sesión:', error);
+        if (typeof currentUser !== 'undefined') showDashboard();
+        else {
             const auth = document.getElementById('authContainer');
             const dash = document.getElementById('dashboardContainer');
             if (auth) auth.classList.remove('hidden');
             if (dash) dash.classList.add('hidden');
         }
-    } catch (error) {
-        console.error('Error sesión:', error);
-        localStorage.removeItem('token');
-        const auth = document.getElementById('authContainer');
-        const dash = document.getElementById('dashboardContainer');
-        if (auth) auth.classList.remove('hidden');
-        if (dash) dash.classList.add('hidden');
     } finally {
         hideLoadingOverlay();
     }
