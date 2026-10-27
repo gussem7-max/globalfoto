@@ -301,10 +301,11 @@ async function loadPlans() {
             <div class="plan-card ${plan.key === 'pro' ? 'popular' : ''}" onclick="selectPlan('${plan.key}')">
                 <div class="plan-name">${plan.name}</div>
                 <div class="plan-price">${formatPrice(plan.price, plan.currency)}</div>
-                <div class="plan-currency">${plan.currency} / mes</div>
+                <div class="plan-currency">/ mes</div>
                 <ul class="plan-features">
                     ${getFeaturesForPlan(plan.key)}
                 </ul>
+                <button class="btn-primary" style="margin-top:18px;" onclick="selectPlan('${plan.key}'); event.stopPropagation()">Elegir este plan</button>
             </div>
         `).join('');
         
@@ -323,9 +324,9 @@ async function loadPlans() {
 function formatPrice(price, currency) {
     const num = parseFloat(price);
     if (isNaN(num)) return String(price);
-    if (currency === 'VES') return `Bs. ${num.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    if (currency === 'COP') return `$${Math.round(num).toLocaleString('es-CO')}`;
-    return `$${num.toFixed(2)}`;
+    if (currency === 'VES') return `Bs. ${num.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} VES`;
+    if (currency === 'COP') return `$${Math.round(num).toLocaleString('es-CO')} COP`;
+    return `$${num.toFixed(2)} USD`;
 }
 
 function getFeaturesForPlan(key) {
@@ -338,8 +339,9 @@ function getFeaturesForPlan(key) {
 }
 
 async function selectPlan(planKey) {
+    const card = event.target.closest('.plan-card');
     document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
-    event.currentTarget.classList.add('selected');
+    if (card) card.classList.add('selected');
 
     try {
         const res = await fetch('/api/subscriptions/order', {
@@ -348,12 +350,9 @@ async function selectPlan(planKey) {
             body: JSON.stringify({ plan: planKey })
         });
         const data = await res.json();
-
         if (!res.ok) throw new Error(data.error || 'Error creando orden');
-
         openPaymentModal(data.order);
     } catch (err) {
-        // El mensaje de downgrade del backend ya viene redactado para el usuario
         alert(err.message);
     }
 }
@@ -486,7 +485,7 @@ function closePaymentModal() {
 function formatAmount(amount, currency) {
     const num = parseFloat(amount);
     if (isNaN(num)) return String(amount);
-    if (currency === 'VES') return `Bs. ${num.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (currency === 'VES') return `Bs. ${num.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} VES`;
     if (currency === 'COP') return `$${Math.round(num).toLocaleString('es-CO')} COP`;
     if (currency === 'USD') return `$${num.toFixed(2)} USD`;
     return num.toString();
@@ -652,10 +651,11 @@ async function showPlanSelection() {
             <div class="plan-card ${plan.key === 'pro' ? 'popular' : ''}" onclick="selectPlan('${plan.key}')">
                 <div class="plan-name">${plan.name}</div>
                 <div class="plan-price">${formatPrice(plan.price, plan.currency)}</div>
-                <div class="plan-currency">${plan.currency} / mes</div>
+                <div class="plan-currency">/ mes</div>
                 <ul class="plan-features">
                     ${getFeaturesForPlan(plan.key)}
                 </ul>
+                <button class="btn-primary" style="margin-top:18px;" onclick="selectPlan('${plan.key}'); event.stopPropagation()">Elegir este plan</button>
             </div>
         `).join('');
 
