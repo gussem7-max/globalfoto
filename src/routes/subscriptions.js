@@ -8,7 +8,6 @@ const { getCurrentRate } = require('../lib/exchangeRate');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'globalfoto_secret_key_2024';
 
-// === DATOS BANCARIOS REALES ===
 const BANK_DATA = {
     nequi: { number: '3155129964', name: 'Gustavo Semprun' },
     pagomovil: { bank: 'Banco Venezolano de Crédito', account: '20661645', phone: '04145866017', name: 'Gustavo Semprun' },
@@ -38,7 +37,7 @@ router.get('/plans', verifyToken, async (req, res) => {
         
         let rate = 1;
         if (currency === 'VES') {
-            rate = await getCurrentRate('EUR_VES');
+            rate = await getCurrentRate('USD_VES'); // ← CAMBIO CLAVE: USD_VES, no EUR_VES
         }
         
         const plansOut = Object.keys(PLANS).map(key => {
@@ -46,7 +45,7 @@ router.get('/plans', verifyToken, async (req, res) => {
             let price;
             
             if (currency === 'VES') {
-                price = +(baseUsd * rate).toFixed(2);
+                price = +(baseUsd * rate).toFixed(2); // ej: 5.90 * 994 = 5864.60
             } else if (currency === 'COP') {
                 price = PLANS[key].cop;
             } else {
@@ -86,8 +85,8 @@ router.post('/order', verifyToken, async (req, res) => {
 
         let baseAmount;
         if (currency === 'VES') {
-            const eurVesRate = await getCurrentRate('EUR_VES');
-            baseAmount = +(PLANS[plan].usd * eurVesRate).toFixed(2);
+            const usdVesRate = await getCurrentRate('USD_VES'); // ← USD_VES
+            baseAmount = +(PLANS[plan].usd * usdVesRate).toFixed(2);
         } else {
             baseAmount = PLANS[plan][currency.toLowerCase()] || PLANS[plan].usd;
         }
@@ -237,9 +236,9 @@ router.post('/webhook', async (req, res) => {
     }
 });
 
-// --- VALIDACIÓN MANUAL ---
+// --- VALIDACIÓN MANUAL (con número de referencia bancaria) ---
 router.post('/verify-manual', verifyToken, async (req, res) => {
-    const { order_id, reported_amount, reported_reference } = req.body;
+    const { order_id, reported_amount, reported_reference, transaction_reference } = req.body; // ← NUEVO CAMPO
     
     try {
         const orderCheck = await pool.query(
@@ -251,17 +250,24 @@ router.post('/verify-manual', verifyToken, async (req, res) => {
         const order = orderCheck.rows[0];
         const cleanReportedAmount = parseFloat(reported_amount);
         const cleanReportedRef = String(reported_reference || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const cleanTxRef = String(transaction_reference || '').trim(); // ← Número de referencia bancaria
 
         let isMatch = false;
 
+        // 1. ¿Coincide el código GF?
         if (cleanReportedRef.startsWith('GF') && cleanReportedRef === order.reference_code) isMatch = true;
 
+        // 2. ¿Coincide el monto exacto?
         if (!isMatch && Math.abs(cleanReportedAmount - parseFloat(order.expected_amount)) < 0.01) {
             isMatch = true;
         }
 
         if (isMatch) {
-            await pool.query(`UPDATE subscription_orders SET status='paid', paid_at=NOW(), reference_note=$1 WHERE id=$2`, [`Manual: ${reported_reference}`, order.id]);
+            // Guardar también el número de referencia bancaria para auditoría
+            await pool.query(
+                `UPDATE subscription_orders SET status='paid', paid_at=NOW(), reference_note=$1, webhook_raw=$2 WHERE id=$3`, 
+                [`Manual: ${reported_reference} | TxRef: ${cleanTxRef}`, JSON.stringify({ transaction_reference: cleanTxRef }), order.id]
+            );
             await activateUserPlan(order.user_id, order.plan);
             return res.json({ success: true, message: 'Pago verificado manualmente. ¡Disfruta tu plan!' });
         } else {
@@ -284,7 +290,7 @@ async function activateUserPlan(userId, planKey) {
 
 function getInstructions(channel, amount, currency, refCode) {
     let amtStr;
-    if (currency === 'VES') amtStr = `Bs. ${amount.toFixed(2)}`;
+    if (currency === 'VES') amtStr = `Bs. ${amount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     else if (currency === 'COP') amtStr = `$${Math.round(amount).toLocaleString('es-CO')} COP`;
     else amtStr = `$${amount.toFixed(2)} USD`;
     

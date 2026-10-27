@@ -49,7 +49,7 @@ async function loadPlans() {
 function formatPrice(price, currency) {
     const num = parseFloat(price);
     if (isNaN(num)) return String(price);
-    if (currency === 'VES') return `Bs. ${num.toFixed(2)}`;
+    if (currency === 'VES') return `Bs. ${num.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     if (currency === 'COP') return `$${Math.round(num).toLocaleString('es-CO')}`;
     return `$${num.toFixed(2)}`;
 }
@@ -145,6 +145,10 @@ function openPaymentModal(order) {
                     <label>Código/referencia usada (opcional):</label>
                     <input type="text" id="reportedRef" placeholder="${refCode}">
                 </div>
+                <div class="form-group">
+                    <label>Número de referencia de la transacción (del comprobante bancario):</label>
+                    <input type="text" id="transactionRef" placeholder="Ej: 0123456789" required>
+                </div>
                 <button class="btn-primary" onclick="submitManualVerification()">Enviar verificación</button>
             </div>
             
@@ -184,7 +188,7 @@ function closePaymentModal() {
 function formatAmount(amount, currency) {
     const num = parseFloat(amount);
     if (isNaN(num)) return String(amount);
-    if (currency === 'VES') return `Bs. ${num.toFixed(2)}`;
+    if (currency === 'VES') return `Bs. ${num.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     if (currency === 'COP') return `$${Math.round(num).toLocaleString('es-CO')} COP`;
     if (currency === 'USD') return `$${num.toFixed(2)} USD`;
     return num.toString();
@@ -260,19 +264,27 @@ function showManualVerifyForm() {
 async function submitManualVerification() {
     const amountInput = document.getElementById('reportedAmount');
     const refInput = document.getElementById('reportedRef');
+    const txRefInput = document.getElementById('transactionRef'); // ← NUEVO CAMPO
     
-    if (!amountInput || !refInput) return;
+    if (!amountInput || !refInput || !txRefInput) return;
     
     const amount = parseFloat(amountInput.value);
     const ref = refInput.value.trim();
+    const txRef = txRefInput.value.trim(); // ← Número de referencia bancaria
     
     if (!amount) { alert('Ingresa el monto que transferiste.'); return; }
+    if (!txRef) { alert('Ingresa el número de referencia de la transacción bancaria.'); return; }
     
     try {
         const res = await fetch('/api/subscriptions/verify-manual', {
             method: 'POST',
             headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-            body: JSON.stringify({ order_id: currentOrderId, reported_amount: amount, reported_reference: ref })
+            body: JSON.stringify({ 
+                order_id: currentOrderId, 
+                reported_amount: amount, 
+                reported_reference: ref,
+                transaction_reference: txRef // ← ENVIAR AL BACKEND
+            })
         });
         const data = await res.json();
         
