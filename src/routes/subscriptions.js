@@ -37,7 +37,7 @@ router.get('/plans', verifyToken, async (req, res) => {
         
         let rate = 1;
         if (currency === 'VES') {
-            rate = await getCurrentRate('USD_VES'); // ← CAMBIO CLAVE: USD_VES, no EUR_VES
+            rate = await getCurrentRate('USD_VES');
         }
         
         const plansOut = Object.keys(PLANS).map(key => {
@@ -45,7 +45,7 @@ router.get('/plans', verifyToken, async (req, res) => {
             let price;
             
             if (currency === 'VES') {
-                price = +(baseUsd * rate).toFixed(2); // ej: 5.90 * 994 = 5864.60
+                price = +(baseUsd * rate).toFixed(2);
             } else if (currency === 'COP') {
                 price = PLANS[key].cop;
             } else {
@@ -85,7 +85,7 @@ router.post('/order', verifyToken, async (req, res) => {
 
         let baseAmount;
         if (currency === 'VES') {
-            const usdVesRate = await getCurrentRate('USD_VES'); // ← USD_VES
+            const usdVesRate = await getCurrentRate('USD_VES');
             baseAmount = +(PLANS[plan].usd * usdVesRate).toFixed(2);
         } else {
             baseAmount = PLANS[plan][currency.toLowerCase()] || PLANS[plan].usd;
@@ -236,9 +236,9 @@ router.post('/webhook', async (req, res) => {
     }
 });
 
-// --- VALIDACIÓN MANUAL (con número de referencia bancaria) ---
+// --- VALIDACIÓN MANUAL ---
 router.post('/verify-manual', verifyToken, async (req, res) => {
-    const { order_id, reported_amount, reported_reference, transaction_reference } = req.body; // ← NUEVO CAMPO
+    const { order_id, reported_amount, reported_reference, transaction_reference } = req.body;
     
     try {
         const orderCheck = await pool.query(
@@ -250,20 +250,17 @@ router.post('/verify-manual', verifyToken, async (req, res) => {
         const order = orderCheck.rows[0];
         const cleanReportedAmount = parseFloat(reported_amount);
         const cleanReportedRef = String(reported_reference || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const cleanTxRef = String(transaction_reference || '').trim(); // ← Número de referencia bancaria
+        const cleanTxRef = String(transaction_reference || '').trim();
 
         let isMatch = false;
 
-        // 1. ¿Coincide el código GF?
         if (cleanReportedRef.startsWith('GF') && cleanReportedRef === order.reference_code) isMatch = true;
 
-        // 2. ¿Coincide el monto exacto?
         if (!isMatch && Math.abs(cleanReportedAmount - parseFloat(order.expected_amount)) < 0.01) {
             isMatch = true;
         }
 
         if (isMatch) {
-            // Guardar también el número de referencia bancaria para auditoría
             await pool.query(
                 `UPDATE subscription_orders SET status='paid', paid_at=NOW(), reference_note=$1, webhook_raw=$2 WHERE id=$3`, 
                 [`Manual: ${reported_reference} | TxRef: ${cleanTxRef}`, JSON.stringify({ transaction_reference: cleanTxRef }), order.id]
@@ -276,6 +273,63 @@ router.post('/verify-manual', verifyToken, async (req, res) => {
 
     } catch (err) {
         console.error('Error en verificación manual:', err);
+        res.status(500).json({ error: 'Error interno.' });
+    }
+});
+
+// GET /api/subscriptions/history
+router.get('/history', verifyToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT id, plan, currency, channel, base_amount, expected_amount, reference_code, status, created_at, paid_at
+             FROM subscription_orders 
+             WHERE user_id = $1 
+             ORDER BY created_at DESC 
+             LIMIT 20`,
+            [req.user.id]
+        );
+        
+        const orders = result.rows.map(o => ({
+            ...o,
+            base_amount: Number(o.base_amount),
+            expected_amount: Number(o.expected_amount)
+        }));
+
+        res.json({ orders });
+    } catch (error) {
+        console.error('Error obteniendo historial:', error);
+        res.status(500).json({ error: 'Error interno.' });
+    }
+});
+
+// POST /api/subscriptions/cancel
+router.post('/cancel', verifyToken, async (req, res) => {
+    try {
+        const userCheck = await pool.query('SELECT plan, plan_expires_at FROM users WHERE id = $1', [req.user.id]);
+        if (userCheck.rows.length === 0 || !userCheck.rows[0].plan || userCheck.rows[0].plan === 'trial') {
+            return res.status(400).json({ error: 'No tienes una suscripción activa para cancelar.' });
+        }
+
+        await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS auto_renew BOOLEAN DEFAULT TRUE`);
+        await pool.query(`UPDATE users SET auto_renew = FALSE WHERE id = $1`, [req.user.id]);
+
+        console.log(`🚫 Usuario ${req.user.id} solicitó cancelación de renovación automática.`);
+        
+        res.json({ success: true, message: 'Renovación automática desactivada. Tu plan seguirá activo hasta la fecha de expiración.' });
+    } catch (error) {
+        console.error('Error cancelando suscripción:', error);
+        res.status(500).json({ error: 'Error interno.' });
+    }
+});
+
+// POST /api/subscriptions/reactivate
+router.post('/reactivate', verifyToken, async (req, res) => {
+    try {
+        await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS auto_renew BOOLEAN DEFAULT TRUE`);
+        await pool.query(`UPDATE users SET auto_renew = TRUE WHERE id = $1`, [req.user.id]);
+        res.json({ success: true, message: 'Renovación automática reactivada.' });
+    } catch (error) {
+        console.error('Error reactivando:', error);
         res.status(500).json({ error: 'Error interno.' });
     }
 });

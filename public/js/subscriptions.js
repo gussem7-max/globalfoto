@@ -47,17 +47,57 @@ function showActiveSubscriptionDashboard(user, daysLeft) {
     let statusClass = 'success';
     let statusText = '✅ Plan Activo';
     let warningHtml = '';
+    let cancelBtnHtml = '';
+
+    // Determinar si la renovación automática está activa
+    // Asumimos true por defecto si la columna no existe o es null
+    const isAutoRenew = user.auto_renew !== false; 
 
     if (daysLeft <= 7) {
         statusClass = 'warning';
         statusText = '⚠️ Plan por Vencer';
-        warningHtml = `
-            <div class="alert alert-warning" style="margin-bottom: 20px;">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-                Tu plan expira en <strong>${daysLeft} día${daysLeft !== 1 ? 's' : ''}</strong>. 
-                <button class="btn-secondary" style="margin-left: 10px;" onclick="showPlanSelection()">Renovar Ahora</button>
-            </div>
-        `;
+        if (isAutoRenew) {
+            warningHtml = `
+                <div class="alert alert-warning" style="margin-bottom: 20px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Tu plan expira en <strong>${daysLeft} día${daysLeft !== 1 ? 's' : ''}</strong> y se renovará automáticamente.
+                    <button class="btn-secondary" style="margin-left: 10px;" onclick="showPlanSelection()">Renovar Ahora</button>
+                </div>
+            `;
+        } else {
+            warningHtml = `
+                <div class="alert alert-warning" style="margin-bottom: 20px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Tu plan expira en <strong>${daysLeft} día${daysLeft !== 1 ? 's' : ''}</strong>. La renovación automática está desactivada.
+                    <button class="btn-secondary" style="margin-left: 10px;" onclick="showPlanSelection()">Renovar Manualmente</button>
+                </div>
+            `;
+        }
+    } else {
+        // Si faltan más de 7 días, mostrar botón de cancelar si está activo
+        if (isAutoRenew) {
+            cancelBtnHtml = `
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); text-align: center;">
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+                        ¿No deseas continuar? Puedes desactivar la renovación automática. Tu plan seguirá activo hasta el ${expiresDate}.
+                    </p>
+                    <button class="btn-danger" style="width: auto; padding: 8px 16px; font-size: 13px;" onclick="cancelSubscription()">
+                        <i class="fa-solid fa-ban"></i> Cancelar Renovación Automática
+                    </button>
+                </div>
+            `;
+        } else {
+            cancelBtnHtml = `
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); text-align: center;">
+                    <p style="font-size: 13px; color: var(--success);">
+                        <i class="fa-solid fa-check-circle"></i> Renovación automática desactivada. Tu plan finalizará el ${expiresDate}.
+                    </p>
+                    <button class="btn-secondary" style="width: auto; padding: 8px 16px; font-size: 13px; margin-top: 8px;" onclick="reactivateAutoRenew()">
+                        <i class="fa-solid fa-rotate-right"></i> Reactivar Renovación
+                    </button>
+                </div>
+            `;
+        }
     }
 
     const features = getFeaturesForPlan(user.plan);
@@ -66,7 +106,7 @@ function showActiveSubscriptionDashboard(user, daysLeft) {
         <div class="header">
             <div>
                 <h1>Tu Suscripción</h1>
-                <p class="header-sub">Gestiona tu plan y beneficios actuales.</p>
+                <p class="header-sub">Gestiona tu plan, beneficios e historial.</p>
             </div>
         </div>
 
@@ -103,12 +143,129 @@ function showActiveSubscriptionDashboard(user, daysLeft) {
             </ul>
         </div>
 
+        ${cancelBtnHtml}
+
+        <h2 class="section-title" style="margin-top: 32px;">Historial de Pagos</h2>
+        <div id="paymentHistoryContainer">
+            <p style="color: var(--text-muted); font-size: 13px;">Cargando historial...</p>
+        </div>
+        
         <div style="margin-top: 30px; text-align: center;">
             <button class="btn-secondary" onclick="showPlanSelection()" style="width: auto; padding: 12px 24px;">
                 <i class="fa-solid fa-arrow-up"></i> Cambiar o Mejorar Plan
             </button>
         </div>
     `;
+
+    // Cargar historial asíncronamente
+    loadPaymentHistory();
+}
+
+async function loadPaymentHistory() {
+    const container = document.getElementById('paymentHistoryContainer');
+    if (!container) return;
+
+    try {
+        const res = await fetch('/api/subscriptions/history', { headers: authHeaders() });
+        if (!res.ok) throw new Error('Error cargando historial');
+        const data = await res.json();
+
+        if (!data.orders || data.orders.length === 0) {
+            container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No hay registros de pagos anteriores.</p>';
+            return;
+        }
+
+        let html = `
+            <div style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 12px;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; min-width: 600px;">
+                    <thead style="background: rgba(2,6,23,0.6);">
+                        <tr>
+                            <th style="padding: 12px; font-size: 12px; color: var(--text-muted);">Fecha</th>
+                            <th style="padding: 12px; font-size: 12px; color: var(--text-muted);">Plan</th>
+                            <th style="padding: 12px; font-size: 12px; color: var(--text-muted);">Monto</th>
+                            <th style="padding: 12px; font-size: 12px; color: var(--text-muted);">Estado</th>
+                            <th style="padding: 12px; font-size: 12px; color: var(--text-muted);">Referencia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        data.orders.forEach(order => {
+            const date = new Date(order.paid_at || order.created_at).toLocaleDateString('es-ES');
+            const amountStr = formatAmount(order.expected_amount, order.currency);
+            const statusBadge = order.status === 'paid' 
+                ? '<span style="color: var(--success); font-weight: 600;">Pagado</span>' 
+                : '<span style="color: var(--warning); font-weight: 600;">Pendiente</span>';
+            
+            html += `
+                <tr style="border-bottom: 1px solid var(--border-color);">
+                    <td style="padding: 12px; font-size: 13px;">${date}</td>
+                    <td style="padding: 12px; font-size: 13px; text-transform: capitalize;">${order.plan}</td>
+                    <td style="padding: 12px; font-size: 13px; font-weight: 600;">${amountStr}</td>
+                    <td style="padding: 12px; font-size: 13px;">${statusBadge}</td>
+                    <td style="padding: 12px; font-size: 12px; color: var(--text-muted); font-family: monospace;">${order.reference_code}</td>
+                </tr>
+            `;
+        });
+
+        html += `</tbody></table></div>`;
+        container.innerHTML = html;
+
+    } catch (err) {
+        console.error('Error:', err);
+        container.innerHTML = `<p style="color: var(--danger); font-size: 13px;">Error al cargar el historial.</p>`;
+    }
+}
+
+async function cancelSubscription() {
+    if (!confirm('¿Estás seguro de desactivar la renovación automática? Tu plan seguirá activo hasta la fecha de expiración, pero no se renovará después.')) return;
+
+    try {
+        const res = await fetch('/api/subscriptions/cancel', {
+            method: 'POST',
+            headers: authHeaders()
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            alert(data.message);
+            checkSubscriptionStatus(); // Recargar dashboard para reflejar el cambio
+        } else {
+            alert(data.error || 'Error al cancelar.');
+        }
+    } catch (err) {
+        alert('Error de conexión: ' + err.message);
+    }
+}
+
+async function reactivateAutoRenew() {
+    if (!confirm('¿Deseas reactivar la renovación automática? Tu plan se renovará al finalizar el periodo actual.')) return;
+
+    try {
+        // Reutilizamos el endpoint de cancel pero con lógica inversa? 
+        // Mejor creamos uno simple o modificamos el existente. 
+        // Para rapidez, hagamos un fetch directo a un endpoint que ponga auto_renew = true.
+        // Como no tenemos ese endpoint específico, podemos hacer un truco:
+        // El endpoint /cancel pone false. Necesitamos uno que ponga true.
+        // Vamos a agregarlo rápidamente al backend en el siguiente paso, 
+        // pero por ahora, simularemos recargando y asumiendo que el usuario puede "Renovar Ahora" manualmente.
+        // MEJOR: Agreguemos el endpoint reactivate en el backend ahora mismo (ver abajo).
+        
+        const res = await fetch('/api/subscriptions/reactivate', {
+            method: 'POST',
+            headers: authHeaders()
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            alert(data.message);
+            checkSubscriptionStatus();
+        } else {
+            alert(data.error || 'Error al reactivar.');
+        }
+    } catch (err) {
+        alert('Error de conexión: ' + err.message);
+    }
 }
 
 // === FUNCIONES EXISTENTES (sin cambios) ===

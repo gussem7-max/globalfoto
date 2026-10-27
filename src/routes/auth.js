@@ -23,8 +23,6 @@ const s3Client = new S3Client({
 const uploadLogo = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
 
 // === Catálogo país → moneda/canal (ESPEJO de public/js/countries.js) ===
-// La moneda se deriva del país EN EL SERVIDOR: el cliente nunca manda currency.
-// Al agregar un país, agrégalo AQUÍ y en countries.js.
 const USD_ZINLI = ['US','MX','AR','CL','PE','EC','BO','PY','UY','BR','PA','CR','DO','GT','HN','SV','NI','CU','PR','ES','IT','FR','DE','PT','GB','CA','AU'];
 const COUNTRY_META = {
     VE: { currency: 'VES', channel: 'pagomovil' },
@@ -52,12 +50,10 @@ router.post('/register', async (req, res) => {
         const { name, email, password } = req.body;
         if (!name || !email || !password) return res.status(400).json({ error: 'Faltan datos requeridos.' });
 
-        // País -> moneda derivada EN EL SERVIDOR (el cliente no manda currency)
         const countryRaw = String(req.body.country || '').toUpperCase().slice(0, 2);
         const country = Object.prototype.hasOwnProperty.call(COUNTRY_META, countryRaw) ? countryRaw : 'XX';
         const currency = COUNTRY_META[country].currency;
 
-        // Teléfono: el front lo arma como "+57 300 123 4567"; normalizo y corto a 32
         const phoneRaw = typeof req.body.phone === 'string' ? req.body.phone.trim() : '';
         const phone = phoneRaw ? phoneRaw.slice(0, 32) : null;
 
@@ -66,8 +62,6 @@ router.post('/register', async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // role FORZADO a photographer (registro solo de fotógrafos; ignora role del body)
-        // plan_expires_at = hoy + 14 días de trial
         const newUser = await pool.query(
             `INSERT INTO users (name, email, password, role, country, phone, currency, plan, plan_started_at, plan_expires_at)
              VALUES ($1, $2, $3, 'photographer', $4, $5, $6, 'trial', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '14 days')
@@ -166,7 +160,7 @@ router.post('/login', async (req, res) => {
 // OBTENER PERFIL ACTUAL
 router.get('/me', verificarToken, async (req, res) => {
     try {
-        const userResult = await pool.query('SELECT id, name, email, role, created_at, logo_url, country, phone, currency, plan, plan_started_at, plan_expires_at FROM users WHERE id = $1', [req.user.id]);
+        const userResult = await pool.query('SELECT id, name, email, role, created_at, logo_url, country, phone, currency, plan, plan_started_at, plan_expires_at, auto_renew FROM users WHERE id = $1', [req.user.id]);
         if (userResult.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado.' });
         res.json({ user: userResult.rows[0] });
     } catch (error) {
@@ -213,7 +207,7 @@ router.put('/password', verificarToken, async (req, res) => {
     }
 });
 
-// SUBIR LOGO DEL FOTÓGRAFO (con ACL pública)
+// SUBIR LOGO DEL FOTÓGRAFO
 router.put('/logo', verificarToken, uploadLogo.single('logo'), async (req, res) => {
     try {
         const file = req.file;
