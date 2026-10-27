@@ -45,68 +45,82 @@ function showActiveSubscriptionDashboard(user, daysLeft) {
     const container = document.getElementById('subscriptionContent');
     if (!container) return;
 
-    const planName = user.plan.charAt(0).toUpperCase() + user.plan.slice(1);
-    const expiresDate = new Date(user.plan_expires_at).toLocaleDateString('es-ES', { 
-        year: 'numeric', month: 'long', day: 'numeric' 
-    });
+    const planName = (user.plan || '').charAt(0).toUpperCase() + (user.plan || '').slice(1);
+    const expiresDate = new Date(user.plan_expires_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+    const features = getFeaturesForPlan(user.plan);
 
+    // ============ MODO PRUEBA (is_trial = true) ============
+    if (user.is_trial) {
+        container.innerHTML = `
+            <div class="header">
+                <div>
+                    <h1>Tu Prueba Gratuita</h1>
+                    <p class="header-sub">Estás explorando el plan ${planName} sin costo por 14 días.</p>
+                </div>
+            </div>
+
+            <div class="alert" style="background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.4); color: #c4b5fd; margin-bottom: 20px; text-align: left;">
+                <i class="fa-solid fa-gift"></i>
+                Estás probando <strong>${planName}</strong> · quedan <strong>${daysLeft} día${daysLeft !== 1 ? 's' : ''}</strong>.
+                Cuando termine la prueba, elige un plan de pago para no perder el acceso ni tus eventos.
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fa-solid fa-crown"></i></div>
+                    <div class="stat-data"><h3>${planName}</h3><p>Plan en prueba</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fa-solid fa-hourglass-half"></i></div>
+                    <div class="stat-data"><h3>${daysLeft} días</h3><p>de prueba restantes</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fa-solid fa-clock"></i></div>
+                    <div class="stat-data"><h3>${expiresDate}</h3><p>Fin de la prueba</p></div>
+                </div>
+            </div>
+
+            <h2 class="section-title">Lo que incluye tu prueba de ${planName}</h2>
+            <div class="config-card">
+                <ul class="plan-features" style="font-size: 15px; line-height: 2;">${features}</ul>
+            </div>
+
+            <div style="margin-top: 28px; text-align: center;">
+                <button class="btn-primary" style="width: auto; padding: 14px 32px;" onclick="showPlanSelection()">
+                    <i class="fa-solid fa-credit-card"></i> Elegir plan de pago
+                </button>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 10px;">Tus eventos y fotos se conservan al pasar a un plan de pago.</p>
+            </div>
+
+            <h2 class="section-title" style="margin-top: 32px;">Historial de Pagos</h2>
+            <div id="paymentHistoryContainer"><p style="color: var(--text-muted); font-size: 13px;">Cargando historial...</p></div>
+        `;
+        loadPaymentHistory();
+        return;
+    }
+
+    // ============ MODO PAGO (is_trial = false) ============
     let statusClass = 'success';
-    let statusText = '✅ Plan Activo';
     let warningHtml = '';
     let cancelBtnHtml = '';
-
-    // Determinar si la renovación automática está activa
-    // Asumimos true por defecto si la columna no existe o es null
-    const isAutoRenew = user.auto_renew !== false; 
+    const isAutoRenew = user.auto_renew !== false;
 
     if (daysLeft <= 7) {
         statusClass = 'warning';
-        statusText = '⚠️ Plan por Vencer';
-        if (isAutoRenew) {
-            warningHtml = `
-                <div class="alert alert-warning" style="margin-bottom: 20px;">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                    Tu plan expira en <strong>${daysLeft} día${daysLeft !== 1 ? 's' : ''}</strong> y se renovará automáticamente.
-                    <button class="btn-secondary" style="margin-left: 10px;" onclick="showPlanSelection()">Renovar Ahora</button>
-                </div>
-            `;
-        } else {
-            warningHtml = `
-                <div class="alert alert-warning" style="margin-bottom: 20px;">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                    Tu plan expira en <strong>${daysLeft} día${daysLeft !== 1 ? 's' : ''}</strong>. La renovación automática está desactivada.
-                    <button class="btn-secondary" style="margin-left: 10px;" onclick="showPlanSelection()">Renovar Manualmente</button>
-                </div>
-            `;
-        }
+        warningHtml = isAutoRenew
+            ? `<div class="alert alert-warning" style="margin-bottom: 20px;"><i class="fa-solid fa-triangle-exclamation"></i> Tu plan expira en <strong>${daysLeft} día${daysLeft !== 1 ? 's' : ''}</strong> y se renovará automáticamente. <button class="btn-secondary" style="margin-left: 10px;" onclick="showPlanSelection()">Renovar Ahora</button></div>`
+            : `<div class="alert alert-warning" style="margin-bottom: 20px;"><i class="fa-solid fa-triangle-exclamation"></i> Tu plan expira en <strong>${daysLeft} día${daysLeft !== 1 ? 's' : ''}</strong>. La renovación automática está desactivada. <button class="btn-secondary" style="margin-left: 10px;" onclick="showPlanSelection()">Renovar Manualmente</button></div>`;
     } else {
-        // Si faltan más de 7 días, mostrar botón de cancelar si está activo
-        if (isAutoRenew) {
-            cancelBtnHtml = `
-                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); text-align: center;">
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
-                        ¿No deseas continuar? Puedes desactivar la renovación automática. Tu plan seguirá activo hasta el ${expiresDate}.
-                    </p>
-                    <button class="btn-danger" style="width: auto; padding: 8px 16px; font-size: 13px;" onclick="cancelSubscription()">
-                        <i class="fa-solid fa-ban"></i> Cancelar Renovación Automática
-                    </button>
-                </div>
-            `;
-        } else {
-            cancelBtnHtml = `
-                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); text-align: center;">
-                    <p style="font-size: 13px; color: var(--success);">
-                        <i class="fa-solid fa-check-circle"></i> Renovación automática desactivada. Tu plan finalizará el ${expiresDate}.
-                    </p>
-                    <button class="btn-secondary" style="width: auto; padding: 8px 16px; font-size: 13px; margin-top: 8px;" onclick="reactivateAutoRenew()">
-                        <i class="fa-solid fa-rotate-right"></i> Reactivar Renovación
-                    </button>
-                </div>
-            `;
-        }
+        cancelBtnHtml = isAutoRenew
+            ? `<div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); text-align: center;">
+                 <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">¿No deseas continuar? Puedes desactivar la renovación automática. Tu plan seguirá activo hasta el ${expiresDate}.</p>
+                 <button class="btn-danger" style="width: auto; padding: 8px 16px; font-size: 13px;" onclick="cancelSubscription()"><i class="fa-solid fa-ban"></i> Cancelar Renovación Automática</button>
+               </div>`
+            : `<div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); text-align: center;">
+                 <p style="font-size: 13px; color: var(--success);"><i class="fa-solid fa-check-circle"></i> Renovación automática desactivada. Tu plan finalizará el ${expiresDate}.</p>
+                 <button class="btn-secondary" style="width: auto; padding: 8px 16px; font-size: 13px; margin-top: 8px;" onclick="reactivateAutoRenew()"><i class="fa-solid fa-rotate-right"></i> Reactivar Renovación</button>
+               </div>`;
     }
-
-    const features = getFeaturesForPlan(user.plan);
 
     container.innerHTML = `
         <div class="header">
@@ -121,41 +135,28 @@ function showActiveSubscriptionDashboard(user, daysLeft) {
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-icon"><i class="fa-solid fa-crown"></i></div>
-                <div class="stat-data">
-                    <h3>${planName}</h3>
-                    <p>Plan Actual</p>
-                </div>
+                <div class="stat-data"><h3>${planName}</h3><p>Plan Actual</p></div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon"><i class="fa-solid fa-calendar-check"></i></div>
-                <div class="stat-data">
-                    <h3>${daysLeft} días</h3>
-                    <p>Restantes</p>
-                </div>
+                <div class="stat-data"><h3>${daysLeft} días</h3><p>Restantes</p></div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon"><i class="fa-solid fa-clock"></i></div>
-                <div class="stat-data">
-                    <h3>${expiresDate}</h3>
-                    <p>Fecha de Expiración</p>
-                </div>
+                <div class="stat-data"><h3>${expiresDate}</h3><p>Fecha de Expiración</p></div>
             </div>
         </div>
 
         <h2 class="section-title">Tus Beneficios Actuales</h2>
         <div class="config-card">
-            <ul class="plan-features" style="font-size: 15px; line-height: 2;">
-                ${features}
-            </ul>
+            <ul class="plan-features" style="font-size: 15px; line-height: 2;">${features}</ul>
         </div>
 
         ${cancelBtnHtml}
 
         <h2 class="section-title" style="margin-top: 32px;">Historial de Pagos</h2>
-        <div id="paymentHistoryContainer">
-            <p style="color: var(--text-muted); font-size: 13px;">Cargando historial...</p>
-        </div>
-        
+        <div id="paymentHistoryContainer"><p style="color: var(--text-muted); font-size: 13px;">Cargando historial...</p></div>
+
         <div style="margin-top: 30px; text-align: center;">
             <button class="btn-secondary" onclick="showPlanSelection()" style="width: auto; padding: 12px 24px;">
                 <i class="fa-solid fa-arrow-up"></i> Cambiar o Mejorar Plan
@@ -163,7 +164,6 @@ function showActiveSubscriptionDashboard(user, daysLeft) {
         </div>
     `;
 
-    // Cargar historial asíncronamente
     loadPaymentHistory();
 }
 
