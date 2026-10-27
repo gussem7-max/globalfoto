@@ -37,7 +37,7 @@ router.get('/plans', verifyToken, async (req, res) => {
         
         let rate = 1;
         if (currency === 'VES') {
-            rate = await getCurrentRate('USD_VES');
+            rate = await getCurrentRate('VES_RATE');
         }
         
         const plansOut = Object.keys(PLANS).map(key => {
@@ -112,7 +112,7 @@ router.post('/order', verifyToken, async (req, res) => {
         else if (country === 'CO') channel = 'nequi';
 
         // Tasa vigente (solo afecta VES)
-        const rate = currency === 'VES' ? await getCurrentRate('USD_VES') : 1;
+        const usdVesRate = await getCurrentRate('VES_RATE');
 
         // Precios en la moneda del usuario, con la MISMA tasa (crédito justo)
         const precioNuevo = currency === 'VES'
