@@ -7,11 +7,10 @@ const pool = require('../db');
 const https = require('https');
 
 const RATE_KEY = 'VES_RATE';          // clave interna neutra: "la tasa que aplico"
-const DEFAULT_RATE = 962;             // estimado euro-oficial; solo emergencia si la API cae
+const DEFAULT_RATE = 887;             // estimado euro-oficial; solo emergencia si la API cae
 
 // Fuentes en orden de preferencia. La primera que devuelva un promedio válido gana.
 const SOURCES = [
-    { url: 'https://ve.dolarapi.com/v1/euros/oficial',   label: 'euro oficial BCV' },
     { url: 'https://ve.dolarapi.com/v1/dolares/oficial', label: 'dólar oficial BCV (fallback legal)' },
 ];
 
