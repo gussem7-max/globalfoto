@@ -22,7 +22,7 @@ const s3Client = new S3Client({
 
 const uploadLogo = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
 
-// === Catálogo país → moneda/canal (ESPEJO de public/js/countries.js) ===
+// === Catálogo país → moneda/canal ===
 const USD_ZINLI = ['US','MX','AR','CL','PE','EC','BO','PY','UY','BR','PA','CR','DO','GT','HN','SV','NI','CU','PR','ES','IT','FR','DE','PT','GB','CA','AU'];
 const COUNTRY_META = {
     VE: { currency: 'VES', channel: 'pagomovil' },
@@ -149,7 +149,13 @@ router.post('/login', async (req, res) => {
         res.json({
             mensaje: 'Inicio de sesión exitoso.',
             token,
-            user: { id: user.id, name: user.name, email: user.email, role: user.role, logo_url: user.logo_url, country: user.country, phone: user.phone, currency: user.currency, plan: user.plan, plan_started_at: user.plan_started_at, plan_expires_at: user.plan_expires_at }
+            user: {
+                id: user.id, name: user.name, email: user.email, role: user.role,
+                logo_url: user.logo_url, country: user.country, phone: user.phone,
+                currency: user.currency, plan: user.plan,
+                plan_started_at: user.plan_started_at, plan_expires_at: user.plan_expires_at,
+                auto_renew: user.auto_renew !== false
+            }
         });
     } catch (error) {
         console.error('Error al iniciar sesión:', error);
@@ -160,12 +166,15 @@ router.post('/login', async (req, res) => {
 // OBTENER PERFIL ACTUAL
 router.get('/me', verificarToken, async (req, res) => {
     try {
-        const userResult = await pool.query('SELECT id, name, email, role, created_at, logo_url, country, phone, currency, plan, plan_started_at, plan_expires_at, auto_renew FROM users WHERE id = $1', [req.user.id]);
+        const userResult = await pool.query(
+            'SELECT id, name, email, role, created_at, logo_url, country, phone, currency, plan, plan_started_at, plan_expires_at, auto_renew FROM users WHERE id = $1',
+            [req.user.id]
+        );
         if (userResult.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado.' });
         res.json({ user: userResult.rows[0] });
     } catch (error) {
         console.error('Error al obtener perfil:', error);
-        res.status(401).json({ error: 'Token inválido o expirado.' });
+        res.status(500).json({ error: 'Error interno al obtener perfil.' });
     }
 });
 

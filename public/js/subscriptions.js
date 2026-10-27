@@ -14,11 +14,10 @@ async function checkSubscriptionStatus() {
         const data = await res.json();
         const user = data.user;
 
-        // Verificación robusta:
-        // 1. Debe tener un plan asignado (que no sea null/undefined)
-        // 2. El plan no debe ser 'trial' (a menos que quieras mostrar dashboard para trial, pero normalmente trial muestra planes)
-        // 3. Debe tener fecha de expiración
-        // 4. La fecha no debe haber pasado
+        // Lógica robusta:
+        // 1. Tiene plan asignado (no null, no trial)
+        // 2. Tiene fecha de expiración
+        // 3. La fecha no ha pasado
         
         const hasPlan = user.plan && user.plan !== 'trial';
         const hasExpiry = user.plan_expires_at;
@@ -28,18 +27,16 @@ async function checkSubscriptionStatus() {
             const now = new Date();
             const daysLeft = Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24));
 
-            // Si quedan días (> 0), mostrar dashboard SIEMPRE, sin importar auto_renew
             if (daysLeft > 0) {
                 showActiveSubscriptionDashboard(user, daysLeft);
                 return; 
             }
         }
 
-        // Si no cumple las condiciones, mostrar planes de venta
+        // Si no cumple, mostrar planes
         loadPlans();
     } catch (err) {
         console.error('Error verificando suscripción:', err);
-        // En caso de error, mostrar planes por seguridad
         loadPlans(); 
     }
 }
