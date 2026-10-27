@@ -128,20 +128,21 @@ async function adminDeletePhoto(id) {
 async function loadUsers() {
     if (!currentUser || currentUser.role !== 'admin') { alert('No tienes permisos.'); showSection('events'); return; }
     const tbody = document.getElementById('usersTableBody');
-    tbody.innerHTML = '<tr><td colspan="5" style="padding: 20px; text-align: center; color: var(--text-muted);">Cargando usuarios...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="padding: 20px; text-align: center; color: var(--text-muted);">Cargando usuarios...</td></tr>';
     try {
         const res = await fetch('/api/users', { headers: authHeaders() });
         if (res.ok) {
             const users = await res.json();
-            if (users.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="padding: 20px; text-align: center; color: var(--text-muted);">No hay usuarios registrados aún.</td></tr>'; return; }
+            if (users.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="padding: 20px; text-align: center; color: var(--text-muted);">No hay usuarios registrados aún.</td></tr>'; return; }
             tbody.innerHTML = users.map(u => {
                 const fecha = new Date(u.created_at).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' });
                 const roleBadge = u.role === 'admin' ? '<span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">Admin</span>' : '<span style="background: #eff6ff; color: #2563eb; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">Fotógrafo</span>';
-                const actionButtons = u.id !== currentUser.id ? `<button onclick="openEditUserModal(${u.id}, '${u.name.replace(/'/g, "\\'")}', '${u.email}', '${u.role}')" class="btn-warning" style="margin-right: 4px;"><i class="fa-solid fa-pen"></i></button><button onclick="deleteUser(${u.id})" class="btn-danger"><i class="fa-solid fa-trash"></i></button>` : '<span style="font-size: 11px; color: var(--text-muted);">(Tú)</span>';
-                return `<tr style="border-bottom: 1px solid var(--border-color);"><td style="padding: 16px; font-size: 14px; font-weight: 500;">${u.name}</td><td style="padding: 16px; font-size: 14px; color: #475569;">${u.email}</td><td style="padding: 16px;">${roleBadge}</td><td style="padding: 16px; font-size: 13px; color: #64748b;">${fecha}</td><td style="padding: 16px;">${actionButtons}</td></tr>`;
+                const planBadge = u.plan && u.plan !== 'trial' ? `<span style="background: #d1fae5; color: #065f46; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-left: 4px;">${u.plan.toUpperCase()}</span>` : '';
+                const actionButtons = u.id !== currentUser.id ? `<button onclick="openActivateSubscriptionModal(${u.id}, '${u.name.replace(/'/g, "\\'")}', '${u.plan || 'trial'}')" class="btn-secondary" style="margin-right: 4px; padding: 6px 10px; font-size: 12px;" title="Activar Plan"><i class="fa-solid fa-crown"></i></button><button onclick="openEditUserModal(${u.id}, '${u.name.replace(/'/g, "\\'")}', '${u.email}', '${u.role}')" class="btn-warning" style="margin-right: 4px; padding: 6px 10px; font-size: 12px;" title="Editar"><i class="fa-solid fa-pen"></i></button><button onclick="deleteUser(${u.id})" class="btn-danger" style="padding: 6px 10px; font-size: 12px;" title="Eliminar"><i class="fa-solid fa-trash"></i></button>` : '<span style="font-size: 11px; color: var(--text-muted);">(Tú)</span>';
+                return `<tr style="border-bottom: 1px solid var(--border-color);"><td style="padding: 16px; font-size: 14px; font-weight: 500;">${u.name}</td><td style="padding: 16px; font-size: 14px; color: #475569;">${u.email}</td><td style="padding: 16px;">${roleBadge}${planBadge}</td><td style="padding: 16px; font-size: 13px; color: #64748b;">${fecha}</td><td style="padding: 16px;">${actionButtons}</td></tr>`;
             }).join('');
         }
-    } catch (err) { tbody.innerHTML = '<tr><td colspan="5" style="padding: 20px; text-align: center; color: var(--danger);">Error al cargar la lista.</td></tr>'; }
+    } catch (err) { tbody.innerHTML = '<tr><td colspan="6" style="padding: 20px; text-align: center; color: var(--danger);">Error al cargar la lista.</td></tr>'; }
 }
 
 function openEditUserModal(id, name, email, role) {
@@ -175,3 +176,102 @@ document.getElementById('editUserForm').addEventListener('submit', async (e) => 
         else { resDiv.className = 'alert alert-error'; resDiv.textContent = data.error; }
     } catch (err) { resDiv.className = 'alert alert-error'; resDiv.textContent = 'Error de conexión.'; }
 });
+
+// === MODAL DE ACTIVACIÓN MANUAL DE SUSCRIPCIÓN ===
+
+function openActivateSubscriptionModal(userId, userName, currentPlan) {
+    let modal = document.getElementById('activateSubModal');
+    if (!modal) {
+        // Crear el modal dinámicamente si no existe
+        const modalHtml = `
+            <div id="activateSubModal" class="modal hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="modal-title"><i class="fa-solid fa-crown"></i> Activar Suscripción Manualmente</h3>
+                        <i class="fa-solid fa-xmark close-modal" onclick="closeActivateSubModal()"></i>
+                    </div>
+                    <form id="activateSubForm">
+                        <input type="hidden" id="activateUserId">
+                        <div class="form-group">
+                            <label>Usuario:</label>
+                            <input type="text" id="activateUserName" readonly style="background: rgba(255,255,255,0.05); cursor: not-allowed;">
+                        </div>
+                        <div class="form-group">
+                            <label>Plan a asignar:</label>
+                            <select id="activatePlan" required>
+                                <option value="trial">Trial (14 días gratis)</option>
+                                <option value="basic">Basic</option>
+                                <option value="pro">Pro ⭐</option>
+                                <option value="studio">Studio</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Duración (días):</label>
+                            <input type="number" id="activateDays" value="30" min="1" max="365" required>
+                            <small style="color: var(--text-muted); display: block; margin-top: 4px;">
+                                Para pruebas rápidas usa 1-7 días. Para producción usa 30.
+                            </small>
+                        </div>
+                        <button type="submit" class="btn-primary" style="width: 100%; margin-top: 12px;">
+                            <i class="fa-solid fa-bolt"></i> Activar Ahora
+                        </button>
+                    </form>
+                    <div id="activateSubResult" style="margin-top: 12px;"></div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Adjuntar listener al formulario recién creado
+        document.getElementById('activateSubForm').addEventListener('submit', submitActivateSubscription);
+    }
+    
+    modal = document.getElementById('activateSubModal');
+    
+    // Rellenar datos del usuario seleccionado
+    document.getElementById('activateUserId').value = userId;
+    document.getElementById('activateUserName').value = userName;
+    document.getElementById('activatePlan').value = currentPlan || 'trial';
+    document.getElementById('activateDays').value = 30;
+    document.getElementById('activateSubResult').innerHTML = '';
+    
+    modal.classList.remove('hidden');
+}
+
+function closeActivateSubModal() {
+    const modal = document.getElementById('activateSubModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function submitActivateSubscription(e) {
+    e.preventDefault();
+    
+    const userId = document.getElementById('activateUserId').value;
+    const plan = document.getElementById('activatePlan').value;
+    const days = document.getElementById('activateDays').value;
+    const resultDiv = document.getElementById('activateSubResult');
+    
+    try {
+        const res = await fetch('/api/admin/activate-subscription', {
+            method: 'POST',
+            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: parseInt(userId), plan, days: parseInt(days) })
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok && data.success) {
+            resultDiv.innerHTML = `<div class="alert alert-success"><i class="fa-solid fa-check-circle"></i> ${data.message}</div>`;
+            
+            // Recargar lista de usuarios tras 1.5 segundos
+            setTimeout(() => {
+                closeActivateSubModal();
+                if (typeof loadUsers === 'function') loadUsers();
+            }, 1500);
+        } else {
+            resultDiv.innerHTML = `<div class="alert alert-error"><i class="fa-solid fa-circle-exclamation"></i> ${data.error || 'Error desconocido'}</div>`;
+        }
+    } catch (err) {
+        resultDiv.innerHTML = `<div class="alert alert-error"><i class="fa-solid fa-circle-exclamation"></i> Error de conexión: ${err.message}</div>`;
+    }
+}

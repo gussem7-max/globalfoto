@@ -168,4 +168,54 @@ router.delete('/photos/:id', verificarAdmin, async (req, res) => {
     }
 });
 
+// POST /api/admin/activate-subscription
+// Activa o modifica la suscripción de un usuario manualmente (solo admin)
+router.post('/activate-subscription', verifyToken, async (req, res) => {
+    try {
+        // Verificar que el requester sea admin
+        const adminCheck = await pool.query('SELECT role FROM users WHERE id = $1', [req.user.id]);
+        if (adminCheck.rows.length === 0 || adminCheck.rows[0].role !== 'admin') {
+            return res.status(403).json({ error: 'Solo administradores pueden activar suscripciones.' });
+        }
+
+        const { user_id, plan, days } = req.body;
+        
+        if (!user_id || !plan) {
+            return res.status(400).json({ error: 'Faltan datos: user_id y plan son obligatorios.' });
+        }
+
+        const validPlans = ['basic', 'pro', 'studio', 'trial'];
+        if (!validPlans.includes(plan)) {
+            return res.status(400).json({ error: 'Plan inválido. Usa: basic, pro, studio o trial.' });
+        }
+
+        const expirationDays = parseInt(days) || 30; // Default 30 días si no se especifica
+        
+        // Si el plan es 'trial', resetear a estado inicial
+        if (plan === 'trial') {
+            await pool.query(
+                `UPDATE users SET plan = 'trial', plan_started_at = CURRENT_TIMESTAMP, plan_expires_at = CURRENT_TIMESTAMP + INTERVAL '14 days' WHERE id = $1`,
+                [user_id]
+            );
+        } else {
+            // Activar plan pagado con duración personalizada
+            await pool.query(
+                `UPDATE users SET plan = $1, plan_started_at = CURRENT_TIMESTAMP, plan_expires_at = CURRENT_TIMESTAMP + INTERVAL '${expirationDays} days' WHERE id = $2`,
+                [plan, user_id]
+            );
+        }
+
+        console.log(`✅ Admin ${req.user.id} activó plan "${plan}" (${expirationDays} días) para usuario ${user_id}`);
+        
+        res.json({ 
+            success: true, 
+            message: `Plan "${plan}" activado exitosamente por ${expirationDays} días.` 
+        });
+
+    } catch (error) {
+        console.error('Error activando suscripción:', error);
+        res.status(500).json({ error: 'Error interno al activar la suscripción.' });
+    }
+});
+
 module.exports = router;
