@@ -2,6 +2,117 @@
 let currentOrderId = null;
 let pollInterval = null;
 
+// === VERIFICAR ESTADO DE SUSCRIPCIÓN AL CARGAR ===
+async function checkSubscriptionStatus() {
+    const container = document.getElementById('subscriptionContent');
+    if (!container) return;
+
+    try {
+        // Obtener datos del usuario actual (incluye plan y fecha de expiración)
+        const res = await fetch('/api/auth/me', { headers: authHeaders() });
+        if (!res.ok) throw new Error('No se pudo obtener perfil');
+        
+        const data = await res.json();
+        const user = data.user;
+
+        // Si tiene plan activo y no ha expirado
+        if (user.plan && user.plan !== 'trial' && user.plan_expires_at) {
+            const expiresAt = new Date(user.plan_expires_at);
+            const now = new Date();
+            const daysLeft = Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24));
+
+            if (daysLeft > 0) {
+                showActiveSubscriptionDashboard(user, daysLeft);
+                return; // Salir temprano, no mostrar planes de venta
+            }
+        }
+
+        // Si no tiene plan o expiró, mostrar planes normales
+        loadPlans();
+    } catch (err) {
+        console.error('Error verificando suscripción:', err);
+        loadPlans(); // Fallback a planes normales
+    }
+}
+
+function showActiveSubscriptionDashboard(user, daysLeft) {
+    const container = document.getElementById('subscriptionContent');
+    if (!container) return;
+
+    const planName = user.plan.charAt(0).toUpperCase() + user.plan.slice(1);
+    const expiresDate = new Date(user.plan_expires_at).toLocaleDateString('es-ES', { 
+        year: 'numeric', month: 'long', day: 'numeric' 
+    });
+
+    let statusClass = 'success';
+    let statusText = '✅ Plan Activo';
+    let warningHtml = '';
+
+    if (daysLeft <= 7) {
+        statusClass = 'warning';
+        statusText = '⚠️ Plan por Vencer';
+        warningHtml = `
+            <div class="alert alert-warning" style="margin-bottom: 20px;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                Tu plan expira en <strong>${daysLeft} día${daysLeft !== 1 ? 's' : ''}</strong>. 
+                <button class="btn-secondary" style="margin-left: 10px;" onclick="loadPlans()">Renovar Ahora</button>
+            </div>
+        `;
+    }
+
+    const features = getFeaturesForPlan(user.plan);
+
+    container.innerHTML = `
+        <div class="header">
+            <div>
+                <h1>Tu Suscripción</h1>
+                <p class="header-sub">Gestiona tu plan y beneficios actuales.</p>
+            </div>
+        </div>
+
+        ${warningHtml}
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-crown"></i></div>
+                <div class="stat-data">
+                    <h3>${planName}</h3>
+                    <p>Plan Actual</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-calendar-check"></i></div>
+                <div class="stat-data">
+                    <h3>${daysLeft} días</h3>
+                    <p>Restantes</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-clock"></i></div>
+                <div class="stat-data">
+                    <h3>${expiresDate}</h3>
+                    <p>Fecha de Expiración</p>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="section-title">Tus Beneficios Actuales</h2>
+        <div class="config-card">
+            <ul class="plan-features" style="font-size: 15px; line-height: 2;">
+                ${features}
+            </ul>
+        </div>
+
+        <div style="margin-top: 30px; text-align: center;">
+            <button class="btn-secondary" onclick="loadPlans()" style="width: auto; padding: 12px 24px;">
+                <i class="fa-solid fa-arrow-up"></i> Cambiar o Mejorar Plan
+            </button>
+        </div>
+    `;
+}
+
+// === FUNCIONES EXISTENTES (sin cambios) ===
+
 async function loadPlans() {
     const container = document.getElementById('planCards');
     if (!container) return;
@@ -56,9 +167,9 @@ function formatPrice(price, currency) {
 
 function getFeaturesForPlan(key) {
     const features = {
-        basic: ['5 eventos activos', 'Hasta 1.500 fotos', 'Marca de agua automática', 'Galerías con expiración'],
-        pro: ['Eventos ilimitados', 'Hasta 10.000 fotos', 'Verificación por selfie', 'QR con tu logo', 'Soporte prioritario'],
-        studio: ['Eventos ilimitados', 'Fotos ilimitadas', 'Multi-cuenta equipo', 'Dominio personalizado', 'Soporte dedicado 24/7']
+        basic: ['✓ 5 eventos activos', '✓ Hasta 1.500 fotos', '✓ Marca de agua automática', '✓ Galerías con expiración'],
+        pro: ['✓ Eventos ilimitados', '✓ Hasta 10.000 fotos', '✓ Verificación por selfie', '✓ QR con tu logo', '✓ Soporte prioritario'],
+        studio: ['✓ Eventos ilimitados', '✓ Fotos ilimitadas', '✓ Multi-cuenta equipo', '✓ Dominio personalizado', '✓ Soporte dedicado 24/7']
     };
     return (features[key] || []).map(f => `<li>${f}</li>`).join('');
 }
@@ -237,7 +348,7 @@ function startPolling() {
                 showSuccess();
                 setTimeout(() => {
                     closePaymentModal();
-                    location.reload();
+                    location.reload(); // Recargar para mostrar dashboard de suscripción activa
                 }, 3000);
             } else if (data.status === 'expired') {
                 stopPolling();
@@ -264,13 +375,13 @@ function showManualVerifyForm() {
 async function submitManualVerification() {
     const amountInput = document.getElementById('reportedAmount');
     const refInput = document.getElementById('reportedRef');
-    const txRefInput = document.getElementById('transactionRef'); // ← NUEVO CAMPO
+    const txRefInput = document.getElementById('transactionRef');
     
     if (!amountInput || !refInput || !txRefInput) return;
     
     const amount = parseFloat(amountInput.value);
     const ref = refInput.value.trim();
-    const txRef = txRefInput.value.trim(); // ← Número de referencia bancaria
+    const txRef = txRefInput.value.trim();
     
     if (!amount) { alert('Ingresa el monto que transferiste.'); return; }
     if (!txRef) { alert('Ingresa el número de referencia de la transacción bancaria.'); return; }
@@ -283,7 +394,7 @@ async function submitManualVerification() {
                 order_id: currentOrderId, 
                 reported_amount: amount, 
                 reported_reference: ref,
-                transaction_reference: txRef // ← ENVIAR AL BACKEND
+                transaction_reference: txRef
             })
         });
         const data = await res.json();
@@ -293,7 +404,7 @@ async function submitManualVerification() {
             showSuccess();
             setTimeout(() => {
                 closePaymentModal();
-                location.reload();
+                location.reload(); // Recargar para mostrar dashboard de suscripción activa
             }, 3000);
         } else {
             alert(data.error || 'No se pudo verificar. Revisa los datos.');
@@ -315,11 +426,14 @@ function showSuccess() {
     localStorage.removeItem('pending_order_id');
 }
 
+// === INICIALIZACIÓN MEJORADA ===
 document.addEventListener('DOMContentLoaded', () => {
     const section = document.getElementById('sectionSubscription');
     if (section && !section.classList.contains('hidden')) {
-        loadPlans();
+        // Verificar estado de suscripción primero
+        checkSubscriptionStatus();
         
+        // Retomar orden pendiente si existe
         const pendingId = localStorage.getItem('pending_order_id');
         if (pendingId) {
             fetch(`/api/subscriptions/orders/${pendingId}`, { headers: authHeaders() })
@@ -335,3 +449,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
+
+// También escuchar cuando se navega a la sección dinámicamente
+window.showSection = function(originalShowSection) {
+    return function(section) {
+        originalShowSection(section);
+        if (section === 'subscription') {
+            checkSubscriptionStatus();
+        }
+    };
+}(window.showSection);
