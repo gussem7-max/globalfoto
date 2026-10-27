@@ -27,39 +27,39 @@ router.get('/plans', verifyToken, async (req, res) => {
         const userResult = await pool.query('SELECT currency, country FROM users WHERE id = $1', [req.user.id]);
         if (userResult.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado.' });
         
-        const { currency, country } = userResult.rows[0];
+        const { currency } = userResult.rows[0];
         
-        // Calcular precios dinámicos según moneda/tasa
-        let plansOut;
+        // Determinar factor de conversión según moneda
+        let rate = 1;
         if (currency === 'VES') {
-            // Obtener tasa EUR→VES vigente
             const eurVesRate = await getCurrentRate('EUR_VES');
-            
-            plansOut = Object.keys(PLANS).map(key => ({
-                key,
-                name: key.charAt(0).toUpperCase() + key.slice(1),
-                price_usd: PLANS[key].usd,
-                price_ves: +(PLANS[key].usd * eurVesRate).toFixed(2), // conversión automática
-                currency: 'VES',
-                exchange_rate: eurVesRate
-            }));
-        } else if (currency === 'COP') {
-            // COP tiene precio fijo definido en PLANS
-            plansOut = Object.keys(PLANS).map(key => ({
-                key,
-                name: key.charAt(0).toUpperCase() + key.slice(1),
-                price_cop: PLANS[key].cop,
-                currency: 'COP'
-            }));
-        } else {
-            // USD/Zinli: precio base directo
-            plansOut = Object.keys(PLANS).map(key => ({
-                key,
-                name: key.charAt(0).toUpperCase() + key.slice(1),
-                price_usd: PLANS[key].usd,
-                currency: 'USD'
-            }));
+            rate = eurVesRate; // USD → VES multiplicando por la tasa
         }
+        // COP y USD usan precios fijos definidos en PLANS, rate=1
+        
+        const plansOut = Object.keys(PLANS).map(key => {
+            const baseUsd = PLANS[key].usd;
+            let price;
+            
+            if (currency === 'VES') {
+                // Conversión dinámica USD → VES usando tasa actual
+                price = +(baseUsd * rate).toFixed(2);
+            } else if (currency === 'COP') {
+                // Precio fijo en COP definido en el catálogo
+                price = PLANS[key].cop;
+            } else {
+                // USD directo
+                price = baseUsd;
+            }
+            
+            return {
+                key,
+                name: key.charAt(0).toUpperCase() + key.slice(1),
+                price,           // ← SIEMPRE hay un campo "price" numérico
+                currency,
+                exchange_rate: currency === 'VES' ? rate : null
+            };
+        });
 
         res.json({ plans: plansOut, currency });
     } catch (error) {
