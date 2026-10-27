@@ -170,10 +170,10 @@ router.delete('/photos/:id', verificarAdmin, async (req, res) => {
 
 // POST /api/admin/activate-subscription
 // Activa o modifica la suscripción de un usuario manualmente (solo admin)
-router.post('/activate-subscription', verifyToken, async (req, res) => {
+router.post('/activate-subscription', verificarAdmin, async (req, res) => {
     try {
         // Verificar que el requester sea admin
-        const adminCheck = await pool.query('SELECT role FROM users WHERE id = $1', [req.user.id]);
+        const adminCheck = await pool.query('SELECT role FROM users WHERE id = $1', [req.admin.id]);
         if (adminCheck.rows.length === 0 || adminCheck.rows[0].role !== 'admin') {
             return res.status(403).json({ error: 'Solo administradores pueden activar suscripciones.' });
         }
@@ -205,7 +205,7 @@ router.post('/activate-subscription', verifyToken, async (req, res) => {
             );
         }
 
-        console.log(`✅ Admin ${req.user.id} activó plan "${plan}" (${expirationDays} días) para usuario ${user_id}`);
+        console.log(`✅ Admin ${req.admin.id} activó plan "${plan}" (${expirationDays} días) para usuario ${user_id}`);
         
         res.json({ 
             success: true, 
