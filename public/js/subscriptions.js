@@ -330,9 +330,9 @@ function formatPrice(price, currency) {
 
 function getFeaturesForPlan(key) {
     const features = {
-        basic: ['✓ 5 eventos activos', '✓ Hasta 1.500 fotos', '✓ Marca de agua automática', '✓ Galerías con expiración'],
-        pro: ['✓ Eventos ilimitados', '✓ Hasta 10.000 fotos', '✓ Verificación por selfie', '✓ QR con tu logo', '✓ Soporte prioritario'],
-        studio: ['✓ Eventos ilimitados', '✓ Fotos ilimitadas', '✓ Multi-cuenta equipo', '✓ Dominio personalizado', '✓ Soporte dedicado 24/7']
+        basic: ['5 eventos activos', 'Hasta 1.500 fotos', 'Marca de agua automática', 'Galerías con expiración'],
+        pro: ['Eventos ilimitados', 'Hasta 10.000 fotos', 'Verificación por selfie', 'QR con tu logo', 'Soporte prioritario'],
+        studio: ['Eventos ilimitados', 'Fotos ilimitadas', 'Multi-cuenta equipo', 'Dominio personalizado', 'Soporte dedicado 24/7']
     };
     return (features[key] || []).map(f => `<li>${f}</li>`).join('');
 }
