@@ -242,6 +242,65 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ===== BARRA MÓVIL TIPO CÁPSULA (solo visible en pantallas < 768px) ===== -->
+            <nav id="gfMobileBar">
+                <button class="gf-pill active" onclick="showSection('events'); switchMobileTab(this)">
+                    <i class="fa-solid fa-calendar-days"></i>
+                    <span class="gf-label">Eventos</span>
+                </button>
+                <button class="gf-pill" onclick="showSection('galleries'); switchMobileTab(this)">
+                    <i class="fa-solid fa-images"></i>
+                    <span class="gf-label">Galerías</span>
+                </button>
+                <button class="gf-pill" onclick="showSection('sales'); switchMobileTab(this)" style="position:relative;">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    <span class="gf-label">Ventas</span>
+                    <span class="gf-sales-dot" id="mobileSalesDot">0</span>
+                </button>
+                <button class="gf-pill" onclick="showSection('settings'); switchMobileTab(this)">
+                    <i class="fa-solid fa-gear"></i>
+                    <span class="gf-label">Ajustes</span>
+                </button>
+                <button class="gf-pill gf-pill-account" onclick="openProfileDrawer()">
+                    <i class="fa-solid fa-user"></i>
+                </button>
+            </nav>
+
+            <!-- ===== OVERLAY OSCURO (fondo al abrir drawer) ===== -->
+            <div id="gfOverlay" onclick="closeProfileDrawer()"></div>
+
+            <!-- ===== DRAWER DE PERFIL (se desliza desde la derecha) ===== -->
+            <div id="gfDrawer">
+                <div class="gf-drawer-header">
+                    <div class="gf-drawer-user">
+                        <div class="avatar" id="drawerAvatar">U</div>
+                        <div>
+                            <div class="user-name" id="drawerUserName">Usuario</div>
+                            <div class="user-role" id="drawerUserRole">Fotógrafo</div>
+                        </div>
+                    </div>
+                    <button class="gf-close" onclick="closeProfileDrawer()"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="gf-drawer-items">
+                    <div class="gf-ditem" onclick="showSection('subscription'); closeProfileDrawer()">
+                        <i class="fa-solid fa-star"></i> Suscripción
+                    </div>
+                    <div class="gf-ditem" onclick="showSection('settings'); closeProfileDrawer()">
+                        <i class="fa-solid fa-gear"></i> Configuración
+                    </div>
+                    <div class="gf-ditem hidden" id="drawerUsers" onclick="showSection('users'); closeProfileDrawer()">
+                        <i class="fa-solid fa-users"></i> Usuarios
+                    </div>
+                    <div class="gf-ditem hidden" id="drawerAdmin" onclick="showSection('admin'); closeProfileDrawer()">
+                        <i class="fa-solid fa-shield-halved"></i> Administración
+                    </div>
+                    <div class="gf-ddivider"></div>
+                    <div class="gf-ditem" onclick="logout()" style="color: var(--danger);">
+                        <i class="fa-solid fa-right-from-bracket" style="color: var(--danger);"></i> Cerrar Sesión
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 

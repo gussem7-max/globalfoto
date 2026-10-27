@@ -153,33 +153,24 @@ function logout() {
 
 // ===== FUNCIONES GLOBALES PARA LA BARRA MÓVIL Y DRAWER =====
 window.switchMobileTab = function(selectedBtn) {
-    const allPills = document.querySelectorAll('.nav-pill');
-    allPills.forEach(pill => {
-        pill.classList.remove('active', 'bg-purple-600', 'text-white', 'shadow-md', 'shadow-purple-500/30', 'px-4');
-        pill.classList.add('text-slate-400', 'px-3.5');
-        const label = pill.querySelector('.tab-label');
-        if (label) label.classList.add('hidden');
-    });
-
-    selectedBtn.classList.add('active', 'bg-purple-600', 'text-white', 'shadow-md', 'shadow-purple-500/30', 'px-4');
-    selectedBtn.classList.remove('text-slate-400', 'px-3.5');
-    const activeLabel = selectedBtn.querySelector('.tab-label');
-    if (activeLabel) activeLabel.classList.remove('hidden');
+    const allPills = document.querySelectorAll('.gf-pill');
+    allPills.forEach(pill => pill.classList.remove('active'));
+    selectedBtn.classList.add('active');
 };
 
 window.openProfileDrawer = function() {
-    const drawer = document.getElementById('profileDrawer');
-    const overlay = document.getElementById('profileDrawerOverlay');
+    const drawer = document.getElementById('gfDrawer');
+    const overlay = document.getElementById('gfOverlay');
     if (drawer) drawer.classList.add('open');
-    if (overlay) overlay.classList.remove('hidden');
+    if (overlay) overlay.classList.add('show');
     document.body.style.overflow = 'hidden';
 };
 
 window.closeProfileDrawer = function() {
-    const drawer = document.getElementById('profileDrawer');
-    const overlay = document.getElementById('profileDrawerOverlay');
+    const drawer = document.getElementById('gfDrawer');
+    const overlay = document.getElementById('gfOverlay');
     if (drawer) drawer.classList.remove('open');
-    if (overlay) overlay.classList.add('hidden');
+    if (overlay) overlay.classList.remove('show');
     document.body.style.overflow = '';
 };
 
