@@ -57,24 +57,38 @@ router.post('/register', async (req, res) => {
         const phoneRaw = typeof req.body.phone === 'string' ? req.body.phone.trim() : '';
         const phone = phoneRaw ? phoneRaw.slice(0, 32) : null;
 
+        // === Plan elegido desde la landing ===
+        // 'basic'|'pro'|'studio' -> prueba de ESE plan (is_trial = true, 14 días).
+        // 'free' o ausente/inválido -> prueba genérica (plan = 'trial', is_trial = false).
+        const PAID_TRIAL_PLANS = ['basic', 'pro', 'studio'];
+        const requestedPlan = String(req.body.plan || '').toLowerCase();
+        const isPaidTrial = PAID_TRIAL_PLANS.includes(requestedPlan);
+        const planValue = isPaidTrial ? requestedPlan : 'trial';
+        const isTrialFlag = isPaidTrial;
+
         const existingUser = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         if (existingUser.rows.length > 0) return res.status(400).json({ error: 'El correo electrónico ya está registrado.' });
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const newUser = await pool.query(
-            `INSERT INTO users (name, email, password, role, country, phone, currency, plan, plan_started_at, plan_expires_at)
-             VALUES ($1, $2, $3, 'photographer', $4, $5, $6, 'trial', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '14 days')
-             RETURNING id, name, email, role, country, phone, currency, plan, plan_started_at, plan_expires_at, created_at`,
-            [name, email, hashedPassword, country, phone, currency]
+            `INSERT INTO users (name, email, password, role, country, phone, currency, plan, is_trial, plan_started_at, plan_expires_at)
+             VALUES ($1, $2, $3, 'photographer', $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '14 days')
+             RETURNING id, name, email, role, country, phone, currency, plan, is_trial, auto_renew, plan_started_at, plan_expires_at, created_at`,
+            [name, email, hashedPassword, country, phone, currency, planValue, isTrialFlag]
         );
         const user = newUser.rows[0];
+
+        const planLabel = isPaidTrial ? planValue.toUpperCase() : null;
+        const trialLine = isPaidTrial
+            ? `Tu periodo de prueba de 14 días del plan <strong>${planLabel}</strong> comenzó hoy. Al terminar, elige un plan de pago para no perder el acceso.`
+            : `Tu periodo de prueba de 14 días comenzó hoy. Después podrás elegir un plan según tu país.`;
 
         try {
             await resend.emails.send({
                 from: FROM_EMAIL,
                 to: user.email,
-                subject: '🎉 ¡Bienvenido a GlobalFoto!',
+                subject: isPaidTrial ? `🎉 ¡Bienvenido a GlobalFoto! Probando el plan ${planLabel}` : '🎉 ¡Bienvenido a GlobalFoto!',
                 html: `
                     <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                         <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
@@ -94,7 +108,7 @@ router.post('/register', async (req, res) => {
                                     <li>Recibir pedidos y aprobar pagos</li>
                                 </ul>
                             </div>
-                            <p style="color: #64748b; font-size: 13px; margin-bottom: 8px;">Tu periodo de prueba de 14 días comenzó hoy. Después podrás elegir un plan según tu país.</p>
+                            <p style="color: #64748b; font-size: 13px; margin-bottom: 8px;">${trialLine}</p>
                             <div style="text-align: center; margin: 24px 0;">
                                 <a href="${process.env.FRONTEND_URL || 'https://www.globalfotoapp.com'}"
                                    style="background: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; display: inline-block;">
@@ -113,12 +127,17 @@ router.post('/register', async (req, res) => {
             console.error('⚠️ [EMAIL] No se pudo enviar bienvenida:', emailErr.message);
         }
 
+        // === AUTO-LOGIN: devolvemos token igual que /login ===
+        const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+
         res.status(201).json({
             mensaje: 'Usuario registrado exitosamente.',
+            token,
             user: {
                 id: user.id, name: user.name, email: user.email, role: user.role,
                 country: user.country, phone: user.phone, currency: user.currency,
-                plan: user.plan, plan_expires_at: user.plan_expires_at
+                plan: user.plan, is_trial: !!user.is_trial, auto_renew: user.auto_renew !== false,
+                plan_started_at: user.plan_started_at, plan_expires_at: user.plan_expires_at
             }
         });
     } catch (error) {
@@ -154,7 +173,7 @@ router.post('/login', async (req, res) => {
                 logo_url: user.logo_url, country: user.country, phone: user.phone,
                 currency: user.currency, plan: user.plan,
                 plan_started_at: user.plan_started_at, plan_expires_at: user.plan_expires_at,
-                auto_renew: user.auto_renew !== false
+                auto_renew: user.auto_renew !== false, is_trial: !!user.is_trial
             }
         });
     } catch (error) {
@@ -167,8 +186,7 @@ router.post('/login', async (req, res) => {
 router.get('/me', verificarToken, async (req, res) => {
     try {
         const userResult = await pool.query(
-            'SELECT id, name, email, role, created_at, logo_url, country, phone, currency, plan, plan_started_at, plan_expires_at, auto_renew FROM users WHERE id = $1',
-            [req.user.id]
+            'SELECT id, name, email, role, created_at, logo_url, country, phone, currency, plan, plan_started_at, plan_expires_at, auto_renew, is_trial FROM users WHERE id = $1',            [req.user.id]
         );
         if (userResult.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado.' });
         res.json({ user: userResult.rows[0] });

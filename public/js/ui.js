@@ -211,6 +211,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (urlParams.get('tab') === 'register') switchTab('register');
     const plan = urlParams.get('plan');
     if (plan) localStorage.setItem('selected_plan', plan);
+    else localStorage.removeItem('selected_plan');
 
     if (!token) {
         const auth = document.getElementById('authContainer');

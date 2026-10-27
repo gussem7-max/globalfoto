@@ -27,20 +27,25 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
 
     if (!national) { resDiv.className = 'alert alert-error'; resDiv.textContent = 'Introduce tu número de teléfono.'; return; }
 
-    // El chip (+57) y el input están separados en pantalla; los uno para enviar el teléfono completo
     const phone = (prefix + ' ' + national).replace(/\s+/g, ' ').trim();
+    // Plan elegido en la landing (?plan=...). Si no hay, 'free' = prueba genérica.
+    const plan = (localStorage.getItem('selected_plan') || 'free').toLowerCase();
 
     try {
-        const res = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password, country, phone }) });
+        const res = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password, country, phone, plan }) });
         const data = await res.json();
-        if (res.ok) {
-            resDiv.className = 'alert alert-success';
-            resDiv.textContent = '¡Cuenta creada con éxito! Ya puedes iniciar sesión.';
-            e.target.reset();
-            // reset() pone el hidden en VE pero NO toca el chip/trigger (son JS); los reconcilio:
-            if (typeof renderTrigger === 'function' && typeof getCountry === 'function') renderTrigger(getCountry('VE'));
+        if (res.ok && data.token) {
+            // AUTO-LOGIN: guardamos token y entramos directo al panel (antes te dejaba en "ya puedes iniciar sesión")
+            currentUser = data.user;
+            localStorage.setItem('token', data.token);
+            localStorage.removeItem('selected_plan');
+            showDashboard();
+            // Si se registró probando un plan de pago, lo llevamos a Suscripción para que vea su prueba al entrar
+            if (data.user && data.user.is_trial) showSection('subscription');
+        } else {
+            resDiv.className = 'alert alert-error';
+            resDiv.textContent = data.error || 'No se pudo crear la cuenta.';
         }
-        else { resDiv.className = 'alert alert-error'; resDiv.textContent = data.error; }
     } catch (err) { resDiv.className = 'alert alert-error'; resDiv.textContent = 'Error de conexión.'; }
 });
 

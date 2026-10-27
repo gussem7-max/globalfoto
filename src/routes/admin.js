@@ -194,7 +194,7 @@ router.post('/activate-subscription', verificarAdmin, async (req, res) => {
         // Si el plan es 'trial', resetear a estado inicial
         if (plan === 'trial') {
             await pool.query(
-                `UPDATE users SET plan = 'trial', plan_started_at = CURRENT_TIMESTAMP, plan_expires_at = CURRENT_TIMESTAMP + INTERVAL '14 days' WHERE id = $1`,
+                `UPDATE users SET plan = 'trial', is_trial = FALSE, plan_started_at = CURRENT_TIMESTAMP, plan_expires_at = CURRENT_TIMESTAMP + INTERVAL '14 days' WHERE id = $1`,
                 [user_id]
             );
         } else {

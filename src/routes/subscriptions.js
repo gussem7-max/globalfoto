@@ -102,10 +102,10 @@ router.post('/order', verifyToken, async (req, res) => {
         if (!plan) return res.status(400).json({ error: 'Falta el plan.' });
         if (!PLAN_RANK[plan]) return res.status(400).json({ error: 'Plan inválido.' });
 
-        const userResult = await pool.query('SELECT currency, country, plan, plan_expires_at FROM users WHERE id = $1', [req.user.id]);
+        const userResult = await pool.query('SELECT currency, country, plan, plan_expires_at, is_trial FROM users WHERE id = $1', [req.user.id]);
         if (userResult.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado.' });
 
-        const { currency, country, plan: planActual, plan_expires_at } = userResult.rows[0];
+        const { currency, country, plan: planActual, plan_expires_at, is_trial: userIsTrial } = userResult.rows[0];
 
         let channel = 'zinli';
         if (country === 'VE') channel = 'pagomovil';
@@ -118,7 +118,7 @@ router.post('/order', verifyToken, async (req, res) => {
             ? +(PLANS[plan].usd * rate).toFixed(2)
             : (PLANS[plan][currency.toLowerCase()] || PLANS[plan].usd);
 
-        const precioActual = (planActual && planActual !== 'trial' && PLAN_RANK[planActual])
+        const precioActual = (!userIsTrial && planActual && planActual !== 'trial' && PLAN_RANK[planActual])
             ? (currency === 'VES' ? +(PLANS[planActual].usd * rate).toFixed(2) : (PLANS[planActual][currency.toLowerCase()] || PLANS[planActual].usd))
             : 0;
 
@@ -388,16 +388,17 @@ async function activateUserPlan(userId, planKey) {
     const row = cur.rows[0];
     const now = new Date();
 
-    // Renovación anticipada del MISMO plan: suma 30 días al final del periodo actual (no pierde días)
-    // Upgrade / plan nuevo / expirado: ciclo nuevo desde hoy
+    // Renovación anticipada del MISMO plan: suma 30 días al final del periodo actual (no pierde días).
+    // Upgrade / plan nuevo / expirado: ciclo nuevo desde hoy.
     let baseDate = now;
     if (row && row.plan === planKey && row.plan_expires_at && new Date(row.plan_expires_at) > now) {
         baseDate = new Date(row.plan_expires_at);
     }
     const newExp = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000);
 
+    // Pagar = salir de prueba: is_trial = FALSE, auto_renew = TRUE.
     await pool.query(
-        `UPDATE users SET plan = $1, plan_started_at = CURRENT_TIMESTAMP, plan_expires_at = $2, auto_renew = TRUE WHERE id = $3`,
+        `UPDATE users SET plan = $1, plan_started_at = CURRENT_TIMESTAMP, plan_expires_at = $2, auto_renew = TRUE, is_trial = FALSE WHERE id = $3`,
         [planKey, newExp, userId]
     );
 }
