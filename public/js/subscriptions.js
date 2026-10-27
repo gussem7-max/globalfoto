@@ -6,16 +6,27 @@ async function loadPlans() {
     const container = document.getElementById('planCards');
     if (!container) return;
     
+    container.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-muted);">Cargando planes...</div>';
+
     try {
         const res = await fetch('/api/subscriptions/plans', { headers: authHeaders() });
+        
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({ error: 'Error desconocido' }));
+            throw new Error(errData.error || `HTTP ${res.status}`);
+        }
+        
         const data = await res.json();
         
-        if (!res.ok) throw new Error(data.error || 'Error cargando planes');
-        
+        if (!data.plans || data.plans.length === 0) {
+            container.innerHTML = '<p style="color:var(--warning); text-align:center;">No hay planes disponibles.</p>';
+            return;
+        }
+
         const plansHtml = data.plans.map(plan => `
             <div class="plan-card ${plan.key === 'pro' ? 'popular' : ''}" onclick="selectPlan('${plan.key}')">
                 <div class="plan-name">${plan.name}</div>
-                <div class="plan-price">$${plan.price.toFixed(2)}</div>
+                <div class="plan-price">${formatPrice(plan.price, plan.currency)}</div>
                 <div class="plan-currency">${plan.currency} / mes</div>
                 <ul class="plan-features">
                     ${getFeaturesForPlan(plan.key)}
@@ -25,9 +36,22 @@ async function loadPlans() {
         
         container.innerHTML = plansHtml;
     } catch (err) {
-        console.error('Error:', err);
-        container.innerHTML = `<p style="color: var(--danger);">Error: ${err.message}</p>`;
+        console.error('Error cargando planes:', err);
+        container.innerHTML = `
+            <div style="background:rgba(239,68,68,0.1); border:1px solid var(--danger); padding:20px; border-radius:12px; color:#fca5a5;">
+                <strong>Error al cargar planes:</strong><br/>
+                ${err.message}<br/><br/>
+                <small>Verifica tu conexión o inicia sesión nuevamente.</small>
+            </div>`;
     }
+}
+
+function formatPrice(price, currency) {
+    const num = parseFloat(price);
+    if (isNaN(num)) return String(price);
+    if (currency === 'VES') return `Bs. ${num.toFixed(2)}`;
+    if (currency === 'COP') return `$${Math.round(num).toLocaleString('es-CO')}`;
+    return `$${num.toFixed(2)}`;
 }
 
 function getFeaturesForPlan(key) {
@@ -40,7 +64,6 @@ function getFeaturesForPlan(key) {
 }
 
 async function selectPlan(planKey) {
-    // Marcar visualmente el seleccionado
     document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
     event.currentTarget.classList.add('selected');
     
@@ -54,106 +77,128 @@ async function selectPlan(planKey) {
         
         if (!res.ok) throw new Error(data.error || 'Error creando orden');
         
-        showPaymentDetails(data.order);
+        openPaymentModal(data.order);
     } catch (err) {
         alert('Error: ' + err.message);
     }
 }
 
-function showPaymentDetails(order) {
+function openPaymentModal(order) {
     currentOrderId = order.id;
     localStorage.setItem('pending_order_id', order.id);
     
-    const detailsDiv = document.getElementById('paymentDetails');
-    if (!detailsDiv) return;
+    const modal = document.getElementById('paymentModal');
+    if (!modal) return;
     
-    // Normalizar monto UNA VEZ: número para cálculos, string para mostrar/copiar
-    const rawNum = parseFloat(order.expected_amount);
-    const safeAmount = isNaN(rawNum) ? '0' : rawNum.toString();
-    const amtStr = formatAmount(safeAmount, order.currency);
-    const refCode = String(order.reference_code || '').trim();
+    const amtStr = formatAmount(order.expected_amount, order.currency);
+    const refCode = order.reference_code;
     const isZinli = order.channel === 'zinli';
     
     let html = `
-        <h3 style="margin-bottom: 20px; color: var(--text-main);">Completa tu pago</h3>
-        
-        <div class="payment-row">
-            <span class="payment-label">Monto exacto a transferir:</span>
-            <span class="payment-value">
-                ${amtStr}
-                <button class="copy-btn" onclick="copyToClipboard('${safeAmount}', this)">📋</button>
-            </span>
+        <div class="modal-header">
+            <h3 class="modal-title">Completa tu pago</h3>
+            <i class="fa-solid fa-xmark close-modal" onclick="confirmCancelPayment()"></i>
         </div>
-        
-        <div class="payment-row">
-            <span class="payment-label">Código de referencia (concepto):</span>
-            <span class="payment-value">
-                <strong>${refCode}</strong>
-                <button class="copy-btn" onclick="copyToClipboard('${refCode}', this)">📋</button>
-            </span>
-        </div>
-        
-        <div class="instructions-box">${escapeHtml(order.instructions || '')}</div>
+        <div class="modal-body">
+            <div class="payment-row">
+                <span class="payment-label">Monto exacto a transferir:</span>
+                <span class="payment-value">
+                    ${amtStr}
+                    <button class="copy-btn" onclick="copyToClipboard('${order.expected_amount}', this)">📋</button>
+                </span>
+            </div>
+            
+            <div class="payment-row">
+                <span class="payment-label">Código de referencia (concepto):</span>
+                <span class="payment-value">
+                    <strong>${refCode}</strong>
+                    <button class="copy-btn" onclick="copyToClipboard('${refCode}', this)">📋</button>
+                </span>
+            </div>
+            
+            <div class="instructions-box">${escapeHtml(order.instructions)}</div>
     `;
     
     if (isZinli) {
-        const zinliUrl = `https://pay.zin.li/TU_USUARIO_ZINLI?amount=${encodeURIComponent(safeAmount)}&currency=${encodeURIComponent(order.currency)}`;
         html += `
-            <a href="${zinliUrl}" target="_blank" class="zinli-link-btn">
+            <a href="${BANK_DATA_ZINLI_LINK}" target="_blank" class="zinli-link-btn">
                 💳 Abrir cobro en Zinli (${amtStr})
             </a>
         `;
     }
     
     html += `
-        <div class="waiting-screen" id="waitingScreen" style="display:none;">
-            <div class="spinner-large"></div>
-            <div class="waiting-text">Esperando tu pago de ${amtStr}...</div>
-            <div class="waiting-subtext">No cierres esta ventana. Detectaremos el pago automáticamente.</div>
-            <button class="manual-verify-btn" onclick="showManualVerifyForm()">✅ Ya pagué (Verificar manualmente)</button>
-        </div>
-        
-        <div id="manualVerifyForm" style="display:none; margin-top: 20px; padding: 20px; background: rgba(2,6,23,0.6); border-radius: 12px;">
-            <h4 style="color: var(--text-main); margin-bottom: 12px;">Reporta tu pago</h4>
-            <div class="form-group">
-                <label>Monto que transfiriste:</label>
-                <input type="number" step="0.01" id="reportedAmount" placeholder="${safeAmount}" required>
+            <div class="waiting-screen" id="waitingScreen">
+                <div class="spinner-large"></div>
+                <div class="waiting-text">Esperando tu pago de ${amtStr}...</div>
+                <div class="waiting-subtext">No cierres esta ventana. Detectaremos el pago automáticamente.</div>
+                <button class="manual-verify-btn" onclick="showManualVerifyForm()">✅ Ya pagué (Verificar manualmente)</button>
             </div>
-            <div class="form-group">
-                <label>Código/referencia usada (opcional):</label>
-                <input type="text" id="reportedRef" placeholder="${refCode}">
+            
+            <div id="manualVerifyForm" style="display:none; margin-top: 20px; padding: 20px; background: rgba(2,6,23,0.6); border-radius: 12px;">
+                <h4 style="color: var(--text-main); margin-bottom: 12px;">Reporta tu pago</h4>
+                <div class="form-group">
+                    <label>Monto que transfiriste:</label>
+                    <input type="number" step="0.01" id="reportedAmount" placeholder="${order.expected_amount}" required>
+                </div>
+                <div class="form-group">
+                    <label>Código/referencia usada (opcional):</label>
+                    <input type="text" id="reportedRef" placeholder="${refCode}">
+                </div>
+                <button class="btn-primary" onclick="submitManualVerification()">Enviar verificación</button>
             </div>
-            <button class="btn-primary" onclick="submitManualVerification()">Enviar verificación</button>
-        </div>
-        
-        <div class="success-message" id="successMessage" style="display:none;">
-            <i class="fa-solid fa-circle-check success-icon"></i>
-            <div class="success-title">¡Pago exitoso!</div>
-            <div class="success-subtitle">Tu plan ha sido activado. Redirigiendo...</div>
+            
+            <div class="success-message" id="successMessage" style="display:none;">
+                <i class="fa-solid fa-circle-check success-icon"></i>
+                <div class="success-title">¡Pago exitoso!</div>
+                <div class="success-subtitle">Tu plan ha sido activado. Redirigiendo...</div>
+            </div>
         </div>
     `;
     
-    detailsDiv.innerHTML = html;
+    modal.querySelector('.modal-content').innerHTML = html;
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    
     startPolling();
 }
 
+const BANK_DATA_ZINLI_LINK = 'https://recargas.zinli.com/6XgFfhiz45rArACBUYxWTo';
+
+function confirmCancelPayment() {
+    if (confirm('¿Estás seguro de que quieres cancelar el pago? Perderás esta orden pendiente.')) {
+        closePaymentModal();
+        localStorage.removeItem('pending_order_id');
+        stopPolling();
+    }
+}
+
+function closePaymentModal() {
+    const modal = document.getElementById('paymentModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+}
+
 function formatAmount(amount, currency) {
-    const num = typeof amount === 'number' ? amount : parseFloat(String(amount));
-    if (isNaN(num)) return String(amount); // fallback seguro
-    if (currency === 'USD') return `$${num.toFixed(2)}`;
-    if (currency === 'COP') return `${Math.round(num).toLocaleString('es-CO')} COP`;
+    const num = parseFloat(amount);
+    if (isNaN(num)) return String(amount);
     if (currency === 'VES') return `Bs. ${num.toFixed(2)}`;
+    if (currency === 'COP') return `$${Math.round(num).toLocaleString('es-CO')} COP`;
+    if (currency === 'USD') return `$${num.toFixed(2)} USD`;
     return num.toString();
 }
 
 function escapeHtml(text) {
+    if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML.replace(/\n/g, '<br>');
 }
 
 function copyToClipboard(text, btn) {
-    navigator.clipboard.writeText(text).then(() => {
+    navigator.clipboard.writeText(String(text)).then(() => {
         btn.classList.add('copied');
         btn.innerHTML = '✓';
         setTimeout(() => {
@@ -161,9 +206,8 @@ function copyToClipboard(text, btn) {
             btn.innerHTML = '📋';
         }, 2000);
     }).catch(() => {
-        // Fallback para navegadores antiguos
         const ta = document.createElement('textarea');
-        ta.value = text;
+        ta.value = String(text);
         document.body.appendChild(ta);
         ta.select();
         document.execCommand('copy');
@@ -175,26 +219,32 @@ function copyToClipboard(text, btn) {
 }
 
 function startPolling() {
-    stopPolling(); // Limpiar intervalos previos
+    stopPolling();
     pollInterval = setInterval(async () => {
         if (!currentOrderId) return;
         try {
             const res = await fetch(`/api/subscriptions/orders/${currentOrderId}/status`, { headers: authHeaders() });
+            if (!res.ok) return;
+            
             const data = await res.json();
             
             if (data.status === 'paid') {
                 stopPolling();
                 showSuccess();
-                setTimeout(() => location.reload(), 3000);
+                setTimeout(() => {
+                    closePaymentModal();
+                    location.reload();
+                }, 3000);
             } else if (data.status === 'expired') {
                 stopPolling();
                 alert('La orden expiró. Por favor intenta de nuevo.');
+                closePaymentModal();
                 location.reload();
             }
         } catch (err) {
-            console.error('Error polling:', err);
+            console.warn('Error polling:', err);
         }
-    }, 4000); // Cada 4 segundos
+    }, 4000);
 }
 
 function stopPolling() {
@@ -202,18 +252,19 @@ function stopPolling() {
     pollInterval = null;
 }
 
-function showWaitingScreen() {
-    document.getElementById('waitingScreen').style.display = 'block';
-    document.querySelector('.zinli-link-btn')?.style.setProperty('display', 'none');
-}
-
 function showManualVerifyForm() {
-    document.getElementById('manualVerifyForm').style.display = 'block';
+    const mvf = document.getElementById('manualVerifyForm');
+    if (mvf) mvf.style.display = 'block';
 }
 
 async function submitManualVerification() {
-    const amount = parseFloat(document.getElementById('reportedAmount').value);
-    const ref = document.getElementById('reportedRef').value.trim();
+    const amountInput = document.getElementById('reportedAmount');
+    const refInput = document.getElementById('reportedRef');
+    
+    if (!amountInput || !refInput) return;
+    
+    const amount = parseFloat(amountInput.value);
+    const ref = refInput.value.trim();
     
     if (!amount) { alert('Ingresa el monto que transferiste.'); return; }
     
@@ -228,7 +279,10 @@ async function submitManualVerification() {
         if (res.ok && data.success) {
             stopPolling();
             showSuccess();
-            setTimeout(() => location.reload(), 3000);
+            setTimeout(() => {
+                closePaymentModal();
+                location.reload();
+            }, 3000);
         } else {
             alert(data.error || 'No se pudo verificar. Revisa los datos.');
         }
@@ -238,26 +292,29 @@ async function submitManualVerification() {
 }
 
 function showSuccess() {
-    document.getElementById('waitingScreen').style.display = 'none';
-    document.getElementById('manualVerifyForm').style.display = 'none';
-    document.getElementById('successMessage').style.display = 'block';
+    const ws = document.getElementById('waitingScreen');
+    const mvf = document.getElementById('manualVerifyForm');
+    const sm = document.getElementById('successMessage');
+    
+    if (ws) ws.style.display = 'none';
+    if (mvf) mvf.style.display = 'none';
+    if (sm) sm.style.display = 'block';
+    
     localStorage.removeItem('pending_order_id');
 }
 
-// Inicialización cuando se carga la sección de suscripción
 document.addEventListener('DOMContentLoaded', () => {
     const section = document.getElementById('sectionSubscription');
     if (section && !section.classList.contains('hidden')) {
         loadPlans();
         
-        // Retomar orden pendiente si existe
         const pendingId = localStorage.getItem('pending_order_id');
         if (pendingId) {
             fetch(`/api/subscriptions/orders/${pendingId}`, { headers: authHeaders() })
-                .then(r => r.json())
+                .then(r => r.ok ? r.json() : Promise.reject())
                 .then(data => {
                     if (data.order && data.order.status === 'pending') {
-                        showPaymentDetails(data.order);
+                        openPaymentModal(data.order);
                     } else {
                         localStorage.removeItem('pending_order_id');
                     }

@@ -3,10 +3,17 @@ const router = express.Router();
 const pool = require('../db');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { createSubscriptionOrder, PLANS } = require('../lib/subscription');
+const { PLANS } = require('../lib/subscription');
 const { getCurrentRate } = require('../lib/exchangeRate');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'globalfoto_secret_key_2024';
+
+// === DATOS BANCARIOS REALES ===
+const BANK_DATA = {
+    nequi: { number: '3155129964', name: 'Gustavo Semprun' },
+    pagomovil: { bank: 'Banco Venezolano de Crédito', account: '20661645', phone: '04145866017', name: 'Gustavo Semprun' },
+    zinli: { link: 'https://recargas.zinli.com/6XgFfhiz45rArACBUYxWTo' }
+};
 
 function verifyToken(req, res, next) {
     const authHeader = req.headers.authorization;
@@ -29,33 +36,27 @@ router.get('/plans', verifyToken, async (req, res) => {
         
         const { currency } = userResult.rows[0];
         
-        // Determinar factor de conversión según moneda
         let rate = 1;
         if (currency === 'VES') {
-            const eurVesRate = await getCurrentRate('EUR_VES');
-            rate = eurVesRate; // USD → VES multiplicando por la tasa
+            rate = await getCurrentRate('EUR_VES');
         }
-        // COP y USD usan precios fijos definidos en PLANS, rate=1
         
         const plansOut = Object.keys(PLANS).map(key => {
             const baseUsd = PLANS[key].usd;
             let price;
             
             if (currency === 'VES') {
-                // Conversión dinámica USD → VES usando tasa actual
                 price = +(baseUsd * rate).toFixed(2);
             } else if (currency === 'COP') {
-                // Precio fijo en COP definido en el catálogo
                 price = PLANS[key].cop;
             } else {
-                // USD directo
                 price = baseUsd;
             }
             
             return {
                 key,
                 name: key.charAt(0).toUpperCase() + key.slice(1),
-                price,           // ← SIEMPRE hay un campo "price" numérico
+                price,
                 currency,
                 exchange_rate: currency === 'VES' ? rate : null
             };
@@ -83,7 +84,6 @@ router.post('/order', verifyToken, async (req, res) => {
         if (country === 'VE') channel = 'pagomovil';
         else if (country === 'CO') channel = 'nequi';
 
-        // Para VES, calcular monto base con tasa actual ANTES de crear orden
         let baseAmount;
         if (currency === 'VES') {
             const eurVesRate = await getCurrentRate('EUR_VES');
@@ -92,15 +92,14 @@ router.post('/order', verifyToken, async (req, res) => {
             baseAmount = PLANS[plan][currency.toLowerCase()] || PLANS[plan].usd;
         }
 
-        // Crear orden con monto base ya convertido
         const order = await createSubscriptionOrderWithBase(req.user.id, plan, { currency, channel }, baseAmount);
 
         res.status(201).json({
             message: 'Orden creada.',
             order: {
                 id: order.id,
-                expected_amount: Number(order.expected_amount), // forzar número
-                reference_code: sanitizeRefCode(order.reference_code), // limpiar símbolos
+                expected_amount: Number(order.expected_amount),
+                reference_code: sanitizeRefCode(order.reference_code),
                 currency: order.currency,
                 channel: order.channel,
                 expires_at: order.expires_at,
@@ -114,7 +113,6 @@ router.post('/order', verifyToken, async (req, res) => {
     }
 });
 
-// Función auxiliar para crear orden con base pre-calculada (VES dinámico)
 async function createSubscriptionOrderWithBase(userId, planKey, countryMeta, customBase) {
     const plan = PLANS[planKey];
     if (!plan) throw new Error('Plan inválido.');
@@ -124,7 +122,6 @@ async function createSubscriptionOrderWithBase(userId, planKey, countryMeta, cus
     
     if (isNaN(base) || base <= 0) throw new Error(`Precio base inválido: ${base}`);
 
-    // Buscar sufijos ocupados (últimos 30 min)
     const recentOrders = await pool.query(
         `SELECT expected_amount FROM subscription_orders 
          WHERE currency = $1 AND plan = $2 AND status = 'pending' 
@@ -133,11 +130,9 @@ async function createSubscriptionOrderWithBase(userId, planKey, countryMeta, cus
     );
     const taken = new Set(recentOrders.rows.map(r => parseFloat(r.expected_amount)));
 
-    // Generar monto único
     const gen = generateUniqueAmount(base, currency, taken);
     if (!gen) throw new Error('Sistema saturado de pagos pendientes. Intenta de nuevo en unos minutos.');
 
-    // Generar código limpio (solo letras/números)
     let refCode = generateCleanReferenceCode();
     let attempts = 0;
     while (attempts < 5) {
@@ -171,9 +166,9 @@ async function createSubscriptionOrderWithBase(userId, planKey, countryMeta, cus
 
 function generateUniqueAmount(base, currency, takenSuffixes) {
     let maxSuffix;
-    if (currency === 'USD') maxSuffix = 10;       // 0..9
-    else if (currency === 'COP') maxSuffix = 100; // 0..99
-    else maxSuffix = 100;                        // VES
+    if (currency === 'USD') maxSuffix = 10;
+    else if (currency === 'COP') maxSuffix = 100;
+    else maxSuffix = 100;
 
     for (let i = 0; i < maxSuffix; i++) {
         const candidate = +(parseFloat(base) + i * (currency === 'USD' ? 0.01 : 1)).toFixed(4);
@@ -184,32 +179,28 @@ function generateUniqueAmount(base, currency, takenSuffixes) {
     return null;
 }
 
-// Código SIN símbolos bancarios problemáticos (-*/#@_)
 function generateCleanReferenceCode() {
-    // Solo A-Z y 0-9, longitud 6 caracteres
     const chars = crypto.randomBytes(6).toString('hex').toUpperCase().slice(0, 6);
-    return `GF${chars}`; // Ej: GFABC123
+    return `GF${chars}`;
 }
 
-// Sanitizar cualquier código existente por seguridad
 function sanitizeRefCode(code) {
     return String(code || '').replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 10);
 }
 
-// --- CONCILIACIÓN AUTOMÁTICA (WEBHOOK CASERO) ---
+// --- CONCILIACIÓN AUTOMÁTICA (WEBHOOK) ---
 router.post('/webhook', async (req, res) => {
     const secret = req.headers['x-webhook-secret'];
     if (secret !== process.env.WEBHOOK_SECRET) return res.status(401).json({ error: 'Secret invalido' });
 
-    const { amount, currency, reference_text, sender_name } = req.body;
+    const { amount, currency, reference_text } = req.body;
     
     const cleanAmount = parseFloat(amount);
-    const cleanRef = String(reference_text || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, ''); // quitar todo excepto alfanuméricos
+    const cleanRef = String(reference_text || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
     try {
         let matchedOrder = null;
         
-        // ESTRATEGIA 1: Búsqueda por CÓDIGO EXACTO (sin símbolos)
         if (cleanRef.startsWith('GF') && cleanRef.length >= 6) {
             const foundByCode = await pool.query(
                 `UPDATE subscription_orders SET status='paid', paid_at=NOW(), webhook_raw=$1 
@@ -220,7 +211,6 @@ router.post('/webhook', async (req, res) => {
             if (foundByCode.rows.length > 0) matchedOrder = foundByCode.rows[0];
         }
 
-        // ESTRATEGIA 2: Monto único (fallback)
         if (!matchedOrder) {
             const foundByAmount = await pool.query(
                 `UPDATE subscription_orders SET status='paid', paid_at=NOW(), webhook_raw=$1 
@@ -264,10 +254,8 @@ router.post('/verify-manual', verifyToken, async (req, res) => {
 
         let isMatch = false;
 
-        // 1. ¿Coincide el código?
         if (cleanReportedRef.startsWith('GF') && cleanReportedRef === order.reference_code) isMatch = true;
 
-        // 2. ¿Coincide el monto exacto?
         if (!isMatch && Math.abs(cleanReportedAmount - parseFloat(order.expected_amount)) < 0.01) {
             isMatch = true;
         }
@@ -286,7 +274,6 @@ router.post('/verify-manual', verifyToken, async (req, res) => {
     }
 });
 
-// Helpers
 async function activateUserPlan(userId, planKey) {
     const expirationDays = 30;
     await pool.query(
@@ -296,7 +283,6 @@ async function activateUserPlan(userId, planKey) {
 }
 
 function getInstructions(channel, amount, currency, refCode) {
-    // Formatear monto SEGÚN moneda (Bs. sin $, COP con $, USD con $)
     let amtStr;
     if (currency === 'VES') amtStr = `Bs. ${amount.toFixed(2)}`;
     else if (currency === 'COP') amtStr = `$${Math.round(amount).toLocaleString('es-CO')} COP`;
@@ -305,14 +291,22 @@ function getInstructions(channel, amount, currency, refCode) {
     const codeStr = `TU CÓDIGO DE REFERENCIA ES: ${refCode}`;
     
     let intro = "";
-    if (channel === 'nequi') intro = `Transfiere EXACTAMENTE ${amtStr} a nuestro Nequi institucional.`;
-    else if (channel === 'pagomovil') intro = `Realiza Pago Móvil por ${amtStr}.`;
-    else intro = `Genera un cobro o transferencia en Zinli por ${amtStr}.`;
+    let bankInfo = "";
+    
+    if (channel === 'nequi') {
+        intro = `Transfiere EXACTAMENTE ${amtStr} a nuestro Nequi institucional.`;
+        bankInfo = `\n\n📱 NEQUI:\nNúmero: ${BANK_DATA.nequi.number}\nTitular: ${BANK_DATA.nequi.name}`;
+    } else if (channel === 'pagomovil') {
+        intro = `Realiza Pago Móvil por ${amtStr}.`;
+        bankInfo = `\n\n🏦 BANCO VENEZOLANO DE CRÉDITO:\nCuenta: ${BANK_DATA.pagomovil.account}\nTeléfono: ${BANK_DATA.pagomovil.phone}\nTitular: ${BANK_DATA.pagomovil.name}`;
+    } else {
+        intro = `Genera un cobro o transferencia en Zinli por ${amtStr}.`;
+        bankInfo = `\n\n💳 ZINLI:\nLink directo: ${BANK_DATA.zinli.link}`;
+    }
 
-    return `${intro}\n\n${codeStr}\n\nIMPORTANTE: Copia este código y pégalo en el campo "Concepto", "Mensaje" o "Referencia" al momento de pagar.\nSi olvidas el código, asegúrate de transferir el MONTO EXACTO (${amtStr}).`;
+    return `${intro}${bankInfo}\n\n${codeStr}\n\nIMPORTANTE: Copia este código y pégalo en el campo "Concepto", "Mensaje" o "Referencia" al momento de pagar.\nSi olvidas el código, asegúrate de transferir el MONTO EXACTO (${amtStr}).`;
 }
 
-// Endpoints de consulta de estado
 router.get('/orders/:id/status', verifyToken, async (req, res) => {
     try {
         const result = await pool.query(
@@ -335,7 +329,6 @@ router.get('/orders/:id', verifyToken, async (req, res) => {
         );
         if (result.rows.length === 0) return res.status(404).json({ error: 'Orden no encontrada.' });
         const order = result.rows[0];
-        // Normalizar números antes de devolver
         order.expected_amount = Number(order.expected_amount);
         order.base_amount = Number(order.base_amount);
         order.reference_code = sanitizeRefCode(order.reference_code);
