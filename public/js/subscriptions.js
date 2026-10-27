@@ -308,7 +308,7 @@ async function loadPlans() {
                 <ul class="plan-features">
                     ${getFeaturesForPlan(plan.key)}
                 </ul>
-                <button class="btn-primary" style="margin-top:18px;" onclick="selectPlan('${plan.key}')">Elegir este plan</button>
+                <button class="btn-primary" style="margin-top:18px;" onclick="selectPlan('${plan.key}')">${esActual ? 'Renovar plan' : 'Elegir este plan'}</button>
             </div>
             `;
         }).join('');
@@ -662,7 +662,7 @@ async function showPlanSelection() {
                 <ul class="plan-features">
                     ${getFeaturesForPlan(plan.key)}
                 </ul>
-                <button class="btn-primary" style="margin-top:18px;" onclick="selectPlan('${plan.key}')">Elegir este plan</button>
+                <button class="btn-primary" style="margin-top:18px;" onclick="selectPlan('${plan.key}')">${esActual ? 'Renovar plan' : 'Elegir este plan'}</button>
             </div>
             `;
         }).join('');
