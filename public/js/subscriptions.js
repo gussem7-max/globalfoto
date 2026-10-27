@@ -377,10 +377,10 @@ function openPaymentModal(order) {
         const originalStr = formatAmount(pro.precioOriginal, order.currency);
         prorationHtml = `
             <div style="background: rgba(16,185,129,0.10); border: 1px solid rgba(16,185,129,0.35); border-radius: 12px; padding: 14px 16px; margin-bottom: 18px; font-size: 13px; line-height: 1.7; color: #6ee7b7;">
-                <div style="font-weight: 700; margin-bottom: 6px; color: #a7f3d0;">🎁 Renovación anticipada con crédito</div>
-                <div>Pagabas <strong>${originalStr}</strong> por el plan completo.</div>
-                <div>Te descontamos <strong>${creditoStr}</strong> por los ${pro.diasRestantes} día${pro.diasRestantes !== 1 ? 's' : ''} restantes de tu plan actual.</div>
-                <div style="margin-top: 6px; color: var(--text-main);">Monto final a transferir: <strong style="color: #fff;">${amtStr}</strong></div>
+                <div style="font-weight: 700; margin-bottom: 6px; color: #a7f3d0;">🎁 Mejora de plan con crédito</div>
+                <div>El nuevo plan cuesta <strong>${originalStr}</strong>.</div>
+                <div>Te abonamos <strong>${creditoStr}</strong> por los ${pro.diasRestantes} día${pro.diasRestantes !== 1 ? 's' : ''} que te quedan de tu plan actual.</div>
+                <div style="margin-top: 6px; color: var(--text-main);">Solo pagas la diferencia: <strong style="color: #fff;">${amtStr}</strong></div>
             </div>
         `;
     } else if (pro && pro.tipo === 'renovacion' && pro.diasRestantes > 0) {
