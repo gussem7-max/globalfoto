@@ -68,30 +68,83 @@ router.get('/plans', verifyToken, async (req, res) => {
     }
 });
 
+// === RANKING DE PLANES (independiente de moneda/tasa) ===
+const PLAN_RANK = { basic: 1, pro: 2, studio: 3 };
+
+/**
+ * Decide el tipo de ajuste y el monto a cobrar según el cambio de plan.
+ * precioActual = 0 cuando viene de trial o no tiene plan (no se regala crédito).
+ */
+function calcularAjuste(planActualKey, planNuevoKey, diasRestantes, precioActual, precioNuevo) {
+    const rankActual = PLAN_RANK[planActualKey] || 0;
+    const rankNuevo = PLAN_RANK[planNuevoKey] || 0;
+
+    // Downgrade: no permitido en este ciclo (se aplica al expirar el plan caro)
+    if (rankNuevo < rankActual) {
+        return { tipo: 'downgrade', monto: 0, credito: 0, precioOriginal: precioNuevo, diasRestantes };
+    }
+
+    // Upgrade: descuento proporcional de los días no usados del plan viejo
+    if (rankNuevo > rankActual) {
+        const credito = (Math.max(0, diasRestantes) / 30) * precioActual;
+        const monto = Math.max(0, precioNuevo - credito);
+        return { tipo: 'upgrade', monto: +monto.toFixed(2), credito: +credito.toFixed(2), precioOriginal: +precioNuevo.toFixed(2), diasRestantes };
+    }
+
+    // Renovación del mismo plan: cobro completo (los días restantes se suman al final en activateUserPlan)
+    return { tipo: 'renovacion', monto: +precioNuevo.toFixed(2), credito: 0, precioOriginal: +precioNuevo.toFixed(2), diasRestantes };
+}
+
 // POST /api/subscriptions/order
 router.post('/order', verifyToken, async (req, res) => {
     try {
         const { plan } = req.body;
         if (!plan) return res.status(400).json({ error: 'Falta el plan.' });
+        if (!PLAN_RANK[plan]) return res.status(400).json({ error: 'Plan inválido.' });
 
-        const userResult = await pool.query('SELECT currency, country FROM users WHERE id = $1', [req.user.id]);
+        const userResult = await pool.query('SELECT currency, country, plan, plan_expires_at FROM users WHERE id = $1', [req.user.id]);
         if (userResult.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado.' });
-        
-        const { currency, country } = userResult.rows[0];
-        
+
+        const { currency, country, plan: planActual, plan_expires_at } = userResult.rows[0];
+
         let channel = 'zinli';
         if (country === 'VE') channel = 'pagomovil';
         else if (country === 'CO') channel = 'nequi';
 
-        let baseAmount;
-        if (currency === 'VES') {
-            const usdVesRate = await getCurrentRate('USD_VES');
-            baseAmount = +(PLANS[plan].usd * usdVesRate).toFixed(2);
-        } else {
-            baseAmount = PLANS[plan][currency.toLowerCase()] || PLANS[plan].usd;
+        // Tasa vigente (solo afecta VES)
+        const rate = currency === 'VES' ? await getCurrentRate('USD_VES') : 1;
+
+        // Precios en la moneda del usuario, con la MISMA tasa (crédito justo)
+        const precioNuevo = currency === 'VES'
+            ? +(PLANS[plan].usd * rate).toFixed(2)
+            : (PLANS[plan][currency.toLowerCase()] || PLANS[plan].usd);
+
+        // Precio del plan actual: 0 si es trial o no tiene (no se regala crédito del trial)
+        const precioActual = (planActual && planActual !== 'trial' && PLAN_RANK[planActual])
+            ? (currency === 'VES' ? +(PLANS[planActual].usd * rate).toFixed(2) : (PLANS[planActual][currency.toLowerCase()] || PLANS[planActual].usd))
+            : 0;
+
+        // Días restantes del plan actual
+        let diasRestantes = 0;
+        if (plan_expires_at) {
+            const diff = new Date(plan_expires_at).getTime() - Date.now();
+            diasRestantes = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
         }
 
-        const order = await createSubscriptionOrderWithBase(req.user.id, plan, { currency, channel }, baseAmount);
+        const ajuste = calcularAjuste(planActual, plan, diasRestantes, precioActual, precioNuevo);
+
+        // Bloquear downgrade con mensaje legible
+        if (ajuste.tipo === 'downgrade') {
+            const fechaExp = plan_expires_at
+                ? new Date(plan_expires_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+                : 'la fecha indicada';
+            return res.status(400).json({
+                error: `Tu plan ${(planActual || '').toUpperCase()} está activo hasta el ${fechaExp}. Para bajar de plan, espera a que expire tu periodo actual o renuévalo al mismo nivel. Si necesitas ayuda, escríbenos.`
+            });
+        }
+
+        // Crear orden con el monto YA prorrateado como base
+        const order = await createSubscriptionOrderWithBase(req.user.id, plan, { currency, channel }, ajuste.monto);
 
         res.status(201).json({
             message: 'Orden creada.',
@@ -102,6 +155,7 @@ router.post('/order', verifyToken, async (req, res) => {
                 currency: order.currency,
                 channel: order.channel,
                 expires_at: order.expires_at,
+                proration: ajuste, // <-- el frontend usa esto para mostrar el crédito
                 instructions: getInstructions(channel, Number(order.expected_amount), currency, sanitizeRefCode(order.reference_code))
             }
         });
@@ -335,10 +389,21 @@ router.post('/reactivate', verifyToken, async (req, res) => {
 });
 
 async function activateUserPlan(userId, planKey) {
-    const expirationDays = 30;
+    const cur = await pool.query('SELECT plan, plan_expires_at FROM users WHERE id = $1', [userId]);
+    const row = cur.rows[0];
+    const now = new Date();
+
+    // Renovación anticipada del MISMO plan: suma 30 días al final del periodo actual (no pierde días)
+    // Upgrade / plan nuevo / expirado: ciclo nuevo desde hoy
+    let baseDate = now;
+    if (row && row.plan === planKey && row.plan_expires_at && new Date(row.plan_expires_at) > now) {
+        baseDate = new Date(row.plan_expires_at);
+    }
+    const newExp = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+
     await pool.query(
-        `UPDATE users SET plan=$1, plan_expires_at=CURRENT_TIMESTAMP + INTERVAL '${expirationDays} days' WHERE id=$2`,
-        [planKey, userId]
+        `UPDATE users SET plan = $1, plan_started_at = CURRENT_TIMESTAMP, plan_expires_at = $2, auto_renew = TRUE WHERE id = $3`,
+        [planKey, newExp, userId]
     );
 }
 

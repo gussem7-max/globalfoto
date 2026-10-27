@@ -340,7 +340,7 @@ function getFeaturesForPlan(key) {
 async function selectPlan(planKey) {
     document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
     event.currentTarget.classList.add('selected');
-    
+
     try {
         const res = await fetch('/api/subscriptions/order', {
             method: 'POST',
@@ -348,32 +348,56 @@ async function selectPlan(planKey) {
             body: JSON.stringify({ plan: planKey })
         });
         const data = await res.json();
-        
+
         if (!res.ok) throw new Error(data.error || 'Error creando orden');
-        
+
         openPaymentModal(data.order);
     } catch (err) {
-        alert('Error: ' + err.message);
+        // El mensaje de downgrade del backend ya viene redactado para el usuario
+        alert(err.message);
     }
 }
 
 function openPaymentModal(order) {
     currentOrderId = order.id;
     localStorage.setItem('pending_order_id', order.id);
-    
+
     const modal = document.getElementById('paymentModal');
     if (!modal) return;
-    
+
     const amtStr = formatAmount(order.expected_amount, order.currency);
     const refCode = order.reference_code;
     const isZinli = order.channel === 'zinli';
-    
+    const pro = order.proration;
+
+    // Línea de crédito solo en upgrades con descuento real
+    let prorationHtml = '';
+    if (pro && pro.tipo === 'upgrade' && pro.credito > 0) {
+        const creditoStr = formatAmount(pro.credito, order.currency);
+        const originalStr = formatAmount(pro.precioOriginal, order.currency);
+        prorationHtml = `
+            <div style="background: rgba(16,185,129,0.10); border: 1px solid rgba(16,185,129,0.35); border-radius: 12px; padding: 14px 16px; margin-bottom: 18px; font-size: 13px; line-height: 1.7; color: #6ee7b7;">
+                <div style="font-weight: 700; margin-bottom: 6px; color: #a7f3d0;">🎁 Renovación anticipada con crédito</div>
+                <div>Pagabas <strong>${originalStr}</strong> por el plan completo.</div>
+                <div>Te descontamos <strong>${creditoStr}</strong> por los ${pro.diasRestantes} día${pro.diasRestantes !== 1 ? 's' : ''} restantes de tu plan actual.</div>
+                <div style="margin-top: 6px; color: var(--text-main);">Monto final a transferir: <strong style="color: #fff;">${amtStr}</strong></div>
+            </div>
+        `;
+    } else if (pro && pro.tipo === 'renovacion' && pro.diasRestantes > 0) {
+        prorationHtml = `
+            <div style="background: rgba(99,102,241,0.10); border: 1px solid rgba(99,102,241,0.35); border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; font-size: 13px; color: #a5b4fc;">
+                ♻️ Renovación: tus ${pro.diasRestantes} día${pro.diasRestantes !== 1 ? 's' : ''} restantes se sumarán al final del nuevo periodo. No los pierdes.
+            </div>
+        `;
+    }
+
     let html = `
         <div class="modal-header">
             <h3 class="modal-title">Completa tu pago</h3>
             <i class="fa-solid fa-xmark close-modal" onclick="confirmCancelPayment()"></i>
         </div>
         <div class="modal-body">
+            ${prorationHtml}
             <div class="payment-row">
                 <span class="payment-label">Monto exacto a transferir:</span>
                 <span class="payment-value">
@@ -381,7 +405,7 @@ function openPaymentModal(order) {
                     <button class="copy-btn" onclick="copyToClipboard('${order.expected_amount}', this)">📋</button>
                 </span>
             </div>
-            
+
             <div class="payment-row">
                 <span class="payment-label">Código de referencia (concepto):</span>
                 <span class="payment-value">
@@ -389,10 +413,10 @@ function openPaymentModal(order) {
                     <button class="copy-btn" onclick="copyToClipboard('${refCode}', this)">📋</button>
                 </span>
             </div>
-            
+
             <div class="instructions-box">${escapeHtml(order.instructions)}</div>
     `;
-    
+
     if (isZinli) {
         html += `
             <a href="${BANK_DATA_ZINLI_LINK}" target="_blank" class="zinli-link-btn">
@@ -400,7 +424,7 @@ function openPaymentModal(order) {
             </a>
         `;
     }
-    
+
     html += `
             <div class="waiting-screen" id="waitingScreen">
                 <div class="spinner-large"></div>
@@ -408,7 +432,7 @@ function openPaymentModal(order) {
                 <div class="waiting-subtext">No cierres esta ventana. Detectaremos el pago automáticamente.</div>
                 <button class="manual-verify-btn" onclick="showManualVerifyForm()">✅ Ya pagué (Verificar manualmente)</button>
             </div>
-            
+
             <div id="manualVerifyForm" style="display:none; margin-top: 20px; padding: 20px; background: rgba(2,6,23,0.6); border-radius: 12px;">
                 <h4 style="color: var(--text-main); margin-bottom: 12px;">Reporta tu pago</h4>
                 <div class="form-group">
@@ -425,7 +449,7 @@ function openPaymentModal(order) {
                 </div>
                 <button class="btn-primary" onclick="submitManualVerification()">Enviar verificación</button>
             </div>
-            
+
             <div class="success-message" id="successMessage" style="display:none;">
                 <i class="fa-solid fa-circle-check success-icon"></i>
                 <div class="success-title">¡Pago exitoso!</div>
@@ -433,11 +457,11 @@ function openPaymentModal(order) {
             </div>
         </div>
     `;
-    
+
     modal.querySelector('.modal-content').innerHTML = html;
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
-    
+
     startPolling();
 }
 
