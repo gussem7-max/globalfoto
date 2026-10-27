@@ -297,17 +297,21 @@ async function loadPlans() {
             return;
         }
 
-        const plansHtml = data.plans.map(plan => `
-            <div class="plan-card ${plan.key === 'pro' ? 'popular' : ''}" onclick="selectPlan('${plan.key}')">
+        const plansHtml = data.plans.map(plan => {
+            const esActual = (typeof currentUser !== 'undefined' && currentUser && currentUser.plan === plan.key);
+            return `
+            <div class="plan-card ${plan.key === 'pro' ? 'popular' : ''}">
                 <div class="plan-name">${plan.name}</div>
+                ${esActual ? `<div style="display:inline-block;background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.4);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:8px;">✓ Tu plan actual</div>` : ''}
                 <div class="plan-price">${formatPrice(plan.price, plan.currency)}</div>
                 <div class="plan-currency">/ mes</div>
                 <ul class="plan-features">
                     ${getFeaturesForPlan(plan.key)}
                 </ul>
-                <button class="btn-primary" style="margin-top:18px;" onclick="selectPlan('${plan.key}'); event.stopPropagation()">Elegir este plan</button>
+                <button class="btn-primary" style="margin-top:18px;" onclick="selectPlan('${plan.key}')">Elegir este plan</button>
             </div>
-        `).join('');
+            `;
+        }).join('');
         
         container.innerHTML = plansHtml;
     } catch (err) {
@@ -647,17 +651,21 @@ async function showPlanSelection() {
 
         // Renderizar planes en el contenedor temporal
         const plansContainer = document.getElementById('planCardsTemp');
-        plansContainer.innerHTML = data.plans.map(plan => `
-            <div class="plan-card ${plan.key === 'pro' ? 'popular' : ''}" onclick="selectPlan('${plan.key}')">
+        plansContainer.innerHTML = data.plans.map(plan => {
+            const esActual = (typeof currentUser !== 'undefined' && currentUser && currentUser.plan === plan.key);
+            return `
+            <div class="plan-card ${plan.key === 'pro' ? 'popular' : ''}">
                 <div class="plan-name">${plan.name}</div>
+                ${esActual ? `<div style="display:inline-block;background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.4);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:8px;">✓ Tu plan actual</div>` : ''}
                 <div class="plan-price">${formatPrice(plan.price, plan.currency)}</div>
                 <div class="plan-currency">/ mes</div>
                 <ul class="plan-features">
                     ${getFeaturesForPlan(plan.key)}
                 </ul>
-                <button class="btn-primary" style="margin-top:18px;" onclick="selectPlan('${plan.key}'); event.stopPropagation()">Elegir este plan</button>
+                <button class="btn-primary" style="margin-top:18px;" onclick="selectPlan('${plan.key}')">Elegir este plan</button>
             </div>
-        `).join('');
+            `;
+        }).join('');
 
         // Guardar el HTML del dashboard para poder restaurarlo
         window._savedDashboardHtml = currentHtml;

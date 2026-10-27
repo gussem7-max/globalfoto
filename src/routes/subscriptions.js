@@ -111,20 +111,17 @@ router.post('/order', verifyToken, async (req, res) => {
         if (country === 'VE') channel = 'pagomovil';
         else if (country === 'CO') channel = 'nequi';
 
-        // Tasa vigente (solo afecta VES)
-        const usdVesRate = await getCurrentRate('VES_RATE');
+        // Tasa vigente (solo afecta VES). DECLARADA AQUÍ arriba, por eso ya no da "rate is not defined".
+        const rate = currency === 'VES' ? await getCurrentRate('VES_RATE') : 1;
 
-        // Precios en la moneda del usuario, con la MISMA tasa (crédito justo)
         const precioNuevo = currency === 'VES'
             ? +(PLANS[plan].usd * rate).toFixed(2)
             : (PLANS[plan][currency.toLowerCase()] || PLANS[plan].usd);
 
-        // Precio del plan actual: 0 si es trial o no tiene (no se regala crédito del trial)
         const precioActual = (planActual && planActual !== 'trial' && PLAN_RANK[planActual])
             ? (currency === 'VES' ? +(PLANS[planActual].usd * rate).toFixed(2) : (PLANS[planActual][currency.toLowerCase()] || PLANS[planActual].usd))
             : 0;
 
-        // Días restantes del plan actual
         let diasRestantes = 0;
         if (plan_expires_at) {
             const diff = new Date(plan_expires_at).getTime() - Date.now();
@@ -133,7 +130,6 @@ router.post('/order', verifyToken, async (req, res) => {
 
         const ajuste = calcularAjuste(planActual, plan, diasRestantes, precioActual, precioNuevo);
 
-        // Bloquear downgrade con mensaje legible
         if (ajuste.tipo === 'downgrade') {
             const fechaExp = plan_expires_at
                 ? new Date(plan_expires_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -143,7 +139,6 @@ router.post('/order', verifyToken, async (req, res) => {
             });
         }
 
-        // Crear orden con el monto YA prorrateado como base
         const order = await createSubscriptionOrderWithBase(req.user.id, plan, { currency, channel }, ajuste.monto);
 
         res.status(201).json({
@@ -155,7 +150,7 @@ router.post('/order', verifyToken, async (req, res) => {
                 currency: order.currency,
                 channel: order.channel,
                 expires_at: order.expires_at,
-                proration: ajuste, // <-- el frontend usa esto para mostrar el crédito
+                proration: ajuste,
                 instructions: getInstructions(channel, Number(order.expected_amount), currency, sanitizeRefCode(order.reference_code))
             }
         });
