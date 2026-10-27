@@ -156,13 +156,25 @@ process.on('SIGTERM', () => {
   });
 });
 
-// Al final de index.js, después de app.listen(...)
-setInterval(async () => {
+// === CRON DE TASA USD→VES: refresco inmediato al arrancar + cada hora ===
+(async function initRateUpdater() {
+    const { updateExchangeRate } = require('./src/lib/exchangeRate');
+
+    // 1) Corre YA al levantar el servidor (cubre el "despertar" del dyno en free tier)
     try {
-        const { updateExchangeRate } = require('./src/lib/exchangeRate');
         await updateExchangeRate();
-        console.log('⏰ Tasa EUR→VES refrescada automáticamente');
+        console.log('✅ Tasa USD→VES refrescada al arrancar el servidor');
     } catch (err) {
-        console.error('⚠️ Error refrescando tasa:', err.message);
+        console.error('⚠️ No se pudo refrescar la tasa al arrancar:', err.message);
     }
-}, 60 * 60 * 1000); // Cada 1 hora
+
+    // 2) Y luego cada hora, por si el proceso vive mucho rato despierto
+    setInterval(async () => {
+        try {
+            await updateExchangeRate();
+            console.log('⏰ Tasa USD→VES refrescada automáticamente');
+        } catch (err) {
+            console.error('⚠️ Error refrescando tasa:', err.message);
+        }
+    }, 60 * 60 * 1000);
+})();
