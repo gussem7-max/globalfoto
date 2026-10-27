@@ -55,7 +55,7 @@ function showActiveSubscriptionDashboard(user, daysLeft) {
             <div class="alert alert-warning" style="margin-bottom: 20px;">
                 <i class="fa-solid fa-triangle-exclamation"></i>
                 Tu plan expira en <strong>${daysLeft} día${daysLeft !== 1 ? 's' : ''}</strong>. 
-                <button class="btn-secondary" style="margin-left: 10px;" onclick="loadPlans()">Renovar Ahora</button>
+                <button class="btn-secondary" style="margin-left: 10px;" onclick="showPlanSelection()">Renovar Ahora</button>
             </div>
         `;
     }
@@ -104,7 +104,7 @@ function showActiveSubscriptionDashboard(user, daysLeft) {
         </div>
 
         <div style="margin-top: 30px; text-align: center;">
-            <button class="btn-secondary" onclick="loadPlans()" style="width: auto; padding: 12px 24px;">
+            <button class="btn-secondary" onclick="showPlanSelection()" style="width: auto; padding: 12px 24px;">
                 <i class="fa-solid fa-arrow-up"></i> Cambiar o Mejorar Plan
             </button>
         </div>
@@ -424,6 +424,74 @@ function showSuccess() {
     if (sm) sm.style.display = 'block';
     
     localStorage.removeItem('pending_order_id');
+}
+
+// === MOSTRAR SELECCIÓN DE PLANES (desde el dashboard activo) ===
+async function showPlanSelection() {
+    const container = document.getElementById('subscriptionContent');
+    if (!container) return;
+
+    // Guardar estado actual por si quiere volver atrás
+    const currentHtml = container.innerHTML;
+    
+    // Mostrar loading
+    container.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-muted);">Cargando planes...</div>';
+
+    try {
+        const res = await fetch('/api/subscriptions/plans', { headers: authHeaders() });
+        if (!res.ok) throw new Error('Error cargando planes');
+        const data = await res.json();
+
+        let html = `
+            <div class="header">
+                <div>
+                    <h1>Elige tu Plan</h1>
+                    <p class="header-sub">Selecciona un plan para renovar o mejorar tu suscripción actual.</p>
+                </div>
+                <button class="btn-secondary" onclick="restoreDashboard()" style="width:auto; padding:8px 16px;">
+                    <i class="fa-solid fa-arrow-left"></i> Volver
+                </button>
+            </div>
+            <div class="subscription-container">
+                <div class="plan-cards" id="planCardsTemp"></div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+
+        // Renderizar planes en el contenedor temporal
+        const plansContainer = document.getElementById('planCardsTemp');
+        plansContainer.innerHTML = data.plans.map(plan => `
+            <div class="plan-card ${plan.key === 'pro' ? 'popular' : ''}" onclick="selectPlan('${plan.key}')">
+                <div class="plan-name">${plan.name}</div>
+                <div class="plan-price">${formatPrice(plan.price, plan.currency)}</div>
+                <div class="plan-currency">${plan.currency} / mes</div>
+                <ul class="plan-features">
+                    ${getFeaturesForPlan(plan.key)}
+                </ul>
+            </div>
+        `).join('');
+
+        // Guardar el HTML del dashboard para poder restaurarlo
+        window._savedDashboardHtml = currentHtml;
+
+    } catch (err) {
+        console.error('Error:', err);
+        container.innerHTML = `<div class="alert alert-error">Error: ${err.message}</div>`;
+        setTimeout(restoreDashboard, 3000);
+    }
+}
+
+function restoreDashboard() {
+    const container = document.getElementById('subscriptionContent');
+    if (container && window._savedDashboardHtml) {
+        container.innerHTML = window._savedDashboardHtml;
+        // Re-ejecutar checkSubscriptionStatus para actualizar días restantes si cambiaron
+        checkSubscriptionStatus(); 
+    } else {
+        // Fallback: recargar la sección completa
+        showSection('subscription');
+    }
 }
 
 // === INICIALIZACIÓN MEJORADA ===
