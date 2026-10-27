@@ -8,26 +8,27 @@ async function checkSubscriptionStatus() {
     if (!container) return;
 
     try {
-        // Obtener datos del usuario actual (incluye plan y fecha de expiración)
         const res = await fetch('/api/auth/me', { headers: authHeaders() });
         if (!res.ok) throw new Error('No se pudo obtener perfil');
         
         const data = await res.json();
         const user = data.user;
 
-        // Si tiene plan activo y no ha expirado
+        // Verificar si tiene un plan pagado activo (no trial) Y no ha expirado
+        // auto_renew = false NO significa que el plan esté inactivo, solo que no se renovará
         if (user.plan && user.plan !== 'trial' && user.plan_expires_at) {
             const expiresAt = new Date(user.plan_expires_at);
             const now = new Date();
             const daysLeft = Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24));
 
+            // Si aún quedan días (> 0), mostrar dashboard aunque auto_renew sea false
             if (daysLeft > 0) {
                 showActiveSubscriptionDashboard(user, daysLeft);
                 return; // Salir temprano, no mostrar planes de venta
             }
         }
 
-        // Si no tiene plan o expiró, mostrar planes normales
+        // Si no tiene plan, es trial, o ya expiró (daysLeft <= 0), mostrar planes normales
         loadPlans();
     } catch (err) {
         console.error('Error verificando suscripción:', err);
