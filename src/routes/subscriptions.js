@@ -14,6 +14,93 @@ const BANK_DATA = {
     zinli: { link: 'https://recargas.zinli.com/6XgFfhiz45rArACBUYxWTo' }
 };
 
+// === CORREO DE CONFIRMACIÓN DE PAGO (Resend, mismo patrón que auth.js) ===
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'notificaciones@globalfotoapp.com';
+
+const CHANNEL_LABELS = { nequi: 'Nequi', pagomovil: 'Pago Móvil', zinli: 'Zinli' };
+
+function formatMoney(amount, currency) {
+    const num = parseFloat(amount) || 0;
+    if (currency === 'VES') return `Bs. ${num.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (currency === 'COP') return `$${Math.round(num).toLocaleString('es-CO')} COP`;
+    return `$${num.toFixed(2)} USD`;
+}
+
+// Se llama en background (fire-and-forget) desde webhook y verify-manual.
+// Nunca lanza hacia afuera: todo está dentro de try/catch para no romper la conciliación.
+async function sendPaymentConfirmationEmail(userId, planKey, paymentInfo) {
+    try {
+        const u = await pool.query('SELECT name, email, plan_expires_at FROM users WHERE id = $1', [userId]);
+        if (u.rows.length === 0 || !u.rows[0].email) return;
+        const user = u.rows[0];
+
+        // Todo se calcula FUERA del template: dentro solo van ${variableSimple}, a prueba de pegado.
+        const firstName = (user.name || '').split(' ')[0];
+        const planLabel = (planKey || '').toUpperCase();
+        const moneyStr = formatMoney(paymentInfo.amount, paymentInfo.currency);
+        const channelLabel = CHANNEL_LABELS[paymentInfo.channel] || 'transferencia';
+        const reference = paymentInfo.reference || '—';
+        const expiryStr = user.plan_expires_at
+            ? new Date(user.plan_expires_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+            : 'la fecha indicada';
+        const panelUrl = process.env.FRONTEND_URL || 'https://www.globalfotoapp.com';
+
+        const html = `
+            <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-size: 26px;">📸 GlobalFoto</h1>
+                    <p style="color: #94a3b8; margin-top: 8px; font-size: 14px;">Pago confirmado</p>
+                </div>
+                <div style="background: white; padding: 30px; border-radius: 0 0 16px 16px; border: 1px solid #e2e8f0; border-top: none;">
+                    <div style="text-align: center; margin-bottom: 24px;">
+                        <div style="font-size: 48px; line-height: 1;">✅</div>
+                        <h2 style="color: #0f172a; margin: 12px 0 6px 0; font-size: 22px;">¡Pago recibido, ${firstName}!</h2>
+                        <p style="color: #475569; font-size: 15px; margin: 0;">Tu plan <strong>${planLabel}</strong> ya está activo.</p>
+                    </div>
+                    <div style="background: #f8fafc; padding: 20px; border-radius: 10px; margin-bottom: 24px; border-left: 4px solid #059669;">
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                            <span style="color: #64748b; font-size: 13px;">Plan</span>
+                            <span style="color: #0f172a; font-size: 14px; font-weight: 700;">${planLabel}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                            <span style="color: #64748b; font-size: 13px;">Monto pagado</span>
+                            <span style="color: #0f172a; font-size: 14px; font-weight: 700;">${moneyStr}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                            <span style="color: #64748b; font-size: 13px;">Pagado mediante</span>
+                            <span style="color: #0f172a; font-size: 14px; font-weight: 700;">${channelLabel}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                            <span style="color: #64748b; font-size: 13px;">Referencia</span>
+                            <span style="color: #0f172a; font-size: 14px; font-weight: 700; font-family: monospace;">${reference}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+                            <span style="color: #64748b; font-size: 13px;">Válido hasta</span>
+                            <span style="color: #0f172a; font-size: 14px; font-weight: 700;">${expiryStr}</span>
+                        </div>
+                    </div>
+                    <p style="color: #64748b; font-size: 13px; line-height: 1.6; margin-bottom: 20px;">Guarda este correo como comprobante de tu pago. Si tienes algún inconveniente, responde a este mensaje y te ayudamos.</p>
+                    <div style="text-align: center;">
+                        <a href="${panelUrl}" style="background: #059669; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; display: inline-block;">Ir a mi panel</a>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        await resend.emails.send({
+            from: FROM_EMAIL,
+            to: user.email,
+            subject: `✅ Pago confirmado · Plan ${planLabel} activado`,
+            html
+        });
+        console.log(`✅ [EMAIL] Confirmación de pago enviada a ${user.email} (plan ${planKey})`);
+    } catch (err) {
+        console.error('⚠️ [EMAIL] No se pudo enviar confirmación de pago:', err.message);
+    }
+}
+
 function verifyToken(req, res, next) {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'No autorizado.' });
@@ -273,6 +360,12 @@ router.post('/webhook', async (req, res) => {
         if (matchedOrder) {
             await activateUserPlan(matchedOrder.user_id, matchedOrder.plan);
             console.log(`✅ Pago confirmado automáticamente para orden ${matchedOrder.id}`);
+            sendPaymentConfirmationEmail(matchedOrder.user_id, matchedOrder.plan, {
+                amount: Number(matchedOrder.expected_amount),
+                currency: matchedOrder.currency,
+                reference: matchedOrder.reference_code,
+                channel: matchedOrder.channel
+            }).catch(err => console.error('⚠️ [EMAIL] fallo en background (webhook):', err.message));
             return res.json({ success: true, order_id: matchedOrder.id });
         } else {
             console.warn(`⚠️ Notificación recibida pero sin coincidencia clara: ${amount} ${currency} Ref:${reference_text}`);
@@ -315,6 +408,12 @@ router.post('/verify-manual', verifyToken, async (req, res) => {
                 [`Manual: ${reported_reference} | TxRef: ${cleanTxRef}`, JSON.stringify({ transaction_reference: cleanTxRef }), order.id]
             );
             await activateUserPlan(order.user_id, order.plan);
+            sendPaymentConfirmationEmail(order.user_id, order.plan, {
+                amount: Number(order.expected_amount),
+                currency: order.currency,
+                reference: order.reference_code,
+                channel: order.channel
+            }).catch(err => console.error('⚠️ [EMAIL] fallo en background (manual):', err.message));
             return res.json({ success: true, message: 'Pago verificado manualmente. ¡Disfruta tu plan!' });
         } else {
             return res.status(400).json({ error: 'Datos no coinciden con ninguna orden activa. Revisa el monto y la referencia.' });
