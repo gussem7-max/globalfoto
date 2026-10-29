@@ -101,6 +101,58 @@ async function sendPaymentConfirmationEmail(userId, planKey, paymentInfo) {
     }
 }
 
+// Avisa a los admins de un reporte manual (fire-and-forget, no rompe la conciliación)
+async function notifyAdminsOfReport(order, reporterData) {
+    try {
+        const admins = await pool.query("SELECT email FROM users WHERE role = 'admin' AND email IS NOT NULL");
+        if (admins.rows.length === 0) return;
+
+        // Todo calculado FUERA del template: a prueba de pegado.
+        const planLabel = (order.plan || '').toUpperCase();
+        const moneyStr = formatMoney(order.expected_amount, order.currency);
+        const channelLabel = CHANNEL_LABELS[order.channel] || 'transferencia';
+        const ref = order.reference_code || '—';
+        const txRef = reporterData.transaction_reference || '—';
+        const reportedRef = reporterData.reported_reference || '—';
+        const reportedAmount = (reporterData.reported_amount != null && reporterData.reported_amount !== '') ? reporterData.reported_amount : '—';
+        const panelUrl = process.env.FRONTEND_URL || 'https://www.globalfotoapp.com';
+        const subject = `🔔 Reporte de pago pendiente de revisión · Plan ${planLabel}`;
+
+        const html = `
+            <div style="font-family:'Inter',sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+                <div style="background:#0f172a;padding:24px;border-radius:12px 12px 0 0;text-align:center;">
+                    <h1 style="color:#fff;margin:0;font-size:20px;">🔔 Nuevo reporte de pago</h1>
+                    <p style="color:#94a3b8;margin:6px 0 0;font-size:13px;">Un fotógrafo reportó un pago manualmente. Requiere tu revisión.</p>
+                </div>
+                <div style="background:#fff;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;">
+                    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                        <tr><td style="padding:8px 0;color:#64748b;">Orden</td><td style="padding:8px 0;text-align:right;font-weight:700;color:#0f172a;">#${order.id}</td></tr>
+                        <tr><td style="padding:8px 0;color:#64748b;">Plan</td><td style="padding:8px 0;text-align:right;font-weight:700;color:#0f172a;">${planLabel}</td></tr>
+                        <tr><td style="padding:8px 0;color:#64748b;">Monto esperado</td><td style="padding:8px 0;text-align:right;font-weight:700;color:#0f172a;">${moneyStr}</td></tr>
+                        <tr><td style="padding:8px 0;color:#64748b;">Canal</td><td style="padding:8px 0;text-align:right;color:#0f172a;">${channelLabel}</td></tr>
+                        <tr><td style="padding:8px 0;color:#64748b;">Código GF</td><td style="padding:8px 0;text-align:right;font-family:monospace;color:#0f172a;">${ref}</td></tr>
+                        <tr><td style="padding:8px 0;color:#64748b;">Monto reportado</td><td style="padding:8px 0;text-align:right;color:#0f172a;">${reportedAmount}</td></tr>
+                        <tr><td style="padding:8px 0;color:#64748b;">Ref usada</td><td style="padding:8px 0;text-align:right;font-family:monospace;color:#0f172a;">${reportedRef}</td></tr>
+                        <tr><td style="padding:8px 0;color:#64748b;">Nº transacción</td><td style="padding:8px 0;text-align:right;font-family:monospace;color:#0f172a;">${txRef}</td></tr>
+                    </table>
+                    <p style="color:#64748b;font-size:13px;line-height:1.6;margin:18px 0 0;">Verifica el comprobante bancario. Si el pago es real, apruébalo desde el panel; el webhook también lo activará solo si el dinero entra por MacroDroid.</p>
+                    <div style="text-align:center;margin-top:18px;">
+                        <a href="${panelUrl}" style="background:#6366f1;color:#fff;padding:12px 28px;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;display:inline-block;">Revisar en el panel</a>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        for (const a of admins.rows) {
+            resend.emails.send({ from: FROM_EMAIL, to: a.email, subject, html })
+                .catch(e => console.error('⚠️ [EMAIL admin] fallo:', e.message));
+        }
+        console.log(`🔔 [REPORT] Orden ${order.id} reportada manualmente; notificamos a ${admins.rows.length} admin(es).`);
+    } catch (err) {
+        console.error('⚠️ [REPORT] No se pudo notificar admins:', err.message);
+    }
+}
+
 function verifyToken(req, res, next) {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'No autorizado.' });
@@ -259,7 +311,7 @@ async function createSubscriptionOrderWithBase(userId, planKey, countryMeta, cus
 
     const recentOrders = await pool.query(
         `SELECT expected_amount FROM subscription_orders 
-         WHERE currency = $1 AND plan = $2 AND status = 'pending' 
+         WHERE currency = $1 AND plan = $2 AND status IN ('pending','reported') 
            AND created_at > NOW() - INTERVAL '30 minutes'`,
         [currency, planKey]
     );
@@ -339,7 +391,7 @@ router.post('/webhook', async (req, res) => {
         if (cleanRef.startsWith('GF') && cleanRef.length >= 6) {
             const foundByCode = await pool.query(
                 `UPDATE subscription_orders SET status='paid', paid_at=NOW(), webhook_raw=$1 
-                 WHERE reference_code=$2 AND expected_amount=$3 AND currency=$4 AND status='pending' 
+                 WHERE reference_code=$2 AND expected_amount=$3 AND currency=$4 AND status IN ('pending','reported')  
                  RETURNING *`,
                 [JSON.stringify(req.body), cleanRef, cleanAmount, currency]
             );
@@ -349,7 +401,7 @@ router.post('/webhook', async (req, res) => {
         if (!matchedOrder) {
             const foundByAmount = await pool.query(
                 `UPDATE subscription_orders SET status='paid', paid_at=NOW(), webhook_raw=$1 
-                 WHERE expected_amount=$2 AND currency=$3 AND status='pending' 
+                 WHERE expected_amount=$2 AND currency=$3 AND status IN ('pending','reported') 
                    AND created_at > NOW() - INTERVAL '30 minutes'
                  LIMIT 1 RETURNING *`,
                 [JSON.stringify(req.body), cleanAmount, currency]
@@ -381,46 +433,42 @@ router.post('/webhook', async (req, res) => {
 // --- VALIDACIÓN MANUAL ---
 router.post('/verify-manual', verifyToken, async (req, res) => {
     const { order_id, reported_amount, reported_reference, transaction_reference } = req.body;
-    
     try {
+        // El reporte manual YA NO activa el plan: solo marca la orden 'reported' y avisa al admin.
+        // La activación automática la decide el webhook (dinero real) o el admin a mano.
         const orderCheck = await pool.query(
-            `SELECT * FROM subscription_orders WHERE id=$1 AND user_id=$2 AND status='pending'`,
+            `SELECT * FROM subscription_orders WHERE id=$1 AND user_id=$2 AND status IN ('pending','reported')`,
             [order_id, req.user.id]
         );
-        if (orderCheck.rows.length === 0) return res.status(404).json({ error: 'Orden no encontrada o ya procesada.' });
-        
+        if (orderCheck.rows.length === 0) return res.status(404).json({ error: 'No encontramos una orden tuya pendiente con esos datos.' });
+
         const order = orderCheck.rows[0];
         const cleanReportedAmount = parseFloat(reported_amount);
         const cleanReportedRef = String(reported_reference || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
         const cleanTxRef = String(transaction_reference || '').trim();
 
         let isMatch = false;
-
         if (cleanReportedRef.startsWith('GF') && cleanReportedRef === order.reference_code) isMatch = true;
+        if (!isMatch && !isNaN(cleanReportedAmount) && Math.abs(cleanReportedAmount - parseFloat(order.expected_amount)) < 0.01) isMatch = true;
 
-        if (!isMatch && Math.abs(cleanReportedAmount - parseFloat(order.expected_amount)) < 0.01) {
-            isMatch = true;
+        if (!isMatch) {
+            return res.status(400).json({ error: 'Los datos reportados no coinciden con tu orden. Revisa el monto exacto o el código de referencia.' });
         }
 
-        if (isMatch) {
-            await pool.query(
-                `UPDATE subscription_orders SET status='paid', paid_at=NOW(), reference_note=$1, webhook_raw=$2 WHERE id=$3`, 
-                [`Manual: ${reported_reference} | TxRef: ${cleanTxRef}`, JSON.stringify({ transaction_reference: cleanTxRef }), order.id]
-            );
-            await activateUserPlan(order.user_id, order.plan);
-            sendPaymentConfirmationEmail(order.user_id, order.plan, {
-                amount: Number(order.expected_amount),
-                currency: order.currency,
-                reference: order.reference_code,
-                channel: order.channel
-            }).catch(err => console.error('⚠️ [EMAIL] fallo en background (manual):', err.message));
-            return res.json({ success: true, message: 'Pago verificado manualmente. ¡Disfruta tu plan!' });
-        } else {
-            return res.status(400).json({ error: 'Datos no coinciden con ninguna orden activa. Revisa el monto y la referencia.' });
-        }
+        await pool.query(
+            `UPDATE subscription_orders SET status='reported', reference_note=$1, webhook_raw=$2 WHERE id=$3`,
+            [`Reporte manual | TxRef: ${cleanTxRef} | Ref usada: ${reported_reference || '—'} | Monto reportado: ${reported_amount || '—'}`,
+             JSON.stringify({ transaction_reference: cleanTxRef, reported_amount, reported_reference }),
+             order.id]
+        );
 
+        notifyAdminsOfReport(order, { transaction_reference: cleanTxRef, reported_amount, reported_reference })
+            .catch(err => console.error('⚠️ [REPORT] fallo notificando admins:', err.message));
+
+        // reported:true le dice al frontend que muestre "reporte recibido", NO "plan activado".
+        return res.json({ success: true, reported: true, message: 'Reporte recibido. Verificaremos tu pago con el comprobante y te avisaremos por correo en cuanto el plan esté activo.' });
     } catch (err) {
-        console.error('Error en verificación manual:', err);
+        console.error('Error en reporte manual:', err);
         res.status(500).json({ error: 'Error interno.' });
     }
 });
