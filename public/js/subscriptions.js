@@ -566,36 +566,56 @@ async function submitManualVerification() {
     const amountInput = document.getElementById('reportedAmount');
     const refInput = document.getElementById('reportedRef');
     const txRefInput = document.getElementById('transactionRef');
-    
+
     if (!amountInput || !refInput || !txRefInput) return;
-    
+
     const amount = parseFloat(amountInput.value);
     const ref = refInput.value.trim();
     const txRef = txRefInput.value.trim();
-    
+
     if (!amount) { alert('Ingresa el monto que transferiste.'); return; }
     if (!txRef) { alert('Ingresa el número de referencia de la transacción bancaria.'); return; }
-    
+
     try {
         const res = await fetch('/api/subscriptions/verify-manual', {
             method: 'POST',
             headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                order_id: currentOrderId, 
-                reported_amount: amount, 
+            body: JSON.stringify({
+                order_id: currentOrderId,
+                reported_amount: amount,
                 reported_reference: ref,
                 transaction_reference: txRef
             })
         });
         const data = await res.json();
-        
+
         if (res.ok && data.success) {
             stopPolling();
-            showSuccess();
-            setTimeout(() => {
-                closePaymentModal();
-                location.reload(); // Recargar para mostrar dashboard de suscripción activa
-            }, 3000);
+            localStorage.removeItem('pending_order_id');
+
+            // El backend nuevo devuelve reported:true: NO activó el plan, solo registró el reporte.
+            if (data.reported) {
+                // Ocultamos lo anterior (waiting + form) para que no se vea detrás del cartel.
+                const ws = document.getElementById('waitingScreen'); if (ws) ws.style.display = 'none';
+                const mf = document.getElementById('manualVerifyForm'); if (mf) mf.style.display = 'none';
+
+                const successEl = document.getElementById('successMessage');
+                if (successEl) {
+                    const icon = successEl.querySelector('.success-icon');
+                    if (icon) icon.className = 'fa-solid fa-envelope-circle-check success-icon';
+                    const title = successEl.querySelector('.success-title');
+                    if (title) title.textContent = '📥 Reporte recibido';
+                    const sub = successEl.querySelector('.success-subtitle');
+                    if (sub) sub.textContent = data.message || 'Recibimos tu reporte. Lo revisaremos y te avisaremos por correo cuando el plan esté activo.';
+                    successEl.style.display = ''; // revierte al CSS de .success-message (no adivinamos flex/block)
+                }
+                // CERRAMOS el modal SIN recargar: el plan no cambió, el usuario sigue en prueba/vitrina.
+                setTimeout(() => { closePaymentModal(); }, 3500);
+            } else {
+                // Legacy: si algún día verify-manual volviera a activar directo, conserva el comportamiento viejo.
+                showSuccess();
+                setTimeout(() => { closePaymentModal(); location.reload(); }, 3000);
+            }
         } else {
             alert(data.error || 'No se pudo verificar. Revisa los datos.');
         }
