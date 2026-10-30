@@ -6,6 +6,7 @@ const multer = require('multer');
 const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const sharp = require('sharp');
 const crypto = require('crypto');
+const { getUserPlanLimits } = require('../lib/subscription');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -17,7 +18,7 @@ const s3Client = new S3Client({
     }
 });
 
-// SUBIR FOTOS (con ACL pública)
+// SUBIR FOTOS (con ACL pública + enforcement de límites de plan)
 router.post('/upload', verificarToken, upload.array('photos', 50), async (req, res) => {
     try {
         const { event_id } = req.body;
@@ -33,6 +34,26 @@ router.post('/upload', verificarToken, upload.array('photos', 50), async (req, r
             [event_id, photographer_id]
         );
         if (eventCheck.rows.length === 0) return res.status(404).json({ error: 'Evento no encontrado.' });
+
+        // === ENFORCEMENT DE LÍMITES (fotos): cuenta TODAS las fotos del fotógrafo, antes de subir a S3 ===
+        const limitInfo = await getUserPlanLimits(photographer_id);
+        if (limitInfo.maxFotos !== null) {
+            const cnt = await pool.query(
+                'SELECT COUNT(*)::int AS n FROM photos p JOIN events e ON p.event_id = e.id WHERE e.photographer_id = $1',
+                [photographer_id]
+            );
+            const current = cnt.rows[0].n;
+            const remaining = limitInfo.maxFotos - current;
+
+            if (remaining <= 0) {
+                const msg = 'Tu plan ' + limitInfo.planLabel + ' permite hasta ' + limitInfo.maxFotos + ' fotos y ya llegaste al límite (' + current + ' subidas). Elimina fotos o mejora tu plan para subir más.';
+                return res.status(403).json({ error: msg });
+            }
+            if (files.length > remaining) {
+                const msg = 'Tu plan ' + limitInfo.planLabel + ' permite hasta ' + limitInfo.maxFotos + ' fotos: ya tienes ' + current + ' y te quedan ' + remaining + ' espacios, pero estás intentando subir ' + files.length + '. Sube menos archivos o mejora tu plan.';
+                return res.status(403).json({ error: msg });
+            }
+        }
 
         const uploadedPhotos = [];
         for (const file of files) {

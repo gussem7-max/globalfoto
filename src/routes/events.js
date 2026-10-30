@@ -20,24 +20,8 @@ const s3Client = new S3Client({
 
 const isValidId = (id) => /^\d+$/.test(id) && parseInt(id) > 0;
 
-// === LÍMITES DE PLAN (locales por ahora; se extraen a src/lib/subscription.js cuando hagamos fotos) ===
-const PLAN_LIMITS = {
-    trial:  { eventos: 1,    fotos: 100   },
-    basic:  { eventos: 5,    fotos: 1500  },
-    pro:    { eventos: null, fotos: 10000 },
-    studio: { eventos: null, fotos: null  },
-};
-// Regla única: plan VIGENTE (no expirado) usa sus límites; expirado o sin fecha cae a 'trial'.
-// El trial-por-plan (plan='pro', is_trial=true) cae en "vigente" → hereda límites de Pro. ✔
-async function getUserPlanLimits(userId) {
-    const r = await pool.query('SELECT plan, plan_expires_at FROM users WHERE id = $1', [userId]);
-    const row = r.rows[0] || {};
-    const vigente = row.plan_expires_at && new Date(row.plan_expires_at) > new Date();
-    const key = (vigente && PLAN_LIMITS[row.plan]) ? row.plan : 'trial';
-    const lim = PLAN_LIMITS[key];
-    const label = key === 'trial' ? (row.plan === 'trial' ? 'Prueba' : 'Prueba/Expirado') : key.toUpperCase();
-    return { maxEventos: lim.eventos, maxFotos: lim.fotos, planKey: key, planLabel: label };
-}
+// Los límites de plan viven en src/lib/subscription.js (fuente única para eventos y fotos)
+const { getUserPlanLimits } = require('../lib/subscription');
 
 // =====================================================
 // CREAR EVENTO (con estado, expiración y correo espectacular)

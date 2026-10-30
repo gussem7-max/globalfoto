@@ -11,6 +11,14 @@ const PLANS = {
     studio: { usd: 24.90, cop: 100000, ves: 850 }
 };
 
+// === LÍMITES DE PLAN (eventos y fotos) ===
+const PLAN_LIMITS = {
+    trial:  { eventos: 1,    fotos: 100   },
+    basic:  { eventos: 5,    fotos: 1500  },
+    pro:    { eventos: null, fotos: 10000 },
+    studio: { eventos: null, fotos: null  },
+};
+
 /** Convierte cualquier cosa a número seguro. Si no puede, lanza error claro. */
 function toNum(v, label) {
     const n = parseFloat(v);
@@ -100,4 +108,19 @@ async function createSubscriptionOrder(userId, planKey, countryMeta) {
     };
 }
 
-module.exports = { PLANS, createSubscriptionOrder };
+/**
+ * Lee los límites de plan del usuario (eventos y fotos).
+ * Plan VIGENTE (no expirado) usa sus límites; expirado o sin fecha cae a 'trial'.
+ * El trial-por-plan (plan='pro', is_trial=true, fecha futura) hereda límites de Pro.
+ */
+async function getUserPlanLimits(userId) {
+    const r = await pool.query('SELECT plan, plan_expires_at FROM users WHERE id = $1', [userId]);
+    const row = r.rows[0] || {};
+    const vigente = row.plan_expires_at && new Date(row.plan_expires_at) > new Date();
+    const key = (vigente && PLAN_LIMITS[row.plan]) ? row.plan : 'trial';
+    const lim = PLAN_LIMITS[key];
+    const label = key === 'trial' ? (row.plan === 'trial' ? 'Prueba' : 'Prueba/Expirado') : key.toUpperCase();
+    return { maxEventos: lim.eventos, maxFotos: lim.fotos, planKey: key, planLabel: label };
+}
+
+module.exports = { PLANS, PLAN_LIMITS, createSubscriptionOrder, getUserPlanLimits };
