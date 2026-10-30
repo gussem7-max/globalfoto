@@ -576,3 +576,5 @@ input:checked + .toggle-slider:before { transform: translateX(24px); }
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+#resultadoEvento:empty { display: none; }
