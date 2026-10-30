@@ -20,6 +20,25 @@ const s3Client = new S3Client({
 
 const isValidId = (id) => /^\d+$/.test(id) && parseInt(id) > 0;
 
+// === LÍMITES DE PLAN (locales por ahora; se extraen a src/lib/subscription.js cuando hagamos fotos) ===
+const PLAN_LIMITS = {
+    trial:  { eventos: 1,    fotos: 100   },
+    basic:  { eventos: 5,    fotos: 1500  },
+    pro:    { eventos: null, fotos: 10000 },
+    studio: { eventos: null, fotos: null  },
+};
+// Regla única: plan VIGENTE (no expirado) usa sus límites; expirado o sin fecha cae a 'trial'.
+// El trial-por-plan (plan='pro', is_trial=true) cae en "vigente" → hereda límites de Pro. ✔
+async function getUserPlanLimits(userId) {
+    const r = await pool.query('SELECT plan, plan_expires_at FROM users WHERE id = $1', [userId]);
+    const row = r.rows[0] || {};
+    const vigente = row.plan_expires_at && new Date(row.plan_expires_at) > new Date();
+    const key = (vigente && PLAN_LIMITS[row.plan]) ? row.plan : 'trial';
+    const lim = PLAN_LIMITS[key];
+    const label = key === 'trial' ? (row.plan === 'trial' ? 'Prueba' : 'Prueba/Expirado') : key.toUpperCase();
+    return { maxEventos: lim.eventos, maxFotos: lim.fotos, planKey: key, planLabel: label };
+}
+
 // =====================================================
 // CREAR EVENTO (con estado, expiración y correo espectacular)
 // =====================================================
@@ -31,13 +50,13 @@ router.post('/', verificarToken, async (req, res) => {
         if (!title) return res.status(400).json({ error: 'El título del evento es requerido.' });
 
         // === ENFORCEMENT DE LÍMITES (sub-pieza 1: eventos) ===
-        const limitInfo = await getUserPlanLimits(pool, photographer_id);
+        const limitInfo = await getUserPlanLimits(photographer_id);
         if (limitInfo.maxEventos !== null) {
             const cnt = await pool.query('SELECT COUNT(*)::int AS n FROM events WHERE photographer_id = $1', [photographer_id]);
             if (cnt.rows[0].n >= limitInfo.maxEventos) {
-                return res.status(403).json({
-                    error: `Tu plan ${limitInfo.planLabel} permite hasta ${limitInfo.maxEventos} evento${limitInfo.maxEventos !== 1 ? 's' : ''}. Elimina alguno o mejora tu plan para crear más.`
-                });
+                const plural = limitInfo.maxEventos === 1 ? 'evento' : 'eventos';
+                const msg = 'Tu plan ' + limitInfo.planLabel + ' permite hasta ' + limitInfo.maxEventos + ' ' + plural + '. Elimina alguno o mejora tu plan para crear más.';
+                return res.status(403).json({ error: msg });
             }
         }
 
@@ -119,25 +138,6 @@ router.post('/', verificarToken, async (req, res) => {
         res.status(500).json({ error: 'Error interno al crear el evento.' });
     }
 });
-
-// === LÍMITES DE PLAN (locales por ahora; se extraen a src/lib/subscription.js cuando hagamos fotos) ===
-const PLAN_LIMITS = {
-    trial:  { eventos: 1,    fotos: 100   },
-    basic:  { eventos: 5,    fotos: 1500  },
-    pro:    { eventos: null, fotos: 10000 },
-    studio: { eventos: null, fotos: null  },
-};
-// Regla única: plan VIGENTE (no expirado) usa sus límites; expirado o sin fecha cae a 'trial'.
-// El trial-por-plan (plan='pro', is_trial=true) cae en "vigente" → hereda límites de Pro. ✔
-async function getUserPlanLimits(pool, userId) {
-    const r = await pool.query('SELECT plan, plan_expires_at FROM users WHERE id = $1', [userId]);
-    const row = r.rows[0] || {};
-    const vigente = row.plan_expires_at && new Date(row.plan_expires_at) > new Date();
-    const key = (vigente && PLAN_LIMITS[row.plan]) ? row.plan : 'trial';
-    const lim = PLAN_LIMITS[key];
-    const label = key === 'trial' ? (row.plan === 'trial' ? 'Prueba' : 'Prueba/Expirado') : key.toUpperCase();
-    return { maxEventos: lim.eventos, maxFotos: lim.fotos, planKey: key, planLabel: label };
-}
 
 // =====================================================
 // ACTUALIZAR EVENTO (incluye estado y expiración)
