@@ -7,6 +7,26 @@ async function checkSubscriptionStatus() {
     const container = document.getElementById('subscriptionContent');
     if (!container) return;
 
+    // 🛡️ Si es ADMIN, no se muestra la tienda de planes: se abre la Gestión de Suscripciones
+    if (typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin' && typeof renderAdminSubscriptions === 'function') {
+        const container = document.getElementById('subscriptionContent');
+        if (container) {
+            container.innerHTML = '<p style="color: var(--text-muted); padding: 20px;">Cargando suscripciones…</p>';
+            try {
+                const res = await fetch('/api/admin/subscription-orders', { headers: authHeaders() });
+                if (res.ok) {
+                    const data = await res.json();
+                    renderAdminSubscriptions(data, 'subscriptionContent');
+                } else {
+                    container.innerHTML = '<div class="alert alert-error">No se pudo cargar la gestión de suscripciones.</div>';
+                }
+            } catch (err) {
+                container.innerHTML = '<div class="alert alert-error">Error de conexión.</div>';
+            }
+        }
+        return;
+    }
+
     try {
         const res = await fetch('/api/auth/me', { headers: authHeaders() });
         if (!res.ok) throw new Error('No se pudo obtener perfil');

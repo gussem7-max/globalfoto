@@ -278,77 +278,85 @@ async function submitActivateSubscription(e) {
     }
 }
 
-function renderAdminSubscriptions(orders) {
-    const content = document.getElementById('adminContent');
-    if (!orders || orders.length === 0) { 
-        content.innerHTML = '<div class="empty-state"><i class="fa-solid fa-star"></i><p>No hay órdenes de suscripción registradas.</p></div>'; 
-        return; 
+function renderAdminSubscriptions(orders, targetId) {
+    const content = document.getElementById(targetId || 'adminContent');
+    if (!content) return;
+
+    const headerHtml = (targetId === 'subscriptionContent')
+        ? `<div class="header"><div><h1>Gestión de Suscripciones</h1><p class="header-sub">Revisa, aprueba o rechaza los pagos reportados por los fotógrafos.</p></div></div>`
+        : '';
+
+    if (!orders || orders.length === 0) {
+        content.innerHTML = headerHtml + '<div class="empty-state"><i class="fa-solid fa-star"></i><p>No hay órdenes de suscripción registradas.</p></div>';
+        return;
     }
-    
+
     const channelLabels = { nequi: 'Nequi', pagomovil: 'Pago Móvil', zinli: 'Zinli' };
-    
-    content.innerHTML = `
-        <div style="background:white;border-radius:12px;border:1px solid var(--border-color);overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;text-align:left;min-width:900px;">
-            <thead style="background:#f8fafc;border-bottom:1px solid var(--border-color);">
-                <tr>
-                    <th style="padding:14px;font-size:12px;color:var(--text-muted);">#</th>
-                    <th style="padding:14px;font-size:12px;color:var(--text-muted);">Fotógrafo</th>
-                    <th style="padding:14px;font-size:12px;color:var(--text-muted);">Plan</th>
-                    <th style="padding:14px;font-size:12px;color:var(--text-muted);">Monto Esp.</th>
-                    <th style="padding:14px;font-size:12px;color:var(--text-muted);">Monto Rep.</th>
-                    <th style="padding:14px;font-size:12px;color:var(--text-muted);">Código / Ref</th>
-                    <th style="padding:14px;font-size:12px;color:var(--text-muted);">Canal</th>
-                    <th style="padding:14px;font-size:12px;color:var(--text-muted);">Estado</th>
-                    <th style="padding:14px;font-size:12px;color:var(--text-muted);">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>` + orders.map(o => {
-                const statusClass = `status-${o.status}`;
-                const statusText = o.status === 'pending' ? 'Pendiente' : o.status === 'reported' ? 'Reportado ⚠️' : o.status === 'paid' ? 'Pagado' : 'Rechazado';
-                
-                // Extraer datos reportados por el usuario
-                let reportedAmount = '—';
-                let reportedRef = '—';
-                if (o.webhook_raw) {
-                    try {
-                        const raw = typeof o.webhook_raw === 'string' ? JSON.parse(o.webhook_raw) : o.webhook_raw;
-                        if (raw.reported_amount) reportedAmount = raw.reported_amount;
-                        if (raw.reported_reference) reportedRef = raw.reported_reference;
-                    } catch(e) {}
-                }
-                if (reportedAmount === '—' && o.reference_note && o.reference_note.includes('Monto reportado:')) {
-                    const match = o.reference_note.match(/Monto reportado: ([^|]+)/);
-                    if (match) reportedAmount = match[1].trim();
-                }
-                if (reportedRef === '—' && o.reference_note && o.reference_note.includes('Ref usada:')) {
-                    const match = o.reference_note.match(/Ref usada: ([^|]+)/);
-                    if (match) reportedRef = match[1].trim();
-                }
 
-                const moneyExpected = formatMoney(o.expected_amount, o.currency);
-                const moneyReported = reportedAmount !== '—' ? formatMoney(reportedAmount, o.currency) : '—';
-                
-                // Alerta visual si el monto reportado no coincide con el esperado
-                const isMismatch = reportedAmount !== '—' && Math.abs(parseFloat(reportedAmount) - parseFloat(o.expected_amount)) > 0.01;
-                
-                const actions = o.status === 'reported' ? `
-                    <button onclick="approveSubOrder(${o.id})" class="btn-success" style="padding:6px 10px;font-size:12px;margin-right:4px;" title="Aprobar y Activar Plan"><i class="fa-solid fa-check"></i></button>
-                    <button onclick="rejectSubOrder(${o.id})" class="btn-danger" style="padding:6px 10px;font-size:12px;" title="Rechazar"><i class="fa-solid fa-xmark"></i></button>
-                ` : (o.status === 'pending' ? `<span style="font-size:11px;color:var(--text-muted);">Esperando...</span>` : `<span style="font-size:11px;color:var(--text-muted);">${statusText}</span>`);
+    const rows = orders.map(o => {
+        const statusText = o.status === 'pending' ? 'Pendiente' : o.status === 'reported' ? 'Reportado ⚠️' : o.status === 'paid' ? 'Pagado' : 'Rechazado';
 
-                return `<tr style="border-bottom:1px solid var(--border-color); ${o.status === 'reported' ? 'background:#fffbeb;' : ''}">
-                    <td style="padding:12px;font-size:13px;font-weight:600;">#${o.id}</td>
-                    <td style="padding:12px;font-size:13px;">${o.user_name}<br><small style="color:var(--text-muted);">${o.user_email}</small></td>
-                    <td style="padding:12px;font-size:13px;"><span style="background:#e0e7ff;color:#3730a3;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;">${(o.plan || '').toUpperCase()}</span></td>
-                    <td style="padding:12px;font-size:13px;font-weight:600;">${moneyExpected}</td>
-                    <td style="padding:12px;font-size:13px;font-weight:600; color: ${isMismatch ? 'var(--danger)' : 'inherit'}">${moneyReported}</td>
-                    <td style="padding:12px;font-size:12px;font-family:monospace;">${o.reference_code}<br><small style="color:var(--text-muted);">${reportedRef}</small></td>
-                    <td style="padding:12px;font-size:13px;">${channelLabels[o.channel] || o.channel}</td>
-                    <td style="padding:12px;"><span class="order-status ${statusClass}">${statusText}</span></td>
-                    <td style="padding:12px;">${actions}</td>
-                </tr>`;
-            }).join('') + `</tbody></table></div>`;
+        let reportedAmount = '—';
+        let reportedRef = '—';
+        if (o.webhook_raw) {
+            try {
+                const raw = typeof o.webhook_raw === 'string' ? JSON.parse(o.webhook_raw) : o.webhook_raw;
+                if (raw.reported_amount) reportedAmount = raw.reported_amount;
+                if (raw.reported_reference) reportedRef = raw.reported_reference;
+            } catch (e) {}
+        }
+        if (reportedAmount === '—' && o.reference_note && o.reference_note.includes('Monto reportado:')) {
+            const m = o.reference_note.match(/Monto reportado: ([^|]+)/);
+            if (m) reportedAmount = m[1].trim();
+        }
+        if (reportedRef === '—' && o.reference_note && o.reference_note.includes('Ref usada:')) {
+            const m = o.reference_note.match(/Ref usada: ([^|]+)/);
+            if (m) reportedRef = m[1].trim();
+        }
+
+        const moneyExpected = formatMoney(o.expected_amount, o.currency);
+        const moneyReported = reportedAmount !== '—' ? formatMoney(reportedAmount, o.currency) : '—';
+        const isMismatch = reportedAmount !== '—' && Math.abs(parseFloat(reportedAmount) - parseFloat(o.expected_amount)) > 0.01;
+
+        const actions = o.status === 'reported'
+            ? `<button class="btn-action" onclick="approveSubOrder(${o.id})" title="Aprobar y activar plan" style="color:#34d399;background:rgba(16,185,129,0.12);"><i class="fa-solid fa-check"></i></button>
+               <button class="btn-action" onclick="rejectSubOrder(${o.id})" title="Rechazar" style="color:#f87171;background:rgba(239,68,68,0.12);"><i class="fa-solid fa-xmark"></i></button>`
+            : (o.status === 'pending'
+                ? `<span style="font-size:12px;color:var(--text-muted);">Esperando pago…</span>`
+                : `<span style="font-size:12px;color:var(--text-muted);">—</span>`);
+
+        return `<tr style="border-bottom:1px solid var(--border-color);${o.status === 'reported' ? 'background:rgba(245,158,11,0.07);' : ''}">
+            <td style="padding:14px;font-size:13px;font-weight:700;color:var(--text-main);">#${o.id}</td>
+            <td style="padding:14px;font-size:13px;color:var(--text-main);">${o.user_name}<br><small style="color:var(--text-muted);">${o.user_email}</small></td>
+            <td style="padding:14px;"><span style="background:rgba(99,102,241,0.15);color:#a5b4fc;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;">${(o.plan || '').toUpperCase()}</span></td>
+            <td style="padding:14px;font-size:13px;font-weight:600;color:var(--text-main);">${moneyExpected}</td>
+            <td style="padding:14px;font-size:13px;font-weight:600;color:${isMismatch ? 'var(--danger)' : 'var(--text-main)'};">${moneyReported}</td>
+            <td style="padding:14px;font-size:12px;font-family:monospace;color:var(--text-main);">${o.reference_code}<br><small style="color:var(--text-muted);">${reportedRef}</small></td>
+            <td style="padding:14px;font-size:13px;color:var(--text-muted);">${channelLabels[o.channel] || o.channel}</td>
+            <td style="padding:14px;"><span class="order-status status-${o.status}">${statusText}</span></td>
+            <td style="padding:14px;"><div style="display:flex;gap:6px;">${actions}</div></td>
+        </tr>`;
+    }).join('');
+
+    content.innerHTML = headerHtml + `
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="padding:14px;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);text-align:left;">#</th>
+                        <th style="padding:14px;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);text-align:left;">Fotógrafo</th>
+                        <th style="padding:14px;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);text-align:left;">Plan</th>
+                        <th style="padding:14px;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);text-align:left;">Monto Esp.</th>
+                        <th style="padding:14px;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);text-align:left;">Monto Rep.</th>
+                        <th style="padding:14px;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);text-align:left;">Código / Ref</th>
+                        <th style="padding:14px;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);text-align:left;">Canal</th>
+                        <th style="padding:14px;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);text-align:left;">Estado</th>
+                        <th style="padding:14px;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);text-align:left;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>`;
 }
 
 async function approveSubOrder(id) {
