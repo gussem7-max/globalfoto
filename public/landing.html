@@ -993,7 +993,7 @@
                 return;
             }
             
-            // Si es Venezuela → agregar línea de Bs. DEBAJO DEL PRECIO, ANTES de cualquier otro contenido
+            // Si es Venezuela → agregar línea de Bs. DEBAJO DEL PRECIO
             if (iso === 'VE' && p.ves != null) {
                 // Evitar duplicados si recarga
                 if (priceLeaf.dataset.gfVes) return;
@@ -1001,12 +1001,14 @@
                 
                 // Crear el div del Bs.
                 const vesDiv = document.createElement('div');
-                vesDiv.style.cssText = 'text-align:left;font-size:13px;font-weight:700;color:#fbbf24;margin-top:2px;line-height:1.25;display:block;width:100%;';
+                vesDiv.style.cssText = 'display:block;text-align:left;font-size:13px;font-weight:700;color:#fbbf24;margin-top:2px;line-height:1.25;clear:both;';
                 vesDiv.innerHTML = fmtVES(p.ves) + ' <span style="font-weight:500;opacity:0.85;">· tasa BCV</span>';
                 
-                // Insertarlo JUSTO DESPUÉS del precio, DENTRO del mismo padre
+                // Insertarlo JUSTO DESPUÉS del precio ($X.XX), DENTRO del mismo padre
+                // Así queda: $6.90 / mes [nuevo Bs.] Descripción...
                 priceLeaf.parentNode.insertBefore(vesDiv, priceLeaf.nextSibling);
             }
+
         });
     
     console.log('💱 Landing precios → país:', iso || 'USD', '| tarjetas ajustadas:', matched);
