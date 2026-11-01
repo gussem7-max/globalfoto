@@ -995,18 +995,21 @@
             
             // Si es Venezuela → agregar línea de Bs. DEBAJO DEL PRECIO
             if (iso === 'VE' && p.ves != null) {
-                // Evitar duplicados si recarga
                 if (priceLeaf.dataset.gfVes) return;
                 priceLeaf.dataset.gfVes = '1';
-                
-                // Crear el div del Bs.
+
                 const vesDiv = document.createElement('div');
-                vesDiv.style.cssText = 'display:block;text-align:left;font-size:13px;font-weight:700;color:#fbbf24;margin-top:2px;line-height:1.25;clear:both;';
+                vesDiv.style.cssText = 'text-align:left;font-size:13px;font-weight:700;color:#fbbf24;margin-top:2px;line-height:1.25;';
                 vesDiv.innerHTML = fmtVES(p.ves) + ' <span style="font-weight:500;opacity:0.85;">· tasa BCV</span>';
-                
-                // Insertarlo JUSTO DESPUÉS del precio ($X.XX), DENTRO del mismo padre
-                // Así queda: $6.90 / mes [nuevo Bs.] Descripción...
-                priceLeaf.parentNode.insertBefore(vesDiv, priceLeaf.nextSibling);
+
+                // El Bs. va DESPUÉS del "/ mes": así "$6.90 / mes" queda intacto en la línea 1
+                // y el Bs. ámbar abre la línea 2, pegado al bloque del precio.
+                const parent = priceLeaf.parentElement;
+                if (parent) {
+                    const period = parent.querySelector('.plan-period');
+                    if (period) period.after(vesDiv);
+                    else parent.appendChild(vesDiv);
+                }
             }
 
         });
