@@ -1001,7 +1001,15 @@
             const force = new URLSearchParams(window.location.search).get('geo');
             fetch('/api/subscriptions/public/plans' + (force ? '?geo=' + force : ''))
                 .then(r => (r.ok ? r.json() : Promise.reject()))
-                .then(data => applyPrices(force || data.geo || '', data))
+                .then(data => {
+                    const serverIso = force || data.geo || '';
+                    if (serverIso) { applyPrices(serverIso, data); return; }
+                    // Último recurso: geo desde el navegador, SOLO si el servidor no pudo
+                    fetch('https://get.geojs.io/v1/ip/country.json')
+                        .then(r => (r.ok ? r.json() : Promise.reject()))
+                        .then(d => applyPrices(d.country_code || '', data))
+                        .catch(() => applyPrices('', data));
+                })
                 .catch(err => console.warn('💱 No se pudieron ajustar precios por país:', err));
         }
 

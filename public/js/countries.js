@@ -143,6 +143,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     fetch('/api/subscriptions/public/geo')
         .then(r => (r.ok ? r.json() : Promise.reject()))
-        .then(d => applyIso(d && d.iso ? d.iso : ''))
+        .then(d => {
+            const iso = d && d.iso ? d.iso : '';
+            if (iso) { applyIso(iso); return; }
+            fetch('https://get.geojs.io/v1/ip/country.json')
+                .then(r => (r.ok ? r.json() : Promise.reject()))
+                .then(dd => applyIso(dd.country_code || ''))
+                .catch(() => applyIso(''));
+        })
         .catch(() => applyIso(''));
 });
