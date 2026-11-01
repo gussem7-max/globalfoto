@@ -936,19 +936,38 @@
                             </button>
                         </div>`;
 
-                    // ---------- INYECCIÓN ----------
-                    document.querySelectorAll('a[href="/panel"]').forEach(a => {
-                        if (!/iniciar sesi/i.test(a.textContent)) return;
-                        const wrap = a.parentElement;
-                        if (!wrap) return;
-                        wrap.innerHTML = a.classList.contains('block') ? mobileHtml : desktopHtml;
-                    });
-                    document.querySelectorAll('button[onclick*="openAuthModal"]').forEach(b => {
-                        const oc = b.getAttribute('onclick') || '';
-                        if (/login/i.test(oc) && b.parentElement) b.parentElement.innerHTML = desktopHtml;
-                    });
-                    document.querySelectorAll('a[href^="/panel?tab=register"], button[onclick*="openAuthModal"]').forEach(el => {
-                        if (/crear cuenta|register/i.test(el.textContent + (el.getAttribute('onclick') || ''))) el.remove();
+                    // ---------- Chip compacto para la BARRA MÓVIL (avatar + icono de plan) ----------
+                    const mobileChipHtml = `
+                        <a href="/panel" title="Ir a mi Panel · ${nombre}" class="relative inline-flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-brand-600 to-brand-accent ring-2 ring-brand-500/40 text-white text-xs font-bold shadow-md shadow-brand-500/30 no-underline shrink-0">
+                            ${iniciales}${iconBadge('w-4 h-4', '8px')}
+                        </a>`;
+
+                    // ---------- Clasificador de zona (sin depender de una sola clase) ----------
+                    function hasCloseMenu(el) { let n = el; while (n) { if (n.getAttribute && /closeMenu/.test(n.getAttribute('onclick') || '')) return true; n = n.parentElement; } return false; }
+                    function underMdHidden(el) { let n = el; while (n) { if (n.classList && n.classList.contains('md:hidden')) return true; n = n.parentElement; } return false; }
+                    function zoneOf(el) {
+                        if ((el.classList && el.classList.contains('block')) || hasCloseMenu(el)) return 'drawer'; // menú hamburguesa abierto
+                        if (underMdHidden(el)) return 'bar';   // barra superior móvil
+                        return 'desktop';                       // navbar de escritorio
+                    }
+
+                    // ---------- Inyección agnóstica: recorre TODO lo clicable y swappea por texto ----------
+                    const clickables = Array.from(document.querySelectorAll('a, button, [onclick]'));
+                    clickables.forEach(el => {
+                        const txt = (el.textContent || '').toLowerCase().replace(/\s+/g, ' ').trim();
+                        if (/cerrar sesi|salir|logout/.test(txt)) return;          // no tocar logouts ya existentes
+                        const isLogin = /iniciar sesi|iniciar|login|entrar|acceder|ingresar/.test(txt);
+                        const isReg = /crear cuenta|registr|sign ?up|regístrate|registro/.test(txt);
+                        if (!isLogin && !isReg) return;
+
+                        if (isReg) { el.remove(); return; }                        // "Crear Cuenta" desaparece (ya tiene cuenta)
+
+                        const z = zoneOf(el);                                      // "Iniciar Sesión" → chip según zona
+                        const html = z === 'drawer' ? mobileHtml : (z === 'bar' ? mobileChipHtml : desktopHtml);
+                        const holder = document.createElement('div');
+                        holder.innerHTML = html.trim();
+                        const node = holder.firstElementChild;
+                        if (node) el.replaceWith(node);
                     });
 
                     // ---------- Dropdown ----------
