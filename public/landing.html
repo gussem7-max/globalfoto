@@ -858,6 +858,43 @@
                 btn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i> Escanear y Encontrar Fotos';
             }, 2500);
         }
+
+        // === SESIÓN EN LANDING: si hay token válido, los botones de auth cambian a "Ir a mi Panel" ===
+        (function () {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } })
+                .then(r => { if (!r.ok) throw new Error('sin sesión'); return r.json(); })
+                .then(data => {
+                    const user = data.user || {};
+
+                    document.querySelectorAll('a[href="/panel"]').forEach(a => {
+                        if (/iniciar sesi/i.test(a.textContent)) {
+                            a.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Ir a mi Panel';
+                            a.title = 'Entrar como ' + (user.name || 'tu cuenta');
+                        }
+                    });
+                    document.querySelectorAll('button[onclick*="openAuthModal"]').forEach(b => {
+                        const oc = b.getAttribute('onclick') || '';
+                        if (/login/i.test(oc)) {
+                            b.removeAttribute('onclick');
+                            b.onclick = function () { window.location.href = '/panel'; };
+                            b.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Ir a mi Panel';
+                        }
+                    });
+
+                    document.querySelectorAll('a[href^="/panel?tab=register"]').forEach(a => {
+                        if (/crear cuenta/i.test(a.textContent)) a.style.display = 'none';
+                    });
+                    document.querySelectorAll('button[onclick*="openAuthModal"]').forEach(b => {
+                        const oc = b.getAttribute('onclick') || '';
+                        if (/register/i.test(oc)) b.style.display = 'none';
+                    });
+                })
+                .catch(() => {});
+        })();
+
     </script>
 </body>
 </html>
