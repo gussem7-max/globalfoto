@@ -859,7 +859,7 @@
             }, 2500);
         }
 
-        // === SESIÓN EN LANDING: si hay token válido, los botones de auth cambian a "Ir a mi Panel" ===
+        // === SESIÓN PREMIUM EN LANDING: chip de usuario + menú desplegable ===
         (function () {
             const token = localStorage.getItem('token');
             if (!token) return;
@@ -867,32 +867,88 @@
             fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } })
                 .then(r => { if (!r.ok) throw new Error('sin sesión'); return r.json(); })
                 .then(data => {
-                    const user = data.user || {};
+                    const u = data.user || {};
+                    const nombre = u.name || 'Mi cuenta';
+                    const primerNombre = nombre.split(' ')[0];
+                    const iniciales = nombre.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
 
+                    let planLabel = 'Sin plan';
+                    let planColor = 'bg-slate-700/60 text-slate-300 border-slate-600';
+                    if (u.plan === 'trial') { planLabel = 'Prueba Gratis'; planColor = 'bg-violet-500/15 text-violet-300 border-violet-500/40'; }
+                    else if (u.plan && u.is_trial) { planLabel = 'Prueba ' + u.plan.charAt(0).toUpperCase() + u.plan.slice(1); planColor = 'bg-violet-500/15 text-violet-300 border-violet-500/40'; }
+                    else if (u.plan) { planLabel = u.plan.toUpperCase(); planColor = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'; }
+
+                    // ---------- WIDGET ESCRITORIO: chip + dropdown ----------
+                    const desktopHtml = `
+                        <div class="relative" id="gfUserMenuWrap">
+                            <button id="gfUserChip" class="flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-full border border-slate-700/70 bg-slate-800/60 hover:bg-slate-700/60 hover:border-slate-500 transition-all backdrop-blur cursor-pointer">
+                                <span class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-600 to-brand-accent ring-2 ring-brand-500/40 flex items-center justify-center text-white text-xs font-bold shadow-md shadow-brand-500/30">${iniciales}</span>
+                                <span class="text-left leading-tight">
+                                    <span class="block text-sm font-semibold text-white">${primerNombre}</span>
+                                    <span class="block text-[10px] font-bold tracking-wider px-1.5 py-px rounded-full border ${planColor} w-fit mt-0.5">${planLabel}</span>
+                                </span>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-1"></i>
+                            </button>
+                            <div id="gfUserMenu" class="hidden absolute right-0 mt-2 w-64 rounded-2xl border border-slate-700/60 bg-slate-900/95 backdrop-blur-xl shadow-2xl shadow-black/60 overflow-hidden z-50">
+                                <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-700/60">
+                                    <div class="text-sm font-semibold text-white">${nombre}</div>
+                                    <div class="text-xs text-slate-400 truncate">${u.email || ''}</div>
+                                </div>
+                                <a href="/panel" class="flex items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:bg-slate-800/70 hover:text-white transition-all">
+                                    <i class="fa-solid fa-table-columns w-4 text-brand-400"></i> Ir a mi Panel
+                                </a>
+                                <button onclick="localStorage.removeItem('token');localStorage.removeItem('selected_plan');location.reload();" class="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-all border-t border-slate-700/60 cursor-pointer">
+                                    <i class="fa-solid fa-right-from-bracket w-4"></i> Cerrar Sesión
+                                </button>
+                            </div>
+                        </div>`;
+
+                    // ---------- WIDGET MÓVIL: tarjeta de perfil ----------
+                    const mobileHtml = `
+                        <div class="pt-4 mt-4 border-t border-slate-800 space-y-3">
+                            <div class="flex items-center gap-3 px-3 py-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
+                                <span class="w-10 h-10 shrink-0 rounded-full bg-gradient-to-br from-brand-600 to-brand-accent ring-2 ring-brand-500/40 flex items-center justify-center text-white text-sm font-bold">${iniciales}</span>
+                                <span class="min-w-0">
+                                    <span class="block text-sm font-semibold text-white truncate">${nombre}</span>
+                                    <span class="inline-block text-[10px] font-bold tracking-wider px-1.5 py-px rounded-full border ${planColor} mt-0.5">${planLabel}</span>
+                                </span>
+                            </div>
+                            <a href="/panel" class="block w-full py-3 text-center text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-brand-accent hover:opacity-95 rounded-xl shadow-md shadow-brand-500/25 transition-all">
+                                <i class="fa-solid fa-table-columns mr-2"></i>Ir a mi Panel
+                            </a>
+                            <button onclick="localStorage.removeItem('token');localStorage.removeItem('selected_plan');location.reload();" class="block w-full py-2.5 text-center text-sm font-semibold text-red-400 bg-slate-800/70 border border-slate-700 hover:bg-slate-700 rounded-xl transition-all cursor-pointer">
+                                <i class="fa-solid fa-right-from-bracket mr-2"></i>Cerrar Sesión
+                            </button>
+                        </div>`;
+
+                    // ---------- INYECCIÓN: reemplaza los botones de auth donde estén ----------
                     document.querySelectorAll('a[href="/panel"]').forEach(a => {
-                        if (/iniciar sesi/i.test(a.textContent)) {
-                            a.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Ir a mi Panel';
-                            a.title = 'Entrar como ' + (user.name || 'tu cuenta');
-                        }
+                        if (!/iniciar sesi/i.test(a.textContent)) return;
+                        const wrap = a.parentElement;
+                        if (!wrap) return;
+                        wrap.innerHTML = a.classList.contains('block') ? mobileHtml : desktopHtml;
                     });
                     document.querySelectorAll('button[onclick*="openAuthModal"]').forEach(b => {
                         const oc = b.getAttribute('onclick') || '';
-                        if (/login/i.test(oc)) {
-                            b.removeAttribute('onclick');
-                            b.onclick = function () { window.location.href = '/panel'; };
-                            b.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Ir a mi Panel';
-                        }
+                        if (/login/i.test(oc) && b.parentElement) b.parentElement.innerHTML = desktopHtml;
+                    });
+                    // Por si algún "Crear Cuenta" quedó suelto fuera de los contenedores
+                    document.querySelectorAll('a[href^="/panel?tab=register"], button[onclick*="openAuthModal"]').forEach(el => {
+                        if (/crear cuenta|register/i.test(el.textContent + (el.getAttribute('onclick') || ''))) el.remove();
                     });
 
-                    document.querySelectorAll('a[href^="/panel?tab=register"]').forEach(a => {
-                        if (/crear cuenta/i.test(a.textContent)) a.style.display = 'none';
-                    });
-                    document.querySelectorAll('button[onclick*="openAuthModal"]').forEach(b => {
-                        const oc = b.getAttribute('onclick') || '';
-                        if (/register/i.test(oc)) b.style.display = 'none';
-                    });
+                    // ---------- Comportamiento del dropdown ----------
+                    const chip = document.getElementById('gfUserChip');
+                    const menu = document.getElementById('gfUserMenu');
+                    const wrapMenu = document.getElementById('gfUserMenuWrap');
+                    if (chip && menu && wrapMenu) {
+                        chip.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); });
+                        document.addEventListener('click', (e) => {
+                            if (!menu.classList.contains('hidden') && !wrapMenu.contains(e.target)) menu.classList.add('hidden');
+                        });
+                    }
                 })
-                .catch(() => {});
+                .catch(() => { /* sin sesión válida: la landing queda intacta */ });
         })();
 
     </script>
