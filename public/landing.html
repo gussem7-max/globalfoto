@@ -859,129 +859,133 @@
             }, 2500);
         }
 
-        // === SESIÓN PREMIUM EN LANDING: chip de usuario + menú desplegable ===
+        // === SESIÓN PREMIUM EN LANDING (multi-pestaña + botones inyectados tarde + móvil robusto) ===
         (function () {
-            const token = localStorage.getItem('token');
-            if (!token) return;
+            const LS = 'token';
+            let session = null;
+            const authEls = [];
+            let uidSeq = 0;
 
-            fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } })
-                .then(r => { if (!r.ok) throw new Error('sin sesión'); return r.json(); })
-                .then(data => {
-                    const u = data.user || {};
-                    const nombre = u.name || 'Mi cuenta';
-                    const primerNombre = nombre.split(' ')[0];
-                    const iniciales = nombre.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
-                    const cap = u.plan ? u.plan.charAt(0).toUpperCase() + u.plan.slice(1) : '';
+            const isMobile = () => !window.matchMedia('(min-width: 768px)').matches;
+            function hasCloseMenu(el) { let n = el; while (n) { if (n.getAttribute && /closeMenu/.test(n.getAttribute('onclick') || '')) return true; n = n.parentElement; } return false; }
+            function inDrawer(el) { let n = el; while (n) { const id = (n.id || '') + ' ' + (n.className || ''); if (/mobile[-_]?menu|drawer|nav[-_]?mobile|hamburger|offcanvas|side[-_]?nav|menu[-_]?mov/i.test(id)) return true; n = n.parentElement; } return false; }
+            function zoneOf(el) { if (hasCloseMenu(el) || inDrawer(el)) return 'drawer'; return isMobile() ? 'bar' : 'desktop'; }
 
-                    // ---- Icono y color según plan / estado ----
-                    let planIcon = 'fa-gift', planGrad = 'from-violet-500 to-purple-600', planTitle = 'Prueba Gratis';
-                    if (!u.plan) { planIcon = 'fa-clock'; planGrad = 'from-slate-600 to-slate-700'; planTitle = 'Sin plan activo'; }
-                    else if (u.plan === 'trial') { planIcon = 'fa-gift'; planGrad = 'from-violet-500 to-purple-600'; planTitle = 'Prueba Gratis'; }
-                    else if (u.is_trial) {
-                        planGrad = 'from-violet-500 to-purple-600';
-                        planTitle = 'Prueba ' + cap;
-                        planIcon = u.plan === 'studio' ? 'fa-crown' : (u.plan === 'pro' ? 'fa-star' : 'fa-bolt');
-                    } else {
-                        planTitle = 'Plan ' + cap;
-                        if (u.plan === 'studio') { planIcon = 'fa-crown'; planGrad = 'from-emerald-500 to-teal-600'; }
-                        else if (u.plan === 'pro') { planIcon = 'fa-star'; planGrad = 'from-amber-400 to-orange-500'; }
-                        else { planIcon = 'fa-bolt'; planGrad = 'from-sky-500 to-blue-600'; }
-                    }
-                    const iconBadge = (size, iconSize) => `<span title="${planTitle}" class="absolute -bottom-1 -right-1 ${size} rounded-full bg-gradient-to-br ${planGrad} ring-2 ring-slate-900 flex items-center justify-center"><i class="fa-solid ${planIcon}" style="font-size:${iconSize};color:#fff;"></i></span>`;
+            function gather() {
+                document.querySelectorAll('a,button,[onclick]').forEach(el => {
+                    if (el.dataset.gfTagged) return;
+                    const t = (el.textContent || '').toLowerCase().replace(/\s+/g, ' ').trim();
+                    if (/cerrar sesi|salir|logout/.test(t)) return;
+                    const isLogin = /iniciar sesi|iniciar|login|entrar|acceder|ingresar/.test(t);
+                    const isReg = /crear cuenta|registr|sign ?up|regístrate|registro/.test(t);
+                    if (!isLogin && !isReg) return;
+                    el.dataset.gfTagged = '1';
+                    el.dataset.gfKind = isReg ? 'register' : 'login';
+                    el.dataset.gfZone = zoneOf(el);
+                    authEls.push(el);
+                });
+            }
+            function rezone() { authEls.forEach(el => { if (el.dataset.gfKind === 'login') el.dataset.gfZone = zoneOf(el); }); }
 
-                    // ---------- WIDGET ESCRITORIO ----------
-                    const desktopHtml = `
-                        <div class="relative" id="gfUserMenuWrap">
-                            <button id="gfUserChip" class="flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-full border border-slate-700/70 bg-slate-800/60 hover:bg-slate-700/60 hover:border-slate-500 transition-all backdrop-blur cursor-pointer">
-                                <span class="relative">
-                                    <span class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-600 to-brand-accent ring-2 ring-brand-500/40 flex items-center justify-center text-white text-xs font-bold shadow-md shadow-brand-500/30">${iniciales}</span>
-                                    ${iconBadge('w-4 h-4', '8px')}
-                                </span>
-                                <span class="text-sm font-semibold text-white">${primerNombre}</span>
-                                <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-0.5"></i>
-                            </button>
-                            <div id="gfUserMenu" class="hidden absolute right-0 mt-2 w-64 rounded-2xl border border-slate-700/60 bg-slate-900/95 backdrop-blur-xl shadow-2xl shadow-black/60 overflow-hidden z-50">
-                                <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-700/60">
-                                    <div class="text-sm font-semibold text-white">${nombre}</div>
-                                    <div class="text-xs text-slate-400 truncate">${u.email || ''}</div>
-                                    <div class="flex items-center gap-2 mt-2">
-                                        <span class="w-4 h-4 rounded-full bg-gradient-to-br ${planGrad} flex items-center justify-center"><i class="fa-solid ${planIcon}" style="font-size:8px;color:#fff;"></i></span>
-                                        <span class="text-[11px] font-bold tracking-wide text-slate-300">${planTitle}</span>
-                                    </div>
-                                </div>
-                                <a href="/panel" class="flex items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:bg-slate-800/70 hover:text-white transition-all">
-                                    <i class="fa-solid fa-table-columns w-4 text-brand-400"></i> Ir a mi Panel
-                                </a>
-                                <button onclick="localStorage.removeItem('token');localStorage.removeItem('selected_plan');location.reload();" class="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-all border-t border-slate-700/60 cursor-pointer">
-                                    <i class="fa-solid fa-right-from-bracket w-4"></i> Cerrar Sesión
-                                </button>
-                            </div>
-                        </div>`;
+            function planMeta(u) {
+                const cap = u.plan ? u.plan.charAt(0).toUpperCase() + u.plan.slice(1) : '';
+                if (!u.plan) return { icon: 'fa-clock', grad: 'from-slate-600 to-slate-700', title: 'Sin plan activo' };
+                if (u.plan === 'trial') return { icon: 'fa-gift', grad: 'from-violet-500 to-purple-600', title: 'Prueba Gratis' };
+                if (u.is_trial) return { icon: u.plan === 'studio' ? 'fa-crown' : (u.plan === 'pro' ? 'fa-star' : 'fa-bolt'), grad: 'from-violet-500 to-purple-600', title: 'Prueba ' + cap };
+                if (u.plan === 'studio') return { icon: 'fa-crown', grad: 'from-emerald-500 to-teal-600', title: 'Plan ' + cap };
+                if (u.plan === 'pro') return { icon: 'fa-star', grad: 'from-amber-400 to-orange-500', title: 'Plan ' + cap };
+                return { icon: 'fa-bolt', grad: 'from-sky-500 to-blue-600', title: 'Plan ' + cap };
+            }
 
-                    // ---------- WIDGET MÓVIL ----------
-                    const mobileHtml = `
-                        <div class="pt-4 mt-4 border-t border-slate-800 space-y-3">
-                            <div class="flex items-center gap-3 px-3 py-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
-                                <span class="relative shrink-0">
-                                    <span class="w-10 h-10 rounded-full bg-gradient-to-br from-brand-600 to-brand-accent ring-2 ring-brand-500/40 flex items-center justify-center text-white text-sm font-bold">${iniciales}</span>
-                                    ${iconBadge('w-5 h-5', '10px')}
-                                </span>
-                                <span class="text-sm font-semibold text-white truncate">${nombre}</span>
-                            </div>
-                            <a href="/panel" class="block w-full py-3 text-center text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-brand-accent hover:opacity-95 rounded-xl shadow-md shadow-brand-500/25 transition-all">
-                                <i class="fa-solid fa-table-columns mr-2"></i>Ir a mi Panel
-                            </a>
-                            <button onclick="localStorage.removeItem('token');localStorage.removeItem('selected_plan');location.reload();" class="block w-full py-2.5 text-center text-sm font-semibold text-red-400 bg-slate-800/70 border border-slate-700 hover:bg-slate-700 rounded-xl transition-all cursor-pointer">
-                                <i class="fa-solid fa-right-from-bracket mr-2"></i>Cerrar Sesión
-                            </button>
-                        </div>`;
+            function makeWidget(zone, u) {
+                const nombre = u.name || 'Mi cuenta';
+                const primer = nombre.split(' ')[0];
+                const ini = nombre.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
+                const m = planMeta(u);
+                const badge = (s, fs) => '<span title="' + m.title + '" class="absolute -bottom-1 -right-1 ' + s + ' rounded-full bg-gradient-to-br ' + m.grad + ' ring-2 ring-slate-900 flex items-center justify-center"><i class="fa-solid ' + m.icon + '" style="font-size:' + fs + ';color:#fff;"></i></span>';
+                const h = document.createElement('div');
 
-                    // ---------- Chip compacto para la BARRA MÓVIL (avatar + icono de plan) ----------
-                    const mobileChipHtml = `
-                        <a href="/panel" title="Ir a mi Panel · ${nombre}" class="relative inline-flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-brand-600 to-brand-accent ring-2 ring-brand-500/40 text-white text-xs font-bold shadow-md shadow-brand-500/30 no-underline shrink-0">
-                            ${iniciales}${iconBadge('w-4 h-4', '8px')}
-                        </a>`;
-
-                    // ---------- Clasificador de zona (sin depender de una sola clase) ----------
-                    function hasCloseMenu(el) { let n = el; while (n) { if (n.getAttribute && /closeMenu/.test(n.getAttribute('onclick') || '')) return true; n = n.parentElement; } return false; }
-                    function underMdHidden(el) { let n = el; while (n) { if (n.classList && n.classList.contains('md:hidden')) return true; n = n.parentElement; } return false; }
-                    function zoneOf(el) {
-                        if ((el.classList && el.classList.contains('block')) || hasCloseMenu(el)) return 'drawer'; // menú hamburguesa abierto
-                        if (underMdHidden(el)) return 'bar';   // barra superior móvil
-                        return 'desktop';                       // navbar de escritorio
-                    }
-
-                    // ---------- Inyección agnóstica: recorre TODO lo clicable y swappea por texto ----------
-                    const clickables = Array.from(document.querySelectorAll('a, button, [onclick]'));
-                    clickables.forEach(el => {
-                        const txt = (el.textContent || '').toLowerCase().replace(/\s+/g, ' ').trim();
-                        if (/cerrar sesi|salir|logout/.test(txt)) return;          // no tocar logouts ya existentes
-                        const isLogin = /iniciar sesi|iniciar|login|entrar|acceder|ingresar/.test(txt);
-                        const isReg = /crear cuenta|registr|sign ?up|regístrate|registro/.test(txt);
-                        if (!isLogin && !isReg) return;
-
-                        if (isReg) { el.remove(); return; }                        // "Crear Cuenta" desaparece (ya tiene cuenta)
-
-                        const z = zoneOf(el);                                      // "Iniciar Sesión" → chip según zona
-                        const html = z === 'drawer' ? mobileHtml : (z === 'bar' ? mobileChipHtml : desktopHtml);
-                        const holder = document.createElement('div');
-                        holder.innerHTML = html.trim();
-                        const node = holder.firstElementChild;
-                        if (node) el.replaceWith(node);
+                if (zone === 'drawer') {
+                    h.innerHTML = '<div class="pt-4 mt-4 border-t border-slate-800 space-y-3">'
+                        + '<div class="flex items-center gap-3 px-3 py-3 rounded-xl bg-slate-800/60 border border-slate-700/60">'
+                        + '<span class="relative shrink-0"><span class="w-10 h-10 rounded-full bg-gradient-to-br from-brand-600 to-brand-accent ring-2 ring-brand-500/40 flex items-center justify-center text-white text-sm font-bold">' + ini + '</span>' + badge('w-5 h-5', '10px') + '</span>'
+                        + '<span class="text-sm font-semibold text-white truncate">' + nombre + '</span></div>'
+                        + '<a href="/panel" class="block w-full py-3 text-center text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-brand-accent hover:opacity-95 rounded-xl shadow-md shadow-brand-500/25 transition-all"><i class="fa-solid fa-table-columns mr-2"></i>Ir a mi Panel</a>'
+                        + '<button data-gf-logout class="block w-full py-2.5 text-center text-sm font-semibold text-red-400 bg-slate-800/70 border border-slate-700 hover:bg-slate-700 rounded-xl transition-all cursor-pointer"><i class="fa-solid fa-right-from-bracket mr-2"></i>Cerrar Sesión</button></div>';
+                } else if (zone === 'bar') {
+                    h.className = 'inline-flex';
+                    h.innerHTML = '<a href="/panel" title="Ir a mi Panel · ' + nombre + '" class="relative inline-flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-brand-600 to-brand-accent ring-2 ring-brand-500/40 text-white text-xs font-bold shadow-md shadow-brand-500/30 no-underline shrink-0">' + ini + badge('w-4 h-4', '8px') + '</a>';
+                } else {
+                    const uid = 'gf' + (++uidSeq);
+                    h.className = 'relative';
+                    h.innerHTML = '<button id="' + uid + 'chip" class="flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-full border border-slate-700/70 bg-slate-800/60 hover:bg-slate-700/60 hover:border-slate-500 transition-all backdrop-blur cursor-pointer">'
+                        + '<span class="relative"><span class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-600 to-brand-accent ring-2 ring-brand-500/40 flex items-center justify-center text-white text-xs font-bold shadow-md shadow-brand-500/30">' + ini + '</span>' + badge('w-4 h-4', '8px') + '</span>'
+                        + '<span class="text-sm font-semibold text-white">' + primer + '</span>'
+                        + '<i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-0.5"></i></button>'
+                        + '<div id="' + uid + 'menu" data-gf-menu class="hidden absolute right-0 mt-2 w-64 rounded-2xl border border-slate-700/60 bg-slate-900/95 backdrop-blur-xl shadow-2xl shadow-black/60 overflow-hidden z-50">'
+                        + '<div class="px-4 py-3 bg-slate-800/50 border-b border-slate-700/60"><div class="text-sm font-semibold text-white">' + nombre + '</div><div class="text-xs text-slate-400 truncate">' + (u.email || '') + '</div>'
+                        + '<div class="flex items-center gap-2 mt-2"><span class="w-4 h-4 rounded-full bg-gradient-to-br ' + m.grad + ' flex items-center justify-center"><i class="fa-solid ' + m.icon + '" style="font-size:8px;color:#fff;"></i></span><span class="text-[11px] font-bold tracking-wide text-slate-300">' + m.title + '</span></div></div>'
+                        + '<a href="/panel" class="flex items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:bg-slate-800/70 hover:text-white transition-all"><i class="fa-solid fa-table-columns w-4 text-brand-400"></i> Ir a mi Panel</a>'
+                        + '<button data-gf-logout class="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-all border-t border-slate-700/60 cursor-pointer"><i class="fa-solid fa-right-from-bracket w-4"></i> Cerrar Sesión</button></div>';
+                    const chip = h.querySelector('#' + uid + 'chip');
+                    const menu = h.querySelector('#' + uid + 'menu');
+                    chip.addEventListener('click', e => {
+                        e.stopPropagation();
+                        const wasOpen = !menu.classList.contains('hidden');
+                        document.querySelectorAll('[data-gf-menu]').forEach(x => x.classList.add('hidden'));
+                        if (!wasOpen) menu.classList.remove('hidden');
                     });
+                }
+                h.querySelectorAll('[data-gf-logout]').forEach(b => b.addEventListener('click', () => { localStorage.removeItem('token'); localStorage.removeItem('selected_plan'); location.reload(); }));
+                return h;
+            }
 
-                    // ---------- Dropdown ----------
-                    const chip = document.getElementById('gfUserChip');
-                    const menu = document.getElementById('gfUserMenu');
-                    const wrapMenu = document.getElementById('gfUserMenuWrap');
-                    if (chip && menu && wrapMenu) {
-                        chip.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); });
-                        document.addEventListener('click', (e) => {
-                            if (!menu.classList.contains('hidden') && !wrapMenu.contains(e.target)) menu.classList.add('hidden');
-                        });
+            // sync IDERPOTENTE: solo muta el DOM cuando el estado difiere de lo que hay (evita bucle con el observer)
+            function sync() {
+                gather();
+                const byParent = new Map();
+                authEls.forEach(el => { if (!el.isConnected) return; const p = el.parentElement; if (!p) return; if (!byParent.has(p)) byParent.set(p, []); byParent.get(p).push(el); });
+                byParent.forEach((els, parent) => {
+                    const chips = parent.querySelectorAll(':scope > [data-gf-chip]');
+                    const logins = els.filter(e => e.dataset.gfKind === 'login');
+                    if (session) {
+                        logins.forEach(e => { e.style.display = 'none'; });
+                        els.filter(e => e.dataset.gfKind === 'register').forEach(e => { e.style.display = 'none'; });
+                        if (chips.length === 0 && logins.length > 0) {
+                            const w = makeWidget(logins[0].dataset.gfZone || 'desktop', session);
+                            w.setAttribute('data-gf-chip', '1');
+                            parent.insertBefore(w, logins[0]);
+                        }
+                    } else {
+                        chips.forEach(c => c.remove());
+                        els.forEach(e => { e.style.display = ''; });
                     }
-                })
-                .catch(() => { /* sin sesión válida: la landing queda intacta */ });
+                });
+            }
+
+            async function refresh() {
+                const t = localStorage.getItem(LS);
+                if (!t) { session = null; return; }
+                try {
+                    const r = await fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + t } });
+                    if (!r.ok) { session = null; return; }
+                    const d = await r.json(); session = d.user || null;
+                } catch (e) { session = null; }
+            }
+
+            let deb = null;
+            const softReload = () => { clearTimeout(deb); deb = setTimeout(() => refresh().then(sync), 120); };
+            const domReload = () => { clearTimeout(deb); deb = setTimeout(() => { gather(); sync(); }, 200); }; // botones inyectados tarde (drawer móvil)
+
+            document.addEventListener('click', () => document.querySelectorAll('[data-gf-menu]').forEach(m => m.classList.add('hidden')));
+            window.addEventListener('storage', e => { if (e.key === LS || e.key === null) softReload(); });   // logue/logout en OTRA pestaña
+            window.addEventListener('pageshow', softReload);
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) softReload(); });      // volver a la pestaña
+            window.addEventListener('resize', () => { clearTimeout(deb); deb = setTimeout(() => { rezone(); sync(); }, 200); }); // girar dispositivo
+            new MutationObserver(domReload).observe(document.body || document.documentElement, { childList: true, subtree: true }); // el menú móvil crea sus botones al abrirse
+
+            gather();
+            refresh().then(sync);
         })();
 
     // === GEO-PRECIOS (detección en el servidor, sin notas visibles) ===
