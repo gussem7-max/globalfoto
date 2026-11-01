@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeList(); });
 });
 
-// === GEO-PREFILL: el registro arranca con el país detectado (o vacío si la geo falló) ===
+// === GEO-PREFILL: el registro arranca con el país detectado por el servidor ===
 document.addEventListener('DOMContentLoaded', () => {
     const nameEl = document.getElementById('countryName');
     const hiddenEl = document.getElementById('regCountry');
@@ -138,20 +138,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    let geo = null;
-    try { geo = JSON.parse(localStorage.getItem('gf_geo') || 'null'); } catch (e) {}
-    if (geo && geo.iso) { applyIso(geo.iso); return; }
+    const force = new URLSearchParams(window.location.search).get('geo');
+    if (force) { applyIso(force); return; }
 
-    // Sin caché: detecta ahora mismo y prellena
-    fetch('https://get.geojs.io/v1/ip/country.json')
+    fetch('/api/subscriptions/public/geo')
         .then(r => (r.ok ? r.json() : Promise.reject()))
-        .then(d => d.country_code || '')
-        .catch(() => fetch('https://ipapi.co/json/')
-            .then(r => (r.ok ? r.json() : Promise.reject()))
-            .then(d => d.country_code || '')
-            .catch(() => ''))
-        .then(iso => {
-            if (iso) localStorage.setItem('gf_geo', JSON.stringify({ iso: iso, ts: Date.now() }));
-            applyIso(iso);
-        });
+        .then(d => applyIso(d && d.iso ? d.iso : ''))
+        .catch(() => applyIso(''));
 });

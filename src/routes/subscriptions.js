@@ -375,23 +375,49 @@ function sanitizeRefCode(code) {
     return String(code || '').replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 10);
 }
 
-// --- PRECIOS PÚBLICOS PARA LA LANDING (sin autenticación) ---
+// --- GEO + PRECIOS PÚBLICOS PARA LA LANDING (sin autenticación, geo en el servidor) ---
+const geoCache = new Map(); // ip -> { iso, ts }
+function clientIp(req) {
+    return String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip || '';
+}
+async function detectCountryServer(ip) {
+    if (!ip) return '';
+    const hit = geoCache.get(ip);
+    if (hit && (Date.now() - hit.ts) < 6 * 60 * 60 * 1000) return hit.iso;
+    let iso = '';
+    try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 3000);
+        const r = await fetch('https://get.geojs.io/v1/ip/country.json?ip=' + encodeURIComponent(ip), { signal: ctrl.signal });
+        clearTimeout(t);
+        if (r.ok) {
+            const d = await r.json();
+            iso = d.country_code || '';
+        }
+    } catch (e) { iso = ''; }
+    geoCache.set(ip, { iso, ts: Date.now() });
+    return iso;
+}
+
+router.get('/public/geo', async (req, res) => {
+    const iso = req.query.geo || await detectCountryServer(clientIp(req));
+    res.json({ iso });
+});
+
 router.get('/public/plans', async (req, res) => {
+    const iso = req.query.geo || await detectCountryServer(clientIp(req));
     try {
         const rate = await getCurrentRate('VES_RATE');
         const plans = {};
         Object.keys(PLANS).forEach(key => {
-            plans[key] = {
-                usd: PLANS[key].usd,
-                cop: PLANS[key].cop,
-                ves: +(PLANS[key].usd * rate).toFixed(2)
-            };
+            plans[key] = { usd: PLANS[key].usd, cop: PLANS[key].cop, ves: +(PLANS[key].usd * rate).toFixed(2) };
         });
-        res.json({ plans, rateVES: rate });
+        console.log('🌍 Geo landing:', clientIp(req), '→', iso || 'sin país');
+        res.json({ plans, rateVES: rate, geo: iso });
     } catch (error) {
         const plans = {};
         Object.keys(PLANS).forEach(key => { plans[key] = { usd: PLANS[key].usd, cop: PLANS[key].cop, ves: null }; });
-        res.json({ plans, rateVES: null });
+        res.json({ plans, rateVES: null, geo: iso });
     }
 });
 
