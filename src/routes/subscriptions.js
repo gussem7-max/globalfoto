@@ -375,50 +375,50 @@ function sanitizeRefCode(code) {
     return String(code || '').replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 10);
 }
 
-// --- GEO + PRECIOS PÚBLICOS PARA LA LANDING (sin autenticación, geo en el servidor) ---
-const geoCache = new Map(); // ip -> { iso, ts }
-function clientIp(req) {
-    return String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip || '';
-}
-async function detectCountryServer(ip) {
-    if (!ip) return '';
-    const hit = geoCache.get(ip);
-    if (hit && (Date.now() - hit.ts) < 6 * 60 * 60 * 1000) return hit.iso;
-    let iso = '';
+// 🌍 GEO + PRECIOS PÚBLICOS PARA LA LANDING (sin autenticación)
+const axiosGeo = require('axios');
+
+async function detectCountry(req) {
+  const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || String(req.ip || '');
+  const privada = !ip || /^(10\.|192\.168\.|127\.|172\.(1[6-9]|2[0-9]|3[01])\.|::1|f[cd])/i.test(ip);
+  if (!privada) {
     try {
-        const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 3000);
-        const r = await fetch('https://get.geojs.io/v1/ip/country.json?ip=' + encodeURIComponent(ip), { signal: ctrl.signal });
-        clearTimeout(t);
-        if (r.ok) {
-            const d = await r.json();
-            iso = d.country_code || '';
-        }
-    } catch (e) { iso = ''; }
-    geoCache.set(ip, { iso, ts: Date.now() });
-    return iso;
+      const r = await axiosGeo.get(`https://get.geojs.io/v1/ip/country/${encodeURIComponent(ip)}.json`, { timeout: 4000 });
+      const c = String((r.data && (r.data.country_code || r.data.country)) || '').toUpperCase();
+      console.log('🌍 geo provider 1 →', c);
+      if (c.length === 2) return c;
+    } catch (e) { console.error('🌍 geo provider 1 falló:', e.message); }
+    try {
+      const r = await axiosGeo.get(`https://ipapi.co/${encodeURIComponent(ip)}/country/`, { timeout: 4000 });
+      const c = String(r.data || '').trim().toUpperCase();
+      console.log('🌍 geo provider 2 →', c);
+      if (c.length === 2) return c;
+    } catch (e) { console.error('🌍 geo provider 2 falló:', e.message); }
+  } else {
+    console.log('🌍 geo: IP privada/ausente →', ip);
+  }
+  return '';
 }
 
 router.get('/public/geo', async (req, res) => {
-    const iso = req.query.geo || await detectCountryServer(clientIp(req));
-    res.json({ iso });
+  const iso = req.query.geo || await detectCountry(req);
+  res.json({ iso });
 });
 
 router.get('/public/plans', async (req, res) => {
-    const iso = req.query.geo || await detectCountryServer(clientIp(req));
-    try {
-        const rate = await getCurrentRate('VES_RATE');
-        const plans = {};
-        Object.keys(PLANS).forEach(key => {
-            plans[key] = { usd: PLANS[key].usd, cop: PLANS[key].cop, ves: +(PLANS[key].usd * rate).toFixed(2) };
-        });
-        console.log('🌍 Geo landing:', clientIp(req), '→', iso || 'sin país');
-        res.json({ plans, rateVES: rate, geo: iso });
-    } catch (error) {
-        const plans = {};
-        Object.keys(PLANS).forEach(key => { plans[key] = { usd: PLANS[key].usd, cop: PLANS[key].cop, ves: null }; });
-        res.json({ plans, rateVES: null, geo: iso });
-    }
+  const geo = req.query.geo || await detectCountry(req);
+  try {
+    const rate = await getCurrentRate('VES_RATE');
+    const plans = {};
+    Object.keys(PLANS).forEach(key => {
+      plans[key] = { usd: PLANS[key].usd, cop: PLANS[key].cop, ves: +(PLANS[key].usd * rate).toFixed(2) };
+    });
+    res.json({ plans, rateVES: rate, geo });
+  } catch (error) {
+    const plans = {};
+    Object.keys(PLANS).forEach(key => { plans[key] = { usd: PLANS[key].usd, cop: PLANS[key].cop, ves: null }; });
+    res.json({ plans, rateVES: null, geo });
+  }
 });
 
 // --- CONCILIACIÓN AUTOMÁTICA (WEBHOOK) ---
