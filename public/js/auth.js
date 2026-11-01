@@ -24,6 +24,8 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
     const prefix = (document.getElementById('phonePrefix')?.textContent || '').trim();
     const national = (document.getElementById('regPhone')?.value || '').trim();
     const resDiv = document.getElementById('resultado');
+    const countryIso = (document.getElementById('regCountry')?.value || '').trim();
+    if (!countryIso) { resDiv.className = 'alert alert-error'; resDiv.textContent = 'Selecciona tu país para continuar.'; return; }
 
     if (!national) { resDiv.className = 'alert alert-error'; resDiv.textContent = 'Introduce tu número de teléfono.'; return; }
 

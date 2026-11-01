@@ -110,3 +110,48 @@ document.addEventListener('DOMContentLoaded', () => {
   // Cerrar con Escape
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeList(); });
 });
+
+// === GEO-PREFILL: el registro arranca con el país detectado (o vacío si la geo falló) ===
+document.addEventListener('DOMContentLoaded', () => {
+    const nameEl = document.getElementById('countryName');
+    const hiddenEl = document.getElementById('regCountry');
+    const prefixEl = document.getElementById('phonePrefix');
+    const flagEl = document.getElementById('countryFlag');
+    const globeEl = document.getElementById('countryGlobe');
+    if (!nameEl || !hiddenEl) return;
+
+    function applyIso(iso) {
+        const country = iso && typeof getCountry === 'function' ? getCountry(iso) : null;
+        if (country && country.iso && country.iso !== 'XX') {
+            if (typeof renderTrigger === 'function') renderTrigger(country);
+            hiddenEl.value = country.iso;
+            if (prefixEl) prefixEl.textContent = country.dialCode || '';
+            if (flagEl) flagEl.src = 'https://flagcdn.com/48x36/' + country.iso.toLowerCase() + '.png';
+            if (globeEl) globeEl.style.display = 'none';
+            nameEl.textContent = country.name;
+        } else {
+            hiddenEl.value = '';
+            nameEl.textContent = 'Selecciona tu país';
+            if (prefixEl) prefixEl.textContent = '';
+            if (flagEl) flagEl.src = '';
+            if (globeEl) globeEl.style.display = '';
+        }
+    }
+
+    let geo = null;
+    try { geo = JSON.parse(localStorage.getItem('gf_geo') || 'null'); } catch (e) {}
+    if (geo && geo.iso) { applyIso(geo.iso); return; }
+
+    // Sin caché: detecta ahora mismo y prellena
+    fetch('https://get.geojs.io/v1/ip/country.json')
+        .then(r => (r.ok ? r.json() : Promise.reject()))
+        .then(d => d.country_code || '')
+        .catch(() => fetch('https://ipapi.co/json/')
+            .then(r => (r.ok ? r.json() : Promise.reject()))
+            .then(d => d.country_code || '')
+            .catch(() => ''))
+        .then(iso => {
+            if (iso) localStorage.setItem('gf_geo', JSON.stringify({ iso: iso, ts: Date.now() }));
+            applyIso(iso);
+        });
+});

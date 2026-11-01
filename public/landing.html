@@ -965,6 +965,85 @@
                 .catch(() => { /* sin sesión válida: la landing queda intacta */ });
         })();
 
+                // === GEO-PRECIOS: la landing muestra la moneda del visitante ===
+        (function () {
+            const CACHE_KEY = 'gf_geo';
+            const CACHE_MS = 24 * 60 * 60 * 1000;
+
+            function readCache() {
+                try {
+                    const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+                    if (c && c.iso && (Date.now() - c.ts) < CACHE_MS) return c.iso;
+                } catch (e) {}
+                return null;
+            }
+            function detectCountry() {
+                return fetch('https://get.geojs.io/v1/ip/country.json')
+                    .then(r => (r.ok ? r.json() : Promise.reject()))
+                    .then(d => d.country_code || '')
+                    .catch(() => fetch('https://ipapi.co/json/')
+                        .then(r => (r.ok ? r.json() : Promise.reject()))
+                        .then(d => d.country_code || '')
+                        .catch(() => ''));
+            }
+            const fmtVES = n => 'Bs. ' + n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const fmtCOP = n => '$' + Math.round(n).toLocaleString('es-CO') + ' COP';
+
+            function applyPrices(iso, data) {
+                const plans = data.plans || {};
+                const flagImg = code => '<img src="https://flagcdn.com/20x15/' + code.toLowerCase() + '.png" alt="' + code + '" style="border-radius:2px;">';
+                let notita = '';
+                if (iso === 'VE' && data.rateVES) {
+                    notita = '<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin:0 auto 18px;max-width:640px;padding:10px 16px;border:1px solid rgba(148,163,184,0.25);background:rgba(15,23,42,0.6);border-radius:999px;color:#94a3b8;font-size:13px;text-align:center;">' + flagImg('VE') + ' Precios en USD · equivalente en bolívares a la tasa oficial BCV de hoy (Bs. ' + data.rateVES.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' por USD).</div>';
+                } else if (iso === 'CO') {
+                    notita = '<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin:0 auto 18px;max-width:640px;padding:10px 16px;border:1px solid rgba(148,163,184,0.25);background:rgba(15,23,42,0.6);border-radius:999px;color:#94a3b8;font-size:13px;text-align:center;">' + flagImg('CO') + ' Precios en pesos colombianos (COP).</div>';
+                } else {
+                    notita = '<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin:0 auto 18px;max-width:640px;padding:10px 16px;border:1px solid rgba(148,163,184,0.25);background:rgba(15,23,42,0.6);border-radius:999px;color:#94a3b8;font-size:13px;text-align:center;">🌍 Precios en dólares estadounidenses (USD) · pagos internacionales por Zinli.</div>';
+                }
+
+                let firstLeaf = null;
+                Object.keys(plans).forEach(key => {
+                    const p = plans[key];
+                    if (!p) return;
+                    const targets = ['$' + p.usd.toFixed(2), '$' + p.usd.toFixed(2) + ' / mes', '$' + p.usd.toFixed(2) + '/mes'];
+                    const leaves = Array.from(document.querySelectorAll('body *')).filter(el =>
+                        el.children.length === 0 && targets.includes(el.textContent.trim())
+                    );
+                    leaves.forEach(leaf => {
+                        firstLeaf = firstLeaf || leaf;
+                        if (iso === 'CO') {
+                            leaf.textContent = fmtCOP(p.cop);
+                        } else if (iso === 'VE' && p.ves != null) {
+                            const host = leaf.parentElement && leaf.parentElement.children.length > 1 ? leaf.parentElement : leaf;
+                            host.insertAdjacentHTML('afterend',
+                                '<div style="width:100%;text-align:center;font-size:13px;color:#94a3b8;margin-top:4px;">≈ ' + fmtVES(p.ves) + ' · tasa BCV</div>');
+                        }
+                    });
+                });
+
+                if (firstLeaf) {
+                    const grid = firstLeaf.closest('[class*="grid"]');
+                    if (grid) grid.insertAdjacentHTML('beforebegin', notita);
+                }
+            }
+
+            function boot() {
+                const cached = readCache();
+                const go = iso => {
+                    if (iso) localStorage.setItem(CACHE_KEY, JSON.stringify({ iso: iso, ts: Date.now() }));
+                    fetch('/api/subscriptions/public/plans')
+                        .then(r => (r.ok ? r.json() : Promise.reject()))
+                        .then(data => applyPrices(iso || '', data))
+                        .catch(() => {});
+                };
+                if (cached) go(cached);
+                else detectCountry().then(go).catch(() => go(''));
+            }
+
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+            else boot();
+        })();
+
     </script>
 </body>
 </html>

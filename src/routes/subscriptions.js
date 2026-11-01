@@ -375,6 +375,26 @@ function sanitizeRefCode(code) {
     return String(code || '').replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 10);
 }
 
+// --- PRECIOS PÚBLICOS PARA LA LANDING (sin autenticación) ---
+router.get('/public/plans', async (req, res) => {
+    try {
+        const rate = await getCurrentRate('VES_RATE');
+        const plans = {};
+        Object.keys(PLANS).forEach(key => {
+            plans[key] = {
+                usd: PLANS[key].usd,
+                cop: PLANS[key].cop,
+                ves: +(PLANS[key].usd * rate).toFixed(2)
+            };
+        });
+        res.json({ plans, rateVES: rate });
+    } catch (error) {
+        const plans = {};
+        Object.keys(PLANS).forEach(key => { plans[key] = { usd: PLANS[key].usd, cop: PLANS[key].cop, ves: null }; });
+        res.json({ plans, rateVES: null });
+    }
+});
+
 // --- CONCILIACIÓN AUTOMÁTICA (WEBHOOK) ---
 router.post('/webhook', async (req, res) => {
     const secret = req.headers['x-webhook-secret'];
