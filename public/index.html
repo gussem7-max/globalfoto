@@ -124,7 +124,12 @@
                     <li class="nav-item active" id="navEvents" onclick="showSection('events')"><i class="fa-solid fa-calendar-days"></i> <span>Eventos</span></li>
                     <li class="nav-item" id="navGalleries" onclick="showSection('galleries')"><i class="fa-solid fa-images"></i> <span>Galerías</span></li>
                     <li class="nav-item" id="navSales" onclick="showSection('sales')"><i class="fa-solid fa-cart-shopping"></i> <span>Ventas</span> <span class="nav-badge hidden" id="pendingOrdersBadge">0</span></li>
-                    <li class="nav-item hidden" id="navAdmin" onclick="showSection('admin')"><i class="fa-solid fa-shield-halved"></i> <span>Administración</span></li>
+                    <li class="nav-item hidden" id="navAdmin" style="display:none !important;"></li>
+                    <li class="nav-item hidden" id="navAdminSummary" onclick="showSection('adminSummary')"><i class="fa-solid fa-chart-line"></i> <span>Resumen</span></li>
+                    <li class="nav-item hidden" id="navAdminEvents" onclick="showSection('adminEvents')"><i class="fa-solid fa-globe"></i> <span>Eventos Globales</span></li>
+                    <li class="nav-item hidden" id="navAdminMedia" onclick="showSection('adminMedia')"><i class="fa-solid fa-photo-film"></i> <span>Biblioteca de Medios</span></li>
+                    <li class="nav-item hidden" id="navAdminOrders" onclick="showSection('adminOrders')"><i class="fa-solid fa-cart-shopping"></i> <span>Pedidos Globales</span></li>
+                    <li class="nav-item hidden" id="navAdminSubs" onclick="showSection('adminSubs')"><i class="fa-solid fa-star"></i> <span>Suscripciones</span></li>
                     <li class="nav-item hidden" id="navUsers" onclick="showSection('users')"><i class="fa-solid fa-users"></i> <span>Usuarios</span></li>
                     <li class="nav-item" id="navSettings" onclick="showSection('settings')"><i class="fa-solid fa-gear"></i> <span>Configuración</span></li>
                     <li class="nav-item" id="navSubscription" onclick="showSection('subscription')"><i class="fa-solid fa-star"></i><span>Suscripción</span></li>
@@ -170,16 +175,29 @@
                 <div class="orders-list" id="ordersList"></div>
             </div>
 
-            <div id="sectionAdmin" class="hidden">
-                <div class="header"><div><h1>🛡️ Panel de Administración</h1><p class="header-sub">Control total de la plataforma GlobalFoto.</p></div></div>
+            <div id="sectionAdminSummary" class="hidden">
+                <div class="header"><div><h1>📊 Resumen de la Plataforma</h1><p class="header-sub">Control total de GlobalFoto en un vistazo.</p></div></div>
                 <div class="stats-grid" id="adminStats"></div>
-                <div class="admin-tabs">
-                    <button class="admin-tab-btn active" id="tabAdminEvents" onclick="adminTab('events')"><i class="fa-solid fa-calendar-days"></i> Eventos</button>
-                    <button class="admin-tab-btn" id="tabAdminPhotos" onclick="adminTab('photos')"><i class="fa-solid fa-photo-film"></i> Biblioteca de Medios</button>
-                    <button class="admin-tab-btn" id="tabAdminOrders" onclick="adminTab('orders')"><i class="fa-solid fa-cart-shopping"></i> Pedidos</button>
-                    <button class="admin-tab-btn" id="tabAdminSubscriptions" onclick="adminTab('subscriptions')"><i class="fa-solid fa-star"></i> Suscripciones</button>
-                </div>
-                <div id="adminContent"></div>
+            </div>
+
+            <div id="sectionAdminEvents" class="hidden">
+                <div class="header"><div><h1>🌐 Eventos Globales</h1><p class="header-sub">Todos los eventos de todos los fotógrafos.</p></div></div>
+                <div id="adminEventsContent"></div>
+            </div>
+
+            <div id="sectionAdminMedia" class="hidden">
+                <div class="header"><div><h1>🖼️ Biblioteca de Medios</h1><p class="header-sub">Todas las fotos subidas a la plataforma.</p></div></div>
+                <div id="adminMediaContent"></div>
+            </div>
+
+            <div id="sectionAdminOrders" class="hidden">
+                <div class="header"><div><h1>🛒 Pedidos Globales</h1><p class="header-sub">Todos los pedidos de todos los fotógrafos.</p></div></div>
+                <div id="adminOrdersContent"></div>
+            </div>
+
+            <div id="sectionAdminSubs" class="hidden">
+                <div class="header"><div><h1>⭐ Suscripciones</h1><p class="header-sub">Aprueba o rechaza los pagos reportados por los fotógrafos.</p></div></div>
+                <div id="adminSubsContent"></div>
             </div>
 
             <div id="sectionUsers" class="hidden">
@@ -284,8 +302,23 @@
                     <button class="gf-close" onclick="closeProfileDrawer()"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div class="gf-drawer-items">
-                    <div class="gf-ditem" onclick="showSection('subscription'); closeProfileDrawer()">
+                    <div class="gf-ditem" id="drawerSubscription" onclick="showSection('subscription'); closeProfileDrawer()">
                         <i class="fa-solid fa-star"></i> Suscripción
+                    </div>
+                    <div class="gf-ditem hidden" id="drawerAdminSummary" onclick="showSection('adminSummary'); closeProfileDrawer()">
+                        <i class="fa-solid fa-chart-line"></i> Resumen
+                    </div>
+                    <div class="gf-ditem hidden" id="drawerAdminEvents" onclick="showSection('adminEvents'); closeProfileDrawer()">
+                        <i class="fa-solid fa-globe"></i> Eventos Globales
+                    </div>
+                    <div class="gf-ditem hidden" id="drawerAdminMedia" onclick="showSection('adminMedia'); closeProfileDrawer()">
+                        <i class="fa-solid fa-photo-film"></i> Biblioteca de Medios
+                    </div>
+                    <div class="gf-ditem hidden" id="drawerAdminOrders" onclick="showSection('adminOrders'); closeProfileDrawer()">
+                        <i class="fa-solid fa-cart-shopping"></i> Pedidos Globales
+                    </div>
+                    <div class="gf-ditem hidden" id="drawerAdminSubs" onclick="showSection('adminSubs'); closeProfileDrawer()">
+                        <i class="fa-solid fa-star"></i> Suscripciones
                     </div>
                     <div class="gf-ditem" onclick="showSection('settings'); closeProfileDrawer()">
                         <i class="fa-solid fa-gear"></i> Configuración
@@ -293,7 +326,7 @@
                     <div class="gf-ditem hidden" id="drawerUsers" onclick="showSection('users'); closeProfileDrawer()">
                         <i class="fa-solid fa-users"></i> Usuarios
                     </div>
-                    <div class="gf-ditem hidden" id="drawerAdmin" onclick="showSection('admin'); closeProfileDrawer()">
+                    <div class="gf-ditem hidden" id="drawerAdmin" style="display:none !important;">
                         <i class="fa-solid fa-shield-halved"></i> Administración
                     </div>
                     <div class="gf-ddivider"></div>
