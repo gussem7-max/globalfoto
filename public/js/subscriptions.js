@@ -7,22 +7,18 @@ async function checkSubscriptionStatus() {
     const container = document.getElementById('subscriptionContent');
     if (!container) return;
 
-    // 🛡️ Si es ADMIN, no se muestra la tienda de planes: se abre la Gestión de Suscripciones
+    // 🛡️ ADMIN: no se suscribe; gestiona las suscripciones de la plataforma
     if (typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin' && typeof renderAdminSubscriptions === 'function') {
-        const container = document.getElementById('subscriptionContent');
-        if (container) {
-            container.innerHTML = '<p style="color: var(--text-muted); padding: 20px;">Cargando suscripciones…</p>';
-            try {
-                const res = await fetch('/api/admin/subscription-orders', { headers: authHeaders() });
-                if (res.ok) {
-                    const data = await res.json();
-                    renderAdminSubscriptions(data, 'subscriptionContent');
-                } else {
-                    container.innerHTML = '<div class="alert alert-error">No se pudo cargar la gestión de suscripciones.</div>';
-                }
-            } catch (err) {
-                container.innerHTML = '<div class="alert alert-error">Error de conexión.</div>';
+        container.innerHTML = '<p style="color: var(--text-muted); padding: 20px;">Cargando suscripciones…</p>';
+        try {
+            const res = await fetch('/api/admin/subscription-orders', { headers: authHeaders() });
+            if (res.ok) {
+                renderAdminSubscriptions(await res.json(), 'subscriptionContent');
+            } else {
+                container.innerHTML = '<div class="alert alert-error">No se pudo cargar la gestión de suscripciones.</div>';
             }
+        } catch (err) {
+            container.innerHTML = '<div class="alert alert-error">Error de conexión.</div>';
         }
         return;
     }
@@ -30,34 +26,25 @@ async function checkSubscriptionStatus() {
     try {
         const res = await fetch('/api/auth/me', { headers: authHeaders() });
         if (!res.ok) throw new Error('No se pudo obtener perfil');
-        
         const data = await res.json();
         const user = data.user;
 
-        // Lógica robusta:
-        // 1. Tiene plan asignado (no null, no trial)
-        // 2. Tiene fecha de expiración
-        // 3. La fecha no ha pasado
-        
-        const hasPlan = user.plan && user.plan !== 'trial';
-        const hasExpiry = user.plan_expires_at;
-        
-        if (hasPlan && hasExpiry) {
+        // Cualquier plan (INCLUYENDO 'trial') con fecha futura = dashboard activo
+        if (user.plan_expires_at) {
             const expiresAt = new Date(user.plan_expires_at);
             const now = new Date();
             const daysLeft = Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24));
-
             if (daysLeft > 0) {
                 showActiveSubscriptionDashboard(user, daysLeft);
-                return; 
+                return;
             }
         }
 
-        // Si no cumple, mostrar planes
+        // Sin plan o plan expirado → vitrina de venta
         loadPlans();
     } catch (err) {
         console.error('Error verificando suscripción:', err);
-        loadPlans(); 
+        loadPlans();
     }
 }
 
@@ -68,6 +55,26 @@ function showActiveSubscriptionDashboard(user, daysLeft) {
     const planName = (user.plan || '').charAt(0).toUpperCase() + (user.plan || '').slice(1);
     const expiresDate = new Date(user.plan_expires_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
     const features = getFeaturesForPlan(user.plan);
+
+        // ============ PRUEBA GRATIS (plan = 'trial') ============
+    if (user.plan === 'trial') {
+        container.innerHTML = `<div class="header"><div><h1>Tu Prueba Gratuita</h1><p class="header-sub">Estás explorando GlobalFoto sin costo por 14 días.</p></div></div>
+        <div class="alert" style="background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.4); color: #c4b5fd; margin-bottom: 20px; text-align: left;">
+            <i class="fa-solid fa-gift"></i> Tu plan <strong>Gratis</strong> está activo · quedan <strong>${daysLeft} ${diaTxt}</strong>. Cuando termine, elige un plan de pago para no perder el acceso ni tus eventos.
+        </div>
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-crown"></i></div><div class="stat-data"><h3>Gratis</h3><p>Plan Actual</p></div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-hourglass-half"></i></div><div class="stat-data"><h3>${daysLeft} ${diaTxt}</h3><p>Restantes</p></div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-clock"></i></div><div class="stat-data"><h3>${expiresDate}</h3><p>Fecha de Expiración</p></div></div>
+        </div>
+        <h2 class="section-title">Tus Beneficios Actuales</h2>
+        <div class="config-card"><ul class="plan-features" style="font-size: 15px; line-height: 2;">${features}</ul></div>
+        <div style="margin-top: 28px; text-align: center;">
+            <button class="btn-primary" style="width: auto; padding: 14px 32px;" onclick="showPlanSelection()"><i class="fa-solid fa-credit-card"></i> Elegir plan de pago</button>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 10px;">Tus eventos y fotos se conservan al pasar a un plan de pago.</p>
+        </div>`;
+        return;
+    }
 
     // ============ MODO PRUEBA (is_trial = true) ============
     if (user.is_trial) {
@@ -355,6 +362,7 @@ function formatPrice(price, currency) {
 
 function getFeaturesForPlan(key) {
     const features = {
+        trial: ['1 evento activo', 'Hasta 100 fotos', 'Marca de agua automática', 'Galerías públicas compartibles'],
         basic: ['5 eventos activos', 'Hasta 1.500 fotos', 'Marca de agua automática', 'Galerías con expiración'],
         pro: ['Eventos ilimitados', 'Hasta 10.000 fotos', 'Verificación por selfie', 'QR con tu logo', 'Soporte prioritario'],
         studio: ['Eventos ilimitados', 'Fotos ilimitadas', 'Multi-cuenta equipo', 'Dominio personalizado', 'Soporte dedicado 24/7']
