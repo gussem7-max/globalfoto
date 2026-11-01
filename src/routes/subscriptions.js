@@ -608,3 +608,5 @@ router.get('/orders/:id', verifyToken, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.activateUserPlan = activateUserPlan;
+module.exports.sendPaymentConfirmationEmail = sendPaymentConfirmationEmail;

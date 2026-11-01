@@ -22,18 +22,20 @@ async function loadAdmin() {
 }
 
 async function adminTab(tab) {
-    ['events', 'photos', 'orders'].forEach(t => {
+    ['events', 'photos', 'orders', 'subscriptions'].forEach(t => {
         const btn = document.getElementById('tabAdmin' + t.charAt(0).toUpperCase() + t.slice(1));
         if (btn) btn.classList.toggle('active', t === tab);
     });
     const content = document.getElementById('adminContent');
     content.innerHTML = '<p style="color: var(--text-muted); padding: 20px;">Cargando...</p>';
     try {
-        const res = await fetch(`/api/admin/${tab}`, { headers: authHeaders() });
+        const endpoint = tab === 'subscriptions' ? 'subscription-orders' : tab;
+        const res = await fetch(`/api/admin/${endpoint}`, { headers: authHeaders() });
         const data = await res.json();
         if (tab === 'events') renderAdminEvents(data);
         else if (tab === 'photos') renderAdminPhotos(data);
-        else renderAdminOrders(data);
+        else if (tab === 'orders') renderAdminOrders(data);
+        else if (tab === 'subscriptions') renderAdminSubscriptions(data);
     } catch (err) {
         content.innerHTML = '<div class="alert alert-error">Error al cargar la información.</div>';
     }
@@ -273,5 +275,118 @@ async function submitActivateSubscription(e) {
         }
     } catch (err) {
         resultDiv.innerHTML = `<div class="alert alert-error"><i class="fa-solid fa-circle-exclamation"></i> Error de conexión: ${err.message}</div>`;
+    }
+}
+
+function renderAdminSubscriptions(orders) {
+    const content = document.getElementById('adminContent');
+    if (!orders || orders.length === 0) { 
+        content.innerHTML = '<div class="empty-state"><i class="fa-solid fa-star"></i><p>No hay órdenes de suscripción registradas.</p></div>'; 
+        return; 
+    }
+    
+    const channelLabels = { nequi: 'Nequi', pagomovil: 'Pago Móvil', zinli: 'Zinli' };
+    
+    content.innerHTML = `
+        <div style="background:white;border-radius:12px;border:1px solid var(--border-color);overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;text-align:left;min-width:900px;">
+            <thead style="background:#f8fafc;border-bottom:1px solid var(--border-color);">
+                <tr>
+                    <th style="padding:14px;font-size:12px;color:var(--text-muted);">#</th>
+                    <th style="padding:14px;font-size:12px;color:var(--text-muted);">Fotógrafo</th>
+                    <th style="padding:14px;font-size:12px;color:var(--text-muted);">Plan</th>
+                    <th style="padding:14px;font-size:12px;color:var(--text-muted);">Monto Esp.</th>
+                    <th style="padding:14px;font-size:12px;color:var(--text-muted);">Monto Rep.</th>
+                    <th style="padding:14px;font-size:12px;color:var(--text-muted);">Código / Ref</th>
+                    <th style="padding:14px;font-size:12px;color:var(--text-muted);">Canal</th>
+                    <th style="padding:14px;font-size:12px;color:var(--text-muted);">Estado</th>
+                    <th style="padding:14px;font-size:12px;color:var(--text-muted);">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>` + orders.map(o => {
+                const statusClass = `status-${o.status}`;
+                const statusText = o.status === 'pending' ? 'Pendiente' : o.status === 'reported' ? 'Reportado ⚠️' : o.status === 'paid' ? 'Pagado' : 'Rechazado';
+                
+                // Extraer datos reportados por el usuario
+                let reportedAmount = '—';
+                let reportedRef = '—';
+                if (o.webhook_raw) {
+                    try {
+                        const raw = typeof o.webhook_raw === 'string' ? JSON.parse(o.webhook_raw) : o.webhook_raw;
+                        if (raw.reported_amount) reportedAmount = raw.reported_amount;
+                        if (raw.reported_reference) reportedRef = raw.reported_reference;
+                    } catch(e) {}
+                }
+                if (reportedAmount === '—' && o.reference_note && o.reference_note.includes('Monto reportado:')) {
+                    const match = o.reference_note.match(/Monto reportado: ([^|]+)/);
+                    if (match) reportedAmount = match[1].trim();
+                }
+                if (reportedRef === '—' && o.reference_note && o.reference_note.includes('Ref usada:')) {
+                    const match = o.reference_note.match(/Ref usada: ([^|]+)/);
+                    if (match) reportedRef = match[1].trim();
+                }
+
+                const moneyExpected = formatMoney(o.expected_amount, o.currency);
+                const moneyReported = reportedAmount !== '—' ? formatMoney(reportedAmount, o.currency) : '—';
+                
+                // Alerta visual si el monto reportado no coincide con el esperado
+                const isMismatch = reportedAmount !== '—' && Math.abs(parseFloat(reportedAmount) - parseFloat(o.expected_amount)) > 0.01;
+                
+                const actions = o.status === 'reported' ? `
+                    <button onclick="approveSubOrder(${o.id})" class="btn-success" style="padding:6px 10px;font-size:12px;margin-right:4px;" title="Aprobar y Activar Plan"><i class="fa-solid fa-check"></i></button>
+                    <button onclick="rejectSubOrder(${o.id})" class="btn-danger" style="padding:6px 10px;font-size:12px;" title="Rechazar"><i class="fa-solid fa-xmark"></i></button>
+                ` : (o.status === 'pending' ? `<span style="font-size:11px;color:var(--text-muted);">Esperando...</span>` : `<span style="font-size:11px;color:var(--text-muted);">${statusText}</span>`);
+
+                return `<tr style="border-bottom:1px solid var(--border-color); ${o.status === 'reported' ? 'background:#fffbeb;' : ''}">
+                    <td style="padding:12px;font-size:13px;font-weight:600;">#${o.id}</td>
+                    <td style="padding:12px;font-size:13px;">${o.user_name}<br><small style="color:var(--text-muted);">${o.user_email}</small></td>
+                    <td style="padding:12px;font-size:13px;"><span style="background:#e0e7ff;color:#3730a3;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;">${(o.plan || '').toUpperCase()}</span></td>
+                    <td style="padding:12px;font-size:13px;font-weight:600;">${moneyExpected}</td>
+                    <td style="padding:12px;font-size:13px;font-weight:600; color: ${isMismatch ? 'var(--danger)' : 'inherit'}">${moneyReported}</td>
+                    <td style="padding:12px;font-size:12px;font-family:monospace;">${o.reference_code}<br><small style="color:var(--text-muted);">${reportedRef}</small></td>
+                    <td style="padding:12px;font-size:13px;">${channelLabels[o.channel] || o.channel}</td>
+                    <td style="padding:12px;"><span class="order-status ${statusClass}">${statusText}</span></td>
+                    <td style="padding:12px;">${actions}</td>
+                </tr>`;
+            }).join('') + `</tbody></table></div>`;
+}
+
+async function approveSubOrder(id) {
+    if (!confirm('¿Confirmas que el pago es correcto? Se activará el plan del usuario y se le enviará un correo de confirmación.')) return;
+    try {
+        const res = await fetch(`/api/admin/subscription-orders/${id}/approve`, {
+            method: 'POST',
+            headers: authHeaders()
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert('✅ Plan activado y usuario notificado.');
+            adminTab('subscriptions');
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (err) {
+        alert('Error de conexión.');
+    }
+}
+
+async function rejectSubOrder(id) {
+    const reason = prompt('Motivo del rechazo (opcional):');
+    if (reason === null) return; // Cancelado por el usuario
+    try {
+        const res = await fetch(`/api/admin/subscription-orders/${id}/reject`, {
+            method: 'POST',
+            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert('Orden rechazada.');
+            adminTab('subscriptions');
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (err) {
+        alert('Error de conexión.');
     }
 }

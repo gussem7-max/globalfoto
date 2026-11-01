@@ -218,4 +218,88 @@ router.post('/activate-subscription', verificarAdmin, async (req, res) => {
     }
 });
 
+// =====================================================
+// ÓRDENES DE SUSCRIPCIÓN (Reportes manuales y pendientes)
+// =====================================================
+router.get('/subscription-orders', verificarAdmin, async (req, res) => {
+    try {
+        const r = await pool.query(`
+            SELECT so.*, u.name as user_name, u.email as user_email, u.country
+            FROM subscription_orders so
+            JOIN users u ON so.user_id = u.id
+            ORDER BY 
+                CASE so.status 
+                    WHEN 'reported' THEN 1 
+                    WHEN 'pending' THEN 2 
+                    WHEN 'paid' THEN 3 
+                    ELSE 4 
+                END,
+                so.created_at DESC
+        `);
+        res.json(r.rows);
+    } catch (error) {
+        console.error('Error cargando órdenes de suscripción:', error);
+        res.status(500).json({ error: 'Error al cargar órdenes.' });
+    }
+});
+
+router.post('/subscription-orders/:id/approve', verificarAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const orderRes = await pool.query('SELECT * FROM subscription_orders WHERE id = $1', [id]);
+        if (orderRes.rows.length === 0) return res.status(404).json({ error: 'Orden no encontrada.' });
+        
+        const order = orderRes.rows[0];
+        if (order.status === 'paid' || order.status === 'approved') {
+            return res.status(400).json({ error: 'Esta orden ya fue procesada.' });
+        }
+
+        // Importar funciones de suscripciones
+        const subRoutes = require('./subscriptions');
+
+        // 1. Activar plan (misma lógica exacta que el webhook automático)
+        if (subRoutes.activateUserPlan) {
+            await subRoutes.activateUserPlan(order.user_id, order.plan);
+        }
+
+        // 2. Marcar orden como pagada en la base de datos
+        await pool.query(
+            `UPDATE subscription_orders SET status = 'paid', paid_at = NOW(), reference_note = COALESCE(reference_note, '') || ' | Aprobado manualmente por Admin' WHERE id = $1`,
+            [id]
+        );
+
+        // 3. Enviar correo espectacular de confirmación al fotógrafo
+        if (subRoutes.sendPaymentConfirmationEmail) {
+            subRoutes.sendPaymentConfirmationEmail(order.user_id, order.plan, {
+                amount: Number(order.expected_amount),
+                currency: order.currency,
+                reference: order.reference_code,
+                channel: order.channel
+            }).catch(err => console.error('⚠️ [EMAIL admin] fallo:', err.message));
+        }
+
+        res.json({ success: true, message: 'Plan activado y orden aprobada.' });
+    } catch (error) {
+        console.error('Error aprobando orden:', error);
+        res.status(500).json({ error: 'Error interno al aprobar.' });
+    }
+});
+
+router.post('/subscription-orders/:id/reject', verificarAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reason } = req.body;
+        
+        await pool.query(
+            `UPDATE subscription_orders SET status = 'rejected', reference_note = COALESCE(reference_note, '') || ' | Rechazado por Admin: ' || $1 WHERE id = $2`,
+            [reason || 'Sin motivo', id]
+        );
+        
+        res.json({ success: true, message: 'Orden rechazada.' });
+    } catch (error) {
+        console.error('Error rechazando orden:', error);
+        res.status(500).json({ error: 'Error interno al rechazar.' });
+    }
+});
+
 module.exports = router;
