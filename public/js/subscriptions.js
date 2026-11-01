@@ -55,8 +55,9 @@ function showActiveSubscriptionDashboard(user, daysLeft) {
     const planName = (user.plan || '').charAt(0).toUpperCase() + (user.plan || '').slice(1);
     const expiresDate = new Date(user.plan_expires_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
     const features = getFeaturesForPlan(user.plan);
+    const diaTxt = daysLeft === 1 ? 'día' : 'días';
 
-        // ============ PRUEBA GRATIS (plan = 'trial') ============
+    // ============ PRUEBA GRATIS (plan = 'trial') ============
     if (user.plan === 'trial') {
         container.innerHTML = `<div class="header"><div><h1>Tu Prueba Gratuita</h1><p class="header-sub">Estás explorando GlobalFoto sin costo por 14 días.</p></div></div>
         <div class="alert" style="background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.4); color: #c4b5fd; margin-bottom: 20px; text-align: left;">
