@@ -970,32 +970,47 @@
         const fmtVES = n => 'Bs. ' + n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const fmtCOP = n => '$' + Math.round(n).toLocaleString('es-CO') + ' COP';
 
-        function applyPrices(iso, data) {
-            const plans = data.plans || {};
-            let matched = 0;
-            Object.keys(plans).forEach(key => {
-                const p = plans[key];
-                if (!p) return;
-                const targets = ['$' + p.usd.toFixed(2), '$' + p.usd.toFixed(2) + ' / mes', '$' + p.usd.toFixed(2) + '/mes'];
-                const leaves = Array.from(document.querySelectorAll('body *')).filter(el =>
-                    el.children.length === 0 && targets.includes(el.textContent.trim())
-                );
-                leaves.forEach(leaf => {
-                    matched++;
-                    if (iso === 'CO') {
-                        leaf.textContent = fmtCOP(p.cop);
-                    } else if (iso === 'VE' && p.ves != null) {
-                        const host = leaf.parentElement && leaf.parentElement.children.length > 1 ? leaf.parentElement : leaf;
-                        if (!host.dataset.gfVes) {
-                            host.dataset.gfVes = '1';
-                            host.insertAdjacentHTML('afterend',
-                            '<div style="text-align:left;font-size:13px;font-weight:700;color:#fbbf24;margin-top:2px;line-height:1.25;">' + fmtVES(p.ves) + ' <span style="font-weight:500;opacity:0.85;">· tasa BCV</span></div>');
-                        }
-                    }
-                });
-            });
-            console.log('💱 Landing precios → país:', iso || 'USD', '| tarjetas ajustadas:', matched);
-        }
+    function applyPrices(iso, data) {
+        const plans = data.plans || {};
+        let matched = 0;
+        
+        Object.keys(plans).forEach(key => {
+            const p = plans[key];
+            if (!p) return;
+            
+            // Buscar el span del precio en USD ($6.90, $15.90, $24.90)
+            const targets = ['$' + p.usd.toFixed(2), '$' + p.usd.toFixed(2) + ' / mes', '$' + p.usd.toFixed(2) + '/mes'];
+            const priceLeaf = Array.from(document.querySelectorAll('body *')).find(el =>
+                el.children.length === 0 && targets.includes(el.textContent.trim())
+            );
+            
+            if (!priceLeaf) return;
+            matched++;
+            
+            // Si es Colombia → reemplazar texto directo
+            if (iso === 'CO') {
+                priceLeaf.textContent = fmtCOP(p.cop);
+                return;
+            }
+            
+            // Si es Venezuela → agregar línea de Bs. DEBAJO DEL PRECIO, ANTES de cualquier otro contenido
+            if (iso === 'VE' && p.ves != null) {
+                // Evitar duplicados si recarga
+                if (priceLeaf.dataset.gfVes) return;
+                priceLeaf.dataset.gfVes = '1';
+                
+                // Crear el div del Bs.
+                const vesDiv = document.createElement('div');
+                vesDiv.style.cssText = 'text-align:left;font-size:13px;font-weight:700;color:#fbbf24;margin-top:2px;line-height:1.25;display:block;width:100%;';
+                vesDiv.innerHTML = fmtVES(p.ves) + ' <span style="font-weight:500;opacity:0.85;">· tasa BCV</span>';
+                
+                // Insertarlo JUSTO DESPUÉS del precio, DENTRO del mismo padre
+                priceLeaf.parentNode.insertBefore(vesDiv, priceLeaf.nextSibling);
+            }
+        });
+    
+    console.log('💱 Landing precios → país:', iso || 'USD', '| tarjetas ajustadas:', matched);
+}
 
         function boot() {
             const force = new URLSearchParams(window.location.search).get('geo');
