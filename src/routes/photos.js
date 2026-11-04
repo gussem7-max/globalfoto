@@ -71,8 +71,7 @@ router.post('/upload', verificarToken, upload.array('photos', 50), async (req, r
                 Bucket: process.env.AWS_BUCKET_NAME,
                 Key: originalKey,
                 Body: file.buffer,
-                ContentType: file.mimetype,
-                ACL: 'public-read'  // 🔑 CLAVE: hacer público
+                ContentType: file.mimetype
             }));
             const originalUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${originalKey}`;
 
@@ -96,8 +95,7 @@ router.post('/upload', verificarToken, upload.array('photos', 50), async (req, r
                 Bucket: process.env.AWS_BUCKET_NAME,
                 Key: previewKey,
                 Body: previewBuffer,
-                ContentType: 'image/jpeg',
-                ACL: 'public-read'  // 🔑 CLAVE: hacer público
+                ContentType: 'image/jpeg'
             }));
             const previewUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${previewKey}`;
 
