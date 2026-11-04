@@ -260,4 +260,186 @@ router.put('/logo', verificarToken, uploadLogo.single('logo'), async (req, res) 
     }
 });
 
+// =====================================================
+// RECUPERACIÓN DE CONTRASEÑA
+// =====================================================
+
+/** Genera un token criptográfico seguro (URL-safe base64). */
+function generateResetToken() {
+    return crypto.randomBytes(32).toString('base64url'); // ~43 chars, sin padding problemático
+}
+
+/** Envía email con enlace de reset usando Resend. */
+async function sendResetEmail(userEmail, userName, resetUrl) {
+    await resend.emails.send({
+        from: FROM_EMAIL,
+        to: userEmail,
+        subject: '🔐 Restablece tu contraseña en GlobalFoto',
+        html: `
+            <div style="font-family:'Inter',Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+                <div style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);padding:30px;border-radius:16px 16px 0 0;text-align:center;">
+                    <h1 style="color:white;margin:0;font-size:28px;">📸 GlobalFoto</h1>
+                    <p style="color:#94a3b8;margin-top:8px;font-size:14px;">Tu plataforma profesional de fotografía</p>
+                </div>
+                <div style="background:white;padding:30px;border-radius:0 0 16px 16px;border:1px solid #e2e8f0;border-top:none;">
+                    <h2 style="color:#0f172a;margin-bottom:16px;">Hola ${userName},</h2>
+                    <p style="color:#475569;font-size:15px;line-height:1.6;margin-bottom:20px;">
+                        Recibimos una solicitud para restablecer tu contraseña. Si fuiste tú, haz clic en el botón de abajo. 
+                        Este enlace vence en <strong>1 hora</strong>.
+                    </p>
+                    <div style="text-align:center;margin:24px 0;">
+                        <a href="${resetUrl}" 
+                           style="display:inline-block;background:#ffffff;color:#0f172a;padding:14px 32px;text-decoration:none;border-radius:8px;font-weight:700;font-size:15px;box-shadow:0 4px 14px rgba(0,0,0,0.15);">
+                            Restablecer mi contraseña
+                        </a>
+                    </div>
+                    <p style="color:#64748b;font-size:13px;margin-bottom:8px;">Si no ves el botón, copia y pega este enlace en tu navegador:</p>
+                    <p style="color:#2563eb;font-size:13px;word-break:break-all;margin-bottom:20px;">${resetUrl}</p>
+                    <div style="background:#fef3c7;padding:16px;border-radius:10px;border-left:4px solid #f59e0b;">
+                        <p style="color:#92400e;font-size:13px;margin:0;">
+                            ⚠️ <strong>No compartas este enlace.</strong> Quien lo tenga podrá cambiar tu contraseña durante la próxima hora.
+                        </p>
+                    </div>
+                    <p style="color:#64748b;font-size:13px;text-align:center;margin-top:24px;padding-top:20px;border-top:1px solid #e2e8f0;">
+                        ¿No solicitaste esto? Ignora este correo. Tu contraseña seguirá siendo la misma.<br>
+                        GlobalFoto - Tu plataforma profesional de fotografía
+                    </p>
+                </div>
+            </div>
+        `
+    });
+}
+
+// POST /api/auth/forgot-password — Solicita reset (envía email si el usuario existe)
+router.post('/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: 'El correo electrónico es requerido.' });
+
+        // Buscamos al usuario SIN revelar si existe o no (anti-enumeración)
+        const userResult = await pool.query('SELECT id, name, email FROM users WHERE email = $1', [email]);
+        
+        // Siempre respondemos igual (200 OK), aunque el email no exista
+        const genericMsg = 'Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña en los próximos minutos.';
+
+        if (userResult.rows.length === 0) {
+            // Usuario no encontrado: NO revelamos nada, solo devolvemos mensaje genérico
+            return res.json({ mensaje: genericMsg });
+        }
+
+        const user = userResult.rows[0];
+        const token = generateResetToken();
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
+
+        // Invalidamos resets anteriores pendientes del mismo usuario (solo uno activo)
+        await pool.query(
+            'UPDATE password_resets SET used = TRUE WHERE user_id = $1 AND used = FALSE',
+            [user.id]
+        );
+
+        // Insertamos el nuevo token
+        await pool.query(
+            'INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, $3)',
+            [user.id, token, expiresAt]
+        );
+
+        // Construimos la URL absoluta del frontend
+        const baseUrl = process.env.FRONTEND_URL || 'https://www.globalfotoapp.com';
+        const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
+
+        // Enviamos email (si falla, logueamos pero NO rompemos la respuesta al cliente)
+        try {
+            await sendResetEmail(user.email, user.name, resetUrl);
+            console.log('✅ [RESET-PASS] Email enviado a:', user.email);
+        } catch (emailErr) {
+            console.error('⚠️ [RESET-PASS] No se pudo enviar email:', emailErr.message);
+        }
+
+        res.json({ mensaje: genericMsg });
+    } catch (error) {
+        console.error('Error en forgot-password:', error);
+        res.status(500).json({ error: 'Error interno al procesar la solicitud.' });
+    }
+});
+
+// POST /api/auth/reset-password — Valida token y cambia la contraseña
+router.post('/reset-password', async (req, res) => {
+    try {
+        const { token, email, newPassword } = req.body;
+        if (!token || !email || !newPassword) {
+            return res.status(400).json({ error: 'Token, correo y nueva contraseña son requeridos.' });
+        }
+        if (newPassword.length < 8) {
+            return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 8 caracteres.' });
+        }
+
+        // Validamos el token contra la BD
+        const resetResult = await pool.query(
+            `SELECT pr.*, u.email, u.name 
+             FROM password_resets pr 
+             JOIN users u ON pr.user_id = u.id 
+             WHERE pr.token = $1 AND pr.used = FALSE AND pr.expires_at > NOW()`,
+            [token]
+        );
+
+        if (resetResult.rows.length === 0) {
+            return res.status(400).json({ error: 'El enlace de recuperación es inválido o ha expirado. Solicita uno nuevo.' });
+        }
+
+        const resetRecord = resetResult.rows[0];
+
+        // Verificamos que el email coincida (seguridad extra: evita cross-account si alguien roba el token)
+        if (resetRecord.email.toLowerCase() !== email.toLowerCase()) {
+            return res.status(400).json({ error: 'Datos inconsistentes. Intenta solicitar un nuevo enlace.' });
+        }
+
+        // Hash de la nueva contraseña (mismo algoritmo que register/login: bcrypt rounds=10)
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Actualizamos la contraseña del usuario
+        await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, resetRecord.user_id]);
+
+        // Marcamos el token como usado (single-use)
+        await pool.query('UPDATE password_resets SET used = TRUE WHERE id = $1', [resetRecord.id]);
+
+        // Opcional: invalidamos TODOS los tokens previos de ese usuario por seguridad
+        await pool.query('UPDATE password_resets SET used = TRUE WHERE user_id = $1 AND id != $2', [resetRecord.user_id, resetRecord.id]);
+
+        // Enviamos confirmación (opcional pero recomendado UX)
+        try {
+            await resend.emails.send({
+                from: FROM_EMAIL,
+                to: resetRecord.email,
+                subject: '✅ Tu contraseña fue cambiada correctamente',
+                html: `
+                    <div style="font-family:'Inter',sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+                        <div style="background:white;padding:30px;border-radius:16px;border:1px solid #e2e8f0;">
+                            <h2 style="color:#0f172a;margin-bottom:16px;">Hola ${resetRecord.name},</h2>
+                            <p style="color:#475569;font-size:15px;line-height:1.6;margin-bottom:20px;">
+                                Tu contraseña de GlobalFoto ha sido actualizada exitosamente. Ya puedes iniciar sesión con tus nuevas credenciales.
+                            </p>
+                            <div style="background:#ecfdf5;padding:16px;border-radius:10px;border-left:4px solid #10b981;">
+                                <p style="color:#065f46;font-size:13px;margin:0;">
+                                    ✓ Si no realizaste este cambio, contacta inmediatamente a soporte@globalfotoapp.com.
+                                </p>
+                            </div>
+                            <div style="text-align:center;margin-top:24px;">
+                                <a href="${process.env.FRONTEND_URL || 'https://www.globalfotoapp.com'}/panel"
+                                   style="display:inline-block;background:#ffffff;color:#0f172a;padding:14px 32px;text-decoration:none;border-radius:8px;font-weight:700;font-size:15px;box-shadow:0 4px 14px rgba(0,0,0,0.15);">
+                                    Ir a mi Panel
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `
+            });
+        } catch (e) { /* silencioso */ }
+
+        res.json({ mensaje: 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.' });
+    } catch (error) {
+        console.error('Error en reset-password:', error);
+        res.status(500).json({ error: 'Error interno al actualizar la contraseña.' });
+    }
+});
+
 module.exports = router;

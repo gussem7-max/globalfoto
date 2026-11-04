@@ -78,6 +78,13 @@
                 <form id="loginForm">
                     <div class="form-group"><label>Correo Electrónico</label><input type="email" id="loginEmail" required placeholder="tu@email.com"></div>
                     <div class="form-group"><label>Contraseña</label><input type="password" id="loginPassword" required placeholder="••••••••"></div>
+                    <p style="text-align:center;margin-top:12px;">
+                    <a href="#" onclick="showForgotModal();return false;" 
+                    style="color:var(--text-muted);font-size:13px;text-decoration:none;transition:color .2s;"
+                    onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-muted)'">
+                        ¿Olvidaste tu contraseña?
+                    </a>
+                </p>
                     <button type="submit" class="btn-primary">Entrar al Panel</button>
                 </form>
                 <div id="resultadoLogin"></div>
@@ -464,6 +471,76 @@
             <!-- Se llena dinámicamente desde subscriptions.js -->
         </div>
     </div>
+
+    <!-- MODAL OLVIDÉ MI CONTRASEÑA -->
+<div id="forgotModal" class="modal hidden" onclick="if(event.target===this)closeForgotModal()">
+    <div class="modal-content" style="max-width:400px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Recuperar contraseña</h3>
+            <span class="close-modal" onclick="closeForgotModal()">×</span>
+        </div>
+        <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">
+            Ingresa tu correo y te enviaremos un enlace para crear una nueva contraseña.
+        </p>
+        <form id="forgotForm" onsubmit="sendForgotRequest(event)">
+            <div class="form-group">
+                <label for="forgot-email">Correo electrónico</label>
+                <input type="email" id="forgot-email" placeholder="tu@email.com" required>
+            </div>
+            <button type="submit" class="btn-primary" id="forgot-submit-btn">Enviar instrucciones</button>
+        </form>
+        <div id="forgot-alert" class="hidden alert" style="margin-top:12px;"></div>
+    </div>
+</div>
+
+<script>
+function showForgotModal() {
+    document.getElementById('forgotModal').classList.remove('hidden');
+    document.getElementById('forgot-email').focus();
+}
+function closeForgotModal() {
+    document.getElementById('forgotModal').classList.add('hidden');
+    document.getElementById('forgot-alert').classList.add('hidden');
+    document.getElementById('forgotForm').reset();
+}
+async function sendForgotRequest(e) {
+    e.preventDefault();
+    const btn = document.getElementById('forgot-submit-btn');
+    const email = document.getElementById('forgot-email').value.trim();
+    const alertBox = document.getElementById('forgot-alert');
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Enviando...';
+    alertBox.classList.add('hidden');
+
+    try {
+        const resp = await fetch('/api/auth/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const data = await resp.json();
+
+        if (resp.ok) {
+            alertBox.className = 'alert alert-success';
+            alertBox.textContent = data.mensaje || 'Revisa tu bandeja de entrada.';
+            alertBox.classList.remove('hidden');
+            setTimeout(closeForgotModal, 3000);
+        } else {
+            alertBox.className = 'alert alert-error';
+            alertBox.textContent = data.error || 'Error al enviar la solicitud.';
+            alertBox.classList.remove('hidden');
+        }
+    } catch (err) {
+        alertBox.className = 'alert alert-error';
+        alertBox.textContent = 'Error de conexión. Inténtalo de nuevo.';
+        alertBox.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Enviar instrucciones';
+    }
+}
+</script>
 
     <!-- Scripts -->
     <script src="/js/state.js"></script>
