@@ -328,7 +328,7 @@ input:checked + .toggle-slider:before { transform: translateX(24px); background:
 
 /* ===== AJUSTES FINOS GALERÍA PÚBLICA ===== */
 .public-wrapper a { color: #000; }
-.public-wrapper a:hover { color: white; }
+.public-wrapper a:hover { color: rgb(44, 43, 43); }
 #pubEventTitle { color: white; }
 #pubEventDetails { color: var(--text-muted); }
 
