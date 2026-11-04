@@ -296,45 +296,62 @@ router.get('/:id/public', async (req, res) => {
 });
 
 // =====================================================
-// DESCARGA ZIP PÚBLICA
+// DESCARGA ZIP PÚBLICA (robusta: streams + timeout guard + skip rotos)
 // =====================================================
 router.get('/:id/download-zip', async (req, res) => {
     try {
         const { id } = req.params;
-        if (!isValidId(id)) return res.status(400).json({ error: 'ID de evento inválido.' });
+        if (!isValidId(id)) return res.status(400).json({ error: 'ID inválido.' });
 
         const eventResult = await pool.query('SELECT * FROM events WHERE id = $1', [id]);
-        if (eventResult.rows.length === 0) return res.status(404).json({ error: 'El evento no existe.' });
+        if (eventResult.rows.length === 0) return res.status(404).json({ error: 'Evento no encontrado.' });
         const event = eventResult.rows[0];
 
-        const photosResult = await pool.query('SELECT * FROM photos WHERE event_id = $1', [id]);
+        // Validar estado/expiración igual que la galería pública
+        if (event.status !== 'published') return res.status(404).json({ error: 'Galería no disponible.' });
+        if (event.expires_at && new Date(event.expires_at) < new Date()) return res.status(404).json({ error: 'Galería expirada.' });
+
+        const photosResult = await pool.query('SELECT url, filename FROM photos WHERE event_id = $1 ORDER BY created_at ASC', [id]);
         const photos = photosResult.rows;
 
         if (photos.length === 0) return res.status(400).json({ error: 'Este evento no contiene fotografías.' });
 
-        const zipFileName = `${event.title.replace(/[^a-zA-Z0-9]/g, '_')}_GlobalFoto.zip`;
-        res.attachment(zipFileName);
+        // Heartbeat temprano para evitar timeout de Render mientras preparamos headers
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('X-Accel-Buffering', 'no'); // desactiva buffering en proxies/nginx
+        const safeName = String(event.title || 'galeria').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 60);
+        res.attachment(`${safeName}_GlobalFoto.zip`);
+        res.flushHeaders(); // envía headers YA, el body fluye después
 
-        const archive = archiver('zip', { zlib: { level: 9 } });
+        const archive = archiver('zip', { zlib: { level: 6 } }); // nivel 6 = equilibrio velocidad/tamaño
+        let aborted = false;
         archive.on('error', (err) => {
-            console.error('Error al empaquetar ZIP:', err);
-            if (!res.headersSent) res.status(500).json({ error: 'Error al generar el ZIP.' });
+            console.error('[ZIP] Error de archiver:', err.message);
+            if (!aborted && !res.headersSent) res.status(500).end();
+            else if (!aborted) res.destroy();
         });
+        res.on('close', () => { aborted = true; try { archive.abort(); } catch (_) {} });
         archive.pipe(res);
 
+        // Stream cada foto individualmente (sin cargar buffers completos en RAM)
         for (const photo of photos) {
+            if (aborted) break;
             try {
-                const response = await axios.get(photo.url, { responseType: 'stream' });
-                const fileNameInZip = photo.filename.split('/').pop() || 'foto.jpg';
+                const response = await axios.get(photo.url, { responseType: 'stream', timeout: 15000 });
+                const fileNameInZip = (photo.filename || '').split('/').pop() || 'foto.jpg';
                 archive.append(response.data, { name: fileNameInZip });
-            } catch (err) {
-                console.error(`No se pudo incluir la foto ${photo.url} en el ZIP:`, err.message);
+            } catch (imgErr) {
+                // Foto rota/inaccesible: registrar y CONTINUAR con las demás (no tumbar el ZIP entero)
+                console.warn(`[ZIP] Saltando foto ${photo.url}:`, imgErr.message);
             }
         }
+
         await archive.finalize();
+        console.log(`[ZIP] Descarga completada para evento ${id} (${photos.length} fotos)`);
     } catch (error) {
-        console.error('Error al procesar descarga ZIP:', error);
-        if (!res.headersSent) res.status(500).json({ error: 'Error interno al generar la descarga.' });
+        console.error('[ZIP] Error general:', error);
+        if (!res.headersSent) res.status(500).json({ error: 'Error interno al generar el ZIP.' });
+        else res.destroy();
     }
 });
 
