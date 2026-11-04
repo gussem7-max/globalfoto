@@ -79,6 +79,11 @@ app.get('/panel', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Página de recuperación de contraseña (recibe token y email por query string)
+app.get('/reset-password', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
+});
+
 // Galería pública por ID
 app.get('/g/:id', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
