@@ -116,6 +116,10 @@
                         </div>
                     </div>
                     <input type="hidden" id="role" value="photographer">
+                    <label class="flex items-start gap-2 mt-4 mb-2 text-xs text-slate-400 cursor-pointer">
+                            <input type="checkbox" id="accept-terms" required class="mt-0.5 accent-indigo-500">
+                            <span>He leído y acepto los <a href="/legal/terminos" target="_blank" class="text-indigo-400 hover:underline">Términos</a>, la <a href="/legal/privacidad" target="_blank" class="text-indigo-400 hover:underline">Política de Privacidad</a> y <a href="/legal/reembolsos" target="_blank" class="text-indigo-400 hover:underline">Reembolsos</a>.</span>
+                    </label>
                     <button type="submit" class="btn-primary">Registrarme</button>
                 </form>
                 <div id="resultado"></div>
@@ -540,6 +544,7 @@ async function sendForgotRequest(e) {
         btn.innerHTML = 'Enviar instrucciones';
     }
 }
+
 </script>
 
     <!-- Scripts -->
@@ -552,5 +557,70 @@ async function sendForgotRequest(e) {
     <script src="/js/admin.js"></script>
     <script src="/js/subscriptions.js"></script>
     <script src="/js/selfie.js"></script>
+
+<!-- ===== ACEPTACIÓN DE TÉRMINOS (auto-inyectable + bloqueo de registro) ===== -->
+<script>
+(function () {
+    // ---------- 1) HTML del checkbox (se inyecta solo si no existe) ----------
+    const TERMS_HTML =
+        '<label id="gf-terms-wrap" style="display:flex;align-items:flex-start;gap:8px;margin:14px 0 10px;font-size:12px;color:#94a3b8;cursor:pointer;">' +
+        '<input type="checkbox" id="accept-terms" style="margin-top:2px;accent-color:#6366f1;">' +
+        '<span>He leído y acepto los <a href="/legal/terminos" target="_blank" rel="noopener" style="color:#818cf8;text-decoration:underline;">Términos</a>, la ' +
+        '<a href="/legal/privacidad" target="_blank" rel="noopener" style="color:#818cf8;text-decoration:underline;">Política de Privacidad</a> y ' +
+        '<a href="/legal/reembolsos" target="_blank" rel="noopener" style="color:#818cf8;text-decoration:underline;">Reembolsos</a>.</span></label>';
+
+    function findRegisterForm() {
+        const forms = Array.from(document.querySelectorAll('form'));
+        // a) form con campos que huelen a registro (reg-name, register-email, etc.)
+        let f = forms.find(x => x.querySelector('[id*="reg-"],[name*="reg-"],[id*="register"],[name*="register"]'));
+        // b) form con selector de país o teléfono (solo existen en registro)
+        if (!f) f = forms.find(x => x.querySelector('.country-select, .phone-field'));
+        // c) form cuyo botón diga "crear cuenta / comenzar / registr..."
+        if (!f) f = forms.find(x => Array.from(x.querySelectorAll('button, a')).some(b => /crear cuenta|comenzar|registr/i.test(b.textContent || '')));
+        return f || null;
+    }
+
+    function injectTerms() {
+        if (document.getElementById('accept-terms')) return true;  // ya existe (si lo pegaste a mano, no se duplica)
+        const form = findRegisterForm();
+        if (!form) { console.warn('GF: no encontré el formulario de registro para inyectar los términos.'); return false; }
+        const holder = document.createElement('div');
+        holder.innerHTML = TERMS_HTML;
+        const label = holder.firstElementChild;
+        const submitBtn = form.querySelector('button[type="submit"], button:not([type="button"])');
+        if (submitBtn) form.insertBefore(label, submitBtn);
+        else form.appendChild(label);
+        return true;
+    }
+
+    // ---------- 2) Bloqueo del registro si el checkbox no está marcado ----------
+    // Intercepta CUALQUIER fetch a /api/auth/register, sin importar cómo esté
+    // cableado tu botón (form submit, onclick, lo que sea).
+    const originalFetch = window.fetch ? window.fetch.bind(window) : null;
+    if (originalFetch) {
+        window.fetch = function (input, init) {
+            const url = typeof input === 'string' ? input : (input && input.url) || '';
+            if (/\/api\/auth\/register/.test(url)) {
+                const chk = document.getElementById('accept-terms');
+                if (chk && !chk.checked) {
+                    alert('Debes aceptar los Términos y Condiciones para continuar.');
+                    chk.focus();
+                    return Promise.resolve(new Response(
+                        JSON.stringify({ error: 'Debes aceptar los Términos y Condiciones para continuar.' }),
+                        { status: 400, headers: { 'Content-Type': 'application/json' } }
+                    ));
+                }
+            }
+            return originalFetch(input, init);
+        };
+    }
+
+    // Inyectar al cargar + reintentar en cada clic (por si el form de registro
+    // se renderiza tarde al cambiar de tab Iniciar Sesión / Crear Cuenta)
+    injectTerms();
+    document.addEventListener('click', () => setTimeout(injectTerms, 50), true);
+})();
+</script>
+
 </body>
 </html>
