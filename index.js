@@ -185,7 +185,6 @@ process.on('SIGTERM', () => {
 })();
 
 // === PÁGINAS LEGALES ===
-const path = require('path');
 ['terminos', 'privacidad', 'reembolsos', 'aviso-legal', 'cookies'].forEach(slug => {
     app.get(`/legal/${slug}`, (req, res) => {
         res.sendFile(path.join(__dirname, 'public', 'legal', `${slug}.html`));
