@@ -136,6 +136,13 @@ app.use('/api/admin', adminRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// === PÁGINAS LEGALES (DEBE IR ANTES DEL 404) ===
+['terminos', 'privacidad', 'reembolsos', 'aviso-legal', 'cookies'].forEach(slug => {
+    app.get(`/legal/${slug}`, (req, res) => {
+        res.sendFile(path.join(__dirname, 'public', 'legal', `${slug}.html`));
+    });
+});
+
 app.use((req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada.' });
 });
@@ -183,10 +190,3 @@ process.on('SIGTERM', () => {
         }
     }, 60 * 60 * 1000);
 })();
-
-// === PÁGINAS LEGALES ===
-['terminos', 'privacidad', 'reembolsos', 'aviso-legal', 'cookies'].forEach(slug => {
-    app.get(`/legal/${slug}`, (req, res) => {
-        res.sendFile(path.join(__dirname, 'public', 'legal', `${slug}.html`));
-    });
-});
